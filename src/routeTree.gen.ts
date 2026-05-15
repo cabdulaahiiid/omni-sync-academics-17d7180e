@@ -15,8 +15,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedStrategicRouteImport } from './routes/_authenticated/strategic'
 import { Route as AuthenticatedOperationalRouteImport } from './routes/_authenticated/operational'
 import { Route as AuthenticatedGroundRouteImport } from './routes/_authenticated/ground'
+import { Route as AuthenticatedStrategicIndexRouteImport } from './routes/_authenticated/strategic/index'
 import { Route as AuthenticatedOperationalIndexRouteImport } from './routes/_authenticated/operational/index'
 import { Route as AuthenticatedGroundIndexRouteImport } from './routes/_authenticated/ground/index'
+import { Route as AuthenticatedStrategicModulesRouteImport } from './routes/_authenticated/strategic/modules'
+import { Route as AuthenticatedStrategicDepartmentsRouteImport } from './routes/_authenticated/strategic/departments'
+import { Route as AuthenticatedStrategicDepartmentHeadsRouteImport } from './routes/_authenticated/strategic/department-heads'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -48,6 +52,12 @@ const AuthenticatedGroundRoute = AuthenticatedGroundRouteImport.update({
   path: '/ground',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedStrategicIndexRoute =
+  AuthenticatedStrategicIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
 const AuthenticatedOperationalIndexRoute =
   AuthenticatedOperationalIndexRouteImport.update({
     id: '/',
@@ -60,22 +70,47 @@ const AuthenticatedGroundIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedGroundRoute,
   } as any)
+const AuthenticatedStrategicModulesRoute =
+  AuthenticatedStrategicModulesRouteImport.update({
+    id: '/modules',
+    path: '/modules',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedStrategicDepartmentsRoute =
+  AuthenticatedStrategicDepartmentsRouteImport.update({
+    id: '/departments',
+    path: '/departments',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedStrategicDepartmentHeadsRoute =
+  AuthenticatedStrategicDepartmentHeadsRouteImport.update({
+    id: '/department-heads',
+    path: '/department-heads',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/ground': typeof AuthenticatedGroundRouteWithChildren
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
-  '/strategic': typeof AuthenticatedStrategicRoute
+  '/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
+  '/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
+  '/strategic/modules': typeof AuthenticatedStrategicModulesRoute
   '/ground/': typeof AuthenticatedGroundIndexRoute
   '/operational/': typeof AuthenticatedOperationalIndexRoute
+  '/strategic/': typeof AuthenticatedStrategicIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/strategic': typeof AuthenticatedStrategicRoute
+  '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
+  '/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
+  '/strategic/modules': typeof AuthenticatedStrategicModulesRoute
   '/ground': typeof AuthenticatedGroundIndexRoute
   '/operational': typeof AuthenticatedOperationalIndexRoute
+  '/strategic': typeof AuthenticatedStrategicIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -84,9 +119,13 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/ground': typeof AuthenticatedGroundRouteWithChildren
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
-  '/_authenticated/strategic': typeof AuthenticatedStrategicRoute
+  '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/_authenticated/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
+  '/_authenticated/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
+  '/_authenticated/strategic/modules': typeof AuthenticatedStrategicModulesRoute
   '/_authenticated/ground/': typeof AuthenticatedGroundIndexRoute
   '/_authenticated/operational/': typeof AuthenticatedOperationalIndexRoute
+  '/_authenticated/strategic/': typeof AuthenticatedStrategicIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -96,10 +135,22 @@ export interface FileRouteTypes {
     | '/ground'
     | '/operational'
     | '/strategic'
+    | '/strategic/department-heads'
+    | '/strategic/departments'
+    | '/strategic/modules'
     | '/ground/'
     | '/operational/'
+    | '/strategic/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/strategic' | '/ground' | '/operational'
+  to:
+    | '/'
+    | '/login'
+    | '/strategic/department-heads'
+    | '/strategic/departments'
+    | '/strategic/modules'
+    | '/ground'
+    | '/operational'
+    | '/strategic'
   id:
     | '__root__'
     | '/'
@@ -108,8 +159,12 @@ export interface FileRouteTypes {
     | '/_authenticated/ground'
     | '/_authenticated/operational'
     | '/_authenticated/strategic'
+    | '/_authenticated/strategic/department-heads'
+    | '/_authenticated/strategic/departments'
+    | '/_authenticated/strategic/modules'
     | '/_authenticated/ground/'
     | '/_authenticated/operational/'
+    | '/_authenticated/strategic/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -162,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroundRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/strategic/': {
+      id: '/_authenticated/strategic/'
+      path: '/'
+      fullPath: '/strategic/'
+      preLoaderRoute: typeof AuthenticatedStrategicIndexRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
     '/_authenticated/operational/': {
       id: '/_authenticated/operational/'
       path: '/'
@@ -175,6 +237,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/ground/'
       preLoaderRoute: typeof AuthenticatedGroundIndexRouteImport
       parentRoute: typeof AuthenticatedGroundRoute
+    }
+    '/_authenticated/strategic/modules': {
+      id: '/_authenticated/strategic/modules'
+      path: '/modules'
+      fullPath: '/strategic/modules'
+      preLoaderRoute: typeof AuthenticatedStrategicModulesRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
+    '/_authenticated/strategic/departments': {
+      id: '/_authenticated/strategic/departments'
+      path: '/departments'
+      fullPath: '/strategic/departments'
+      preLoaderRoute: typeof AuthenticatedStrategicDepartmentsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
+    '/_authenticated/strategic/department-heads': {
+      id: '/_authenticated/strategic/department-heads'
+      path: '/department-heads'
+      fullPath: '/strategic/department-heads'
+      preLoaderRoute: typeof AuthenticatedStrategicDepartmentHeadsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
   }
 }
@@ -204,16 +287,38 @@ const AuthenticatedOperationalRouteWithChildren =
     AuthenticatedOperationalRouteChildren,
   )
 
+interface AuthenticatedStrategicRouteChildren {
+  AuthenticatedStrategicDepartmentHeadsRoute: typeof AuthenticatedStrategicDepartmentHeadsRoute
+  AuthenticatedStrategicDepartmentsRoute: typeof AuthenticatedStrategicDepartmentsRoute
+  AuthenticatedStrategicModulesRoute: typeof AuthenticatedStrategicModulesRoute
+  AuthenticatedStrategicIndexRoute: typeof AuthenticatedStrategicIndexRoute
+}
+
+const AuthenticatedStrategicRouteChildren: AuthenticatedStrategicRouteChildren =
+  {
+    AuthenticatedStrategicDepartmentHeadsRoute:
+      AuthenticatedStrategicDepartmentHeadsRoute,
+    AuthenticatedStrategicDepartmentsRoute:
+      AuthenticatedStrategicDepartmentsRoute,
+    AuthenticatedStrategicModulesRoute: AuthenticatedStrategicModulesRoute,
+    AuthenticatedStrategicIndexRoute: AuthenticatedStrategicIndexRoute,
+  }
+
+const AuthenticatedStrategicRouteWithChildren =
+  AuthenticatedStrategicRoute._addFileChildren(
+    AuthenticatedStrategicRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedGroundRoute: typeof AuthenticatedGroundRouteWithChildren
   AuthenticatedOperationalRoute: typeof AuthenticatedOperationalRouteWithChildren
-  AuthenticatedStrategicRoute: typeof AuthenticatedStrategicRoute
+  AuthenticatedStrategicRoute: typeof AuthenticatedStrategicRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedGroundRoute: AuthenticatedGroundRouteWithChildren,
   AuthenticatedOperationalRoute: AuthenticatedOperationalRouteWithChildren,
-  AuthenticatedStrategicRoute: AuthenticatedStrategicRoute,
+  AuthenticatedStrategicRoute: AuthenticatedStrategicRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -228,3 +333,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
