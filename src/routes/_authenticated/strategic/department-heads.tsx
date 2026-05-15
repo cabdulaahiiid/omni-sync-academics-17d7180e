@@ -21,14 +21,14 @@ export const Route = createFileRoute("/_authenticated/strategic/department-heads
 
 function DHPage() {
   const qc = useQueryClient();
-  const { authReady, hasSession } = useAuthSession();
+  const { authReady, hasSession, authHeaders } = useAuthSession();
   const canQuery = authReady && hasSession;
   const list = useServerFn(listDepartmentHeads);
   const create = useServerFn(createDepartmentHead);
   const revoke = useServerFn(revokeDepartmentHead);
   const listD = useServerFn(listDepartments);
-  const { data: rows, isLoading } = useQuery({ queryKey: ["dh"], queryFn: () => list(), enabled: canQuery, throwOnError: false });
-  const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => listD(), enabled: canQuery, throwOnError: false });
+  const { data: rows, isLoading } = useQuery({ queryKey: ["dh"], queryFn: () => list({ headers: authHeaders }), enabled: canQuery, throwOnError: false });
+  const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => listD({ headers: authHeaders }), enabled: canQuery, throwOnError: false });
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
@@ -36,7 +36,7 @@ function DHPage() {
   const [credentials, setCredentials] = useState<{ email: string; temp_password: string } | null>(null);
 
   const createMut = useMutation({
-    mutationFn: () => create({ data: { email, full_name: fullName, department_id: deptId } }),
+    mutationFn: () => create({ data: { email, full_name: fullName, department_id: deptId }, headers: authHeaders }),
     onSuccess: (r) => {
       toast.success("Department Head created");
       setCredentials({ email: r.email, temp_password: r.temp_password });
@@ -46,7 +46,7 @@ function DHPage() {
     onError: (e: Error) => toast.error(e.message),
   });
   const revokeMut = useMutation({
-    mutationFn: (id: string) => revoke({ data: { id } }),
+    mutationFn: (id: string) => revoke({ data: { id }, headers: authHeaders }),
     onSuccess: () => { toast.success("Revoked"); qc.invalidateQueries({ queryKey: ["dh"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
