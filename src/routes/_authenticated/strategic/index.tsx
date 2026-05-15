@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/strategic/")({
 
 function StrategicDashboard() {
   const qc = useQueryClient();
-  const { authReady, hasSession } = useAuthSession();
+  const { authReady, hasSession, authHeaders } = useAuthSession();
   const canQuery = authReady && hasSession;
   const stats = useServerFn(getStrategicStats);
   const audit = useServerFn(listRecentAuditLogs);
@@ -33,11 +33,11 @@ function StrategicDashboard() {
   const approve = useServerFn(approveSchedule);
   const sendBack = useServerFn(sendBackSchedule);
 
-  const { data: kpi } = useQuery({ queryKey: ["strategic-stats"], queryFn: () => stats(), enabled: canQuery, throwOnError: false, staleTime: 30000 });
-  const { data: feed } = useQuery({ queryKey: ["audit-feed"], queryFn: () => audit(), enabled: canQuery, throwOnError: false, staleTime: 30000 });
-  const { data: pending } = useQuery({ queryKey: ["approval-queue"], queryFn: () => queue(), enabled: canQuery, throwOnError: false, staleTime: 15000 });
-  const { data: comparison } = useQuery({ queryKey: ["dept-comparison"], queryFn: () => dept(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
-  const { data: overrideRows } = useQuery({ queryKey: ["overrides"], queryFn: () => overrides(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
+  const { data: kpi } = useQuery({ queryKey: ["strategic-stats"], queryFn: () => stats({ headers: authHeaders }), enabled: canQuery, throwOnError: false, staleTime: 30000 });
+  const { data: feed } = useQuery({ queryKey: ["audit-feed"], queryFn: () => audit({ headers: authHeaders }), enabled: canQuery, throwOnError: false, staleTime: 30000 });
+  const { data: pending } = useQuery({ queryKey: ["approval-queue"], queryFn: () => queue({ headers: authHeaders }), enabled: canQuery, throwOnError: false, staleTime: 15000 });
+  const { data: comparison } = useQuery({ queryKey: ["dept-comparison"], queryFn: () => dept({ headers: authHeaders }), enabled: canQuery, throwOnError: false, staleTime: 60000 });
+  const { data: overrideRows } = useQuery({ queryKey: ["overrides"], queryFn: () => overrides({ headers: authHeaders }), enabled: canQuery, throwOnError: false, staleTime: 60000 });
 
   useEffect(() => {
     const ch = supabase.channel("strategic-live")
@@ -56,12 +56,12 @@ function StrategicDashboard() {
   const [feedbackText, setFeedbackText] = useState("");
 
   const approveMut = useMutation({
-    mutationFn: (id: string) => approve({ data: { schedule_id: id } }),
+    mutationFn: (id: string) => approve({ data: { schedule_id: id }, headers: authHeaders }),
     onSuccess: () => { toast.success("Approved"); qc.invalidateQueries({ queryKey: ["approval-queue"] }); qc.invalidateQueries({ queryKey: ["strategic-stats"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
   const sendBackMut = useMutation({
-    mutationFn: () => sendBack({ data: { schedule_id: feedbackTarget!, feedback: feedbackText } }),
+    mutationFn: () => sendBack({ data: { schedule_id: feedbackTarget!, feedback: feedbackText }, headers: authHeaders }),
     onSuccess: () => { toast.success("Sent back for correction"); setFeedbackTarget(null); setFeedbackText(""); qc.invalidateQueries({ queryKey: ["approval-queue"] }); },
     onError: (e: Error) => toast.error(e.message),
   });

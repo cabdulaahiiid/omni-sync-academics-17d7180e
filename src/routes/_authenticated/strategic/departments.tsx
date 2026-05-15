@@ -24,11 +24,11 @@ type Dept = { id: string; name: string; description: string | null; status: "ACT
 
 function DepartmentsPage() {
   const qc = useQueryClient();
-  const { authReady, hasSession } = useAuthSession();
+  const { authReady, hasSession, authHeaders } = useAuthSession();
   const list = useServerFn(listDepartments);
   const upsert = useServerFn(upsertDepartment);
   const del = useServerFn(deleteDepartment);
-  const { data: rows, isLoading } = useQuery({ queryKey: ["departments"], queryFn: () => list(), enabled: authReady && hasSession, throwOnError: false });
+  const { data: rows, isLoading } = useQuery({ queryKey: ["departments"], queryFn: () => list({ headers: authHeaders }), enabled: authReady && hasSession, throwOnError: false });
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Dept | null>(null);
   const [name, setName] = useState("");
@@ -36,12 +36,12 @@ function DepartmentsPage() {
   const [status, setStatus] = useState<"ACTIVE" | "SUSPENDED">("ACTIVE");
 
   const saveMut = useMutation({
-    mutationFn: () => upsert({ data: { id: editing?.id, name, description, status } }),
+    mutationFn: () => upsert({ data: { id: editing?.id, name, description, status }, headers: authHeaders }),
     onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["departments"] }); setOpen(false); },
     onError: (e: Error) => toast.error(e.message),
   });
   const delMut = useMutation({
-    mutationFn: (id: string) => del({ data: { id } }),
+    mutationFn: (id: string) => del({ data: { id }, headers: authHeaders }),
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["departments"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
