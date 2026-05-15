@@ -22,7 +22,8 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean };
+const NAV: NavItem[] = [
   { to: "/strategic", label: "Command Center", icon: LayoutDashboard, end: true },
   { to: "/strategic/departments", label: "Departments", icon: Building2 },
   { to: "/strategic/department-heads", label: "Department Heads", icon: UserCog },
@@ -36,7 +37,7 @@ const NAV = [
   { to: "/strategic/users", label: "Users & Roles", icon: ShieldCheck },
   { to: "/strategic/audit", label: "Audit Logs", icon: ScrollText },
   { to: "/strategic/settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 export function StrategicShell() {
   const { data: me, isLoading } = useMe();
@@ -86,7 +87,7 @@ export function StrategicShell() {
             return (
               <Link
                 key={item.to}
-                to={item.to}
+                to={item.to as string}
                 onClick={() => setOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
