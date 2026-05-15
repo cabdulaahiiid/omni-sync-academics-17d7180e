@@ -29,16 +29,13 @@ function StrategicReports() {
   const sess = useServerFn(exportSessionLogsCSV);
   const vel = useServerFn(exportTrainerVelocityCSV);
 
-  const make = (fn: () => Promise<{ filename: string; csv: string; count: number }>) =>
-    useMutation({
-      mutationFn: fn,
-      onSuccess: (r) => { dl(r.filename, r.csv); toast.success(`${r.count} rows exported`); },
-      onError: (e: Error) => toast.error(e.message),
-    });
-
-  const a = make(() => att({ data: {} }));
-  const s = make(() => sess({ data: {} }));
-  const v = make(() => vel({ data: {} }));
+  const onOk = (r: { filename: string; csv: string; count: number }) => {
+    dl(r.filename, r.csv); toast.success(`${r.count} rows exported`);
+  };
+  const onErr = (e: Error) => toast.error(e.message);
+  const a = useMutation({ mutationFn: () => att({ data: {} }), onSuccess: onOk, onError: onErr });
+  const s = useMutation({ mutationFn: () => sess({ data: {} }), onSuccess: onOk, onError: onErr });
+  const v = useMutation({ mutationFn: () => vel({ data: {} }), onSuccess: onOk, onError: onErr });
 
   const items = [
     { title: "Attendance (30d)", desc: "Institution-wide attendance log.", m: a },

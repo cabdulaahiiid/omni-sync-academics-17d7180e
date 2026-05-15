@@ -25,6 +25,7 @@ import { Route as AuthenticatedStrategicStudentsRouteImport } from './routes/_au
 import { Route as AuthenticatedStrategicSettingsRouteImport } from './routes/_authenticated/strategic/settings'
 import { Route as AuthenticatedStrategicSemestersRouteImport } from './routes/_authenticated/strategic/semesters'
 import { Route as AuthenticatedStrategicSectionsRouteImport } from './routes/_authenticated/strategic/sections'
+import { Route as AuthenticatedStrategicReportsRouteImport } from './routes/_authenticated/strategic/reports'
 import { Route as AuthenticatedStrategicModulesRouteImport } from './routes/_authenticated/strategic/modules'
 import { Route as AuthenticatedStrategicLevelsRouteImport } from './routes/_authenticated/strategic/levels'
 import { Route as AuthenticatedStrategicInsightsRouteImport } from './routes/_authenticated/strategic/insights'
@@ -33,8 +34,10 @@ import { Route as AuthenticatedStrategicDepartmentHeadsRouteImport } from './rou
 import { Route as AuthenticatedStrategicAuditRouteImport } from './routes/_authenticated/strategic/audit'
 import { Route as AuthenticatedStrategicApprovalsRouteImport } from './routes/_authenticated/strategic/approvals'
 import { Route as AuthenticatedOperationalSemesterUploadRouteImport } from './routes/_authenticated/operational/semester-upload'
+import { Route as AuthenticatedOperationalReportsRouteImport } from './routes/_authenticated/operational/reports'
 import { Route as AuthenticatedOperationalMatrixRouteImport } from './routes/_authenticated/operational/matrix'
 import { Route as AuthenticatedOperationalLiveMonitorRouteImport } from './routes/_authenticated/operational/live-monitor'
+import { Route as AuthenticatedOperationalAttendanceRouteImport } from './routes/_authenticated/operational/attendance'
 import { Route as AuthenticatedGroundScheduleIdRouteImport } from './routes/_authenticated/ground/$scheduleId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -127,6 +130,12 @@ const AuthenticatedStrategicSectionsRoute =
     path: '/sections',
     getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
+const AuthenticatedStrategicReportsRoute =
+  AuthenticatedStrategicReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
 const AuthenticatedStrategicModulesRoute =
   AuthenticatedStrategicModulesRouteImport.update({
     id: '/modules',
@@ -175,6 +184,12 @@ const AuthenticatedOperationalSemesterUploadRoute =
     path: '/semester-upload',
     getParentRoute: () => AuthenticatedOperationalRoute,
   } as any)
+const AuthenticatedOperationalReportsRoute =
+  AuthenticatedOperationalReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedOperationalRoute,
+  } as any)
 const AuthenticatedOperationalMatrixRoute =
   AuthenticatedOperationalMatrixRouteImport.update({
     id: '/matrix',
@@ -185,6 +200,12 @@ const AuthenticatedOperationalLiveMonitorRoute =
   AuthenticatedOperationalLiveMonitorRouteImport.update({
     id: '/live-monitor',
     path: '/live-monitor',
+    getParentRoute: () => AuthenticatedOperationalRoute,
+  } as any)
+const AuthenticatedOperationalAttendanceRoute =
+  AuthenticatedOperationalAttendanceRouteImport.update({
+    id: '/attendance',
+    path: '/attendance',
     getParentRoute: () => AuthenticatedOperationalRoute,
   } as any)
 const AuthenticatedGroundScheduleIdRoute =
@@ -201,8 +222,10 @@ export interface FileRoutesByFullPath {
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/strategic': typeof AuthenticatedStrategicRouteWithChildren
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
+  '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
   '/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
+  '/operational/reports': typeof AuthenticatedOperationalReportsRoute
   '/operational/semester-upload': typeof AuthenticatedOperationalSemesterUploadRoute
   '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
@@ -211,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/strategic/insights': typeof AuthenticatedStrategicInsightsRoute
   '/strategic/levels': typeof AuthenticatedStrategicLevelsRoute
   '/strategic/modules': typeof AuthenticatedStrategicModulesRoute
+  '/strategic/reports': typeof AuthenticatedStrategicReportsRoute
   '/strategic/sections': typeof AuthenticatedStrategicSectionsRoute
   '/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
   '/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
@@ -226,8 +250,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
+  '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
   '/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
+  '/operational/reports': typeof AuthenticatedOperationalReportsRoute
   '/operational/semester-upload': typeof AuthenticatedOperationalSemesterUploadRoute
   '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
@@ -236,6 +262,7 @@ export interface FileRoutesByTo {
   '/strategic/insights': typeof AuthenticatedStrategicInsightsRoute
   '/strategic/levels': typeof AuthenticatedStrategicLevelsRoute
   '/strategic/modules': typeof AuthenticatedStrategicModulesRoute
+  '/strategic/reports': typeof AuthenticatedStrategicReportsRoute
   '/strategic/sections': typeof AuthenticatedStrategicSectionsRoute
   '/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
   '/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
@@ -256,8 +283,10 @@ export interface FileRoutesById {
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
+  '/_authenticated/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/_authenticated/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
   '/_authenticated/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
+  '/_authenticated/operational/reports': typeof AuthenticatedOperationalReportsRoute
   '/_authenticated/operational/semester-upload': typeof AuthenticatedOperationalSemesterUploadRoute
   '/_authenticated/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/_authenticated/strategic/audit': typeof AuthenticatedStrategicAuditRoute
@@ -266,6 +295,7 @@ export interface FileRoutesById {
   '/_authenticated/strategic/insights': typeof AuthenticatedStrategicInsightsRoute
   '/_authenticated/strategic/levels': typeof AuthenticatedStrategicLevelsRoute
   '/_authenticated/strategic/modules': typeof AuthenticatedStrategicModulesRoute
+  '/_authenticated/strategic/reports': typeof AuthenticatedStrategicReportsRoute
   '/_authenticated/strategic/sections': typeof AuthenticatedStrategicSectionsRoute
   '/_authenticated/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
   '/_authenticated/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
@@ -286,8 +316,10 @@ export interface FileRouteTypes {
     | '/operational'
     | '/strategic'
     | '/ground/$scheduleId'
+    | '/operational/attendance'
     | '/operational/live-monitor'
     | '/operational/matrix'
+    | '/operational/reports'
     | '/operational/semester-upload'
     | '/strategic/approvals'
     | '/strategic/audit'
@@ -296,6 +328,7 @@ export interface FileRouteTypes {
     | '/strategic/insights'
     | '/strategic/levels'
     | '/strategic/modules'
+    | '/strategic/reports'
     | '/strategic/sections'
     | '/strategic/semesters'
     | '/strategic/settings'
@@ -311,8 +344,10 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/ground/$scheduleId'
+    | '/operational/attendance'
     | '/operational/live-monitor'
     | '/operational/matrix'
+    | '/operational/reports'
     | '/operational/semester-upload'
     | '/strategic/approvals'
     | '/strategic/audit'
@@ -321,6 +356,7 @@ export interface FileRouteTypes {
     | '/strategic/insights'
     | '/strategic/levels'
     | '/strategic/modules'
+    | '/strategic/reports'
     | '/strategic/sections'
     | '/strategic/semesters'
     | '/strategic/settings'
@@ -340,8 +376,10 @@ export interface FileRouteTypes {
     | '/_authenticated/operational'
     | '/_authenticated/strategic'
     | '/_authenticated/ground/$scheduleId'
+    | '/_authenticated/operational/attendance'
     | '/_authenticated/operational/live-monitor'
     | '/_authenticated/operational/matrix'
+    | '/_authenticated/operational/reports'
     | '/_authenticated/operational/semester-upload'
     | '/_authenticated/strategic/approvals'
     | '/_authenticated/strategic/audit'
@@ -350,6 +388,7 @@ export interface FileRouteTypes {
     | '/_authenticated/strategic/insights'
     | '/_authenticated/strategic/levels'
     | '/_authenticated/strategic/modules'
+    | '/_authenticated/strategic/reports'
     | '/_authenticated/strategic/sections'
     | '/_authenticated/strategic/semesters'
     | '/_authenticated/strategic/settings'
@@ -482,6 +521,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategicSectionsRouteImport
       parentRoute: typeof AuthenticatedStrategicRoute
     }
+    '/_authenticated/strategic/reports': {
+      id: '/_authenticated/strategic/reports'
+      path: '/reports'
+      fullPath: '/strategic/reports'
+      preLoaderRoute: typeof AuthenticatedStrategicReportsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
     '/_authenticated/strategic/modules': {
       id: '/_authenticated/strategic/modules'
       path: '/modules'
@@ -538,6 +584,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperationalSemesterUploadRouteImport
       parentRoute: typeof AuthenticatedOperationalRoute
     }
+    '/_authenticated/operational/reports': {
+      id: '/_authenticated/operational/reports'
+      path: '/reports'
+      fullPath: '/operational/reports'
+      preLoaderRoute: typeof AuthenticatedOperationalReportsRouteImport
+      parentRoute: typeof AuthenticatedOperationalRoute
+    }
     '/_authenticated/operational/matrix': {
       id: '/_authenticated/operational/matrix'
       path: '/matrix'
@@ -550,6 +603,13 @@ declare module '@tanstack/react-router' {
       path: '/live-monitor'
       fullPath: '/operational/live-monitor'
       preLoaderRoute: typeof AuthenticatedOperationalLiveMonitorRouteImport
+      parentRoute: typeof AuthenticatedOperationalRoute
+    }
+    '/_authenticated/operational/attendance': {
+      id: '/_authenticated/operational/attendance'
+      path: '/attendance'
+      fullPath: '/operational/attendance'
+      preLoaderRoute: typeof AuthenticatedOperationalAttendanceRouteImport
       parentRoute: typeof AuthenticatedOperationalRoute
     }
     '/_authenticated/ground/$scheduleId': {
@@ -576,17 +636,22 @@ const AuthenticatedGroundRouteWithChildren =
   AuthenticatedGroundRoute._addFileChildren(AuthenticatedGroundRouteChildren)
 
 interface AuthenticatedOperationalRouteChildren {
+  AuthenticatedOperationalAttendanceRoute: typeof AuthenticatedOperationalAttendanceRoute
   AuthenticatedOperationalLiveMonitorRoute: typeof AuthenticatedOperationalLiveMonitorRoute
   AuthenticatedOperationalMatrixRoute: typeof AuthenticatedOperationalMatrixRoute
+  AuthenticatedOperationalReportsRoute: typeof AuthenticatedOperationalReportsRoute
   AuthenticatedOperationalSemesterUploadRoute: typeof AuthenticatedOperationalSemesterUploadRoute
   AuthenticatedOperationalIndexRoute: typeof AuthenticatedOperationalIndexRoute
 }
 
 const AuthenticatedOperationalRouteChildren: AuthenticatedOperationalRouteChildren =
   {
+    AuthenticatedOperationalAttendanceRoute:
+      AuthenticatedOperationalAttendanceRoute,
     AuthenticatedOperationalLiveMonitorRoute:
       AuthenticatedOperationalLiveMonitorRoute,
     AuthenticatedOperationalMatrixRoute: AuthenticatedOperationalMatrixRoute,
+    AuthenticatedOperationalReportsRoute: AuthenticatedOperationalReportsRoute,
     AuthenticatedOperationalSemesterUploadRoute:
       AuthenticatedOperationalSemesterUploadRoute,
     AuthenticatedOperationalIndexRoute: AuthenticatedOperationalIndexRoute,
@@ -605,6 +670,7 @@ interface AuthenticatedStrategicRouteChildren {
   AuthenticatedStrategicInsightsRoute: typeof AuthenticatedStrategicInsightsRoute
   AuthenticatedStrategicLevelsRoute: typeof AuthenticatedStrategicLevelsRoute
   AuthenticatedStrategicModulesRoute: typeof AuthenticatedStrategicModulesRoute
+  AuthenticatedStrategicReportsRoute: typeof AuthenticatedStrategicReportsRoute
   AuthenticatedStrategicSectionsRoute: typeof AuthenticatedStrategicSectionsRoute
   AuthenticatedStrategicSemestersRoute: typeof AuthenticatedStrategicSemestersRoute
   AuthenticatedStrategicSettingsRoute: typeof AuthenticatedStrategicSettingsRoute
@@ -626,6 +692,7 @@ const AuthenticatedStrategicRouteChildren: AuthenticatedStrategicRouteChildren =
     AuthenticatedStrategicInsightsRoute: AuthenticatedStrategicInsightsRoute,
     AuthenticatedStrategicLevelsRoute: AuthenticatedStrategicLevelsRoute,
     AuthenticatedStrategicModulesRoute: AuthenticatedStrategicModulesRoute,
+    AuthenticatedStrategicReportsRoute: AuthenticatedStrategicReportsRoute,
     AuthenticatedStrategicSectionsRoute: AuthenticatedStrategicSectionsRoute,
     AuthenticatedStrategicSemestersRoute: AuthenticatedStrategicSemestersRoute,
     AuthenticatedStrategicSettingsRoute: AuthenticatedStrategicSettingsRoute,
