@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import {
   getStrategicStats, listRecentAuditLogs, listApprovalQueue,
   approveSchedule, sendBackSchedule, getDepartmentComparison, listRecentOverrides,
@@ -22,6 +23,8 @@ export const Route = createFileRoute("/_authenticated/strategic/")({
 
 function StrategicDashboard() {
   const qc = useQueryClient();
+  const { authReady, hasSession } = useAuthSession();
+  const canQuery = authReady && hasSession;
   const stats = useServerFn(getStrategicStats);
   const audit = useServerFn(listRecentAuditLogs);
   const queue = useServerFn(listApprovalQueue);
@@ -30,11 +33,11 @@ function StrategicDashboard() {
   const approve = useServerFn(approveSchedule);
   const sendBack = useServerFn(sendBackSchedule);
 
-  const { data: kpi } = useQuery({ queryKey: ["strategic-stats"], queryFn: () => stats(), staleTime: 30000 });
-  const { data: feed } = useQuery({ queryKey: ["audit-feed"], queryFn: () => audit(), staleTime: 30000 });
-  const { data: pending } = useQuery({ queryKey: ["approval-queue"], queryFn: () => queue(), staleTime: 15000 });
-  const { data: comparison } = useQuery({ queryKey: ["dept-comparison"], queryFn: () => dept(), staleTime: 60000 });
-  const { data: overrideRows } = useQuery({ queryKey: ["overrides"], queryFn: () => overrides(), staleTime: 60000 });
+  const { data: kpi } = useQuery({ queryKey: ["strategic-stats"], queryFn: () => stats(), enabled: canQuery, throwOnError: false, staleTime: 30000 });
+  const { data: feed } = useQuery({ queryKey: ["audit-feed"], queryFn: () => audit(), enabled: canQuery, throwOnError: false, staleTime: 30000 });
+  const { data: pending } = useQuery({ queryKey: ["approval-queue"], queryFn: () => queue(), enabled: canQuery, throwOnError: false, staleTime: 15000 });
+  const { data: comparison } = useQuery({ queryKey: ["dept-comparison"], queryFn: () => dept(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
+  const { data: overrideRows } = useQuery({ queryKey: ["overrides"], queryFn: () => overrides(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
 
   useEffect(() => {
     const ch = supabase.channel("strategic-live")
