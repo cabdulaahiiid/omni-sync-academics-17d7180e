@@ -2,6 +2,8 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useMe } from "@/hooks/use-me";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { NotificationsBell } from "@/components/notifications-bell";
+import { OfflineBanner } from "@/components/offline-banner";
 
 export const Route = createFileRoute("/_authenticated/ground")({
   component: GroundShell,
@@ -21,9 +23,13 @@ function GroundShell() {
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Trainer</p>
           <p className="text-sm font-medium">{me?.profile?.full_name || me?.profile?.email}</p>
         </div>
-        <Button variant="ghost" size="sm" onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/login" }); }}>Sign out</Button>
+        <div className="flex items-center gap-1">
+          <NotificationsBell />
+          <Button variant="ghost" size="sm" onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/login" }); }}>Sign out</Button>
+        </div>
       </header>
       <main className="mx-auto max-w-md p-4"><Outlet /></main>
+      <OfflineBanner />
     </div>
   );
 }
