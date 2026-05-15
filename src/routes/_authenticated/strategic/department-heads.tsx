@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listDepartmentHeads, createDepartmentHead, revokeDepartmentHead } from "@/lib/dh.functions";
 import { listDepartments } from "@/lib/data.functions";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,12 +21,14 @@ export const Route = createFileRoute("/_authenticated/strategic/department-heads
 
 function DHPage() {
   const qc = useQueryClient();
+  const { authReady, hasSession } = useAuthSession();
+  const canQuery = authReady && hasSession;
   const list = useServerFn(listDepartmentHeads);
   const create = useServerFn(createDepartmentHead);
   const revoke = useServerFn(revokeDepartmentHead);
   const listD = useServerFn(listDepartments);
-  const { data: rows, isLoading } = useQuery({ queryKey: ["dh"], queryFn: () => list() });
-  const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => listD() });
+  const { data: rows, isLoading } = useQuery({ queryKey: ["dh"], queryFn: () => list(), enabled: canQuery, throwOnError: false });
+  const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => listD(), enabled: canQuery, throwOnError: false });
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
