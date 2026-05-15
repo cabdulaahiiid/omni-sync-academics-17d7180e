@@ -30,6 +30,8 @@ import { Route as AuthenticatedStrategicLevelsRouteImport } from './routes/_auth
 import { Route as AuthenticatedStrategicDepartmentsRouteImport } from './routes/_authenticated/strategic/departments'
 import { Route as AuthenticatedStrategicDepartmentHeadsRouteImport } from './routes/_authenticated/strategic/department-heads'
 import { Route as AuthenticatedStrategicAuditRouteImport } from './routes/_authenticated/strategic/audit'
+import { Route as AuthenticatedStrategicApprovalsRouteImport } from './routes/_authenticated/strategic/approvals'
+import { Route as AuthenticatedOperationalLiveMonitorRouteImport } from './routes/_authenticated/operational/live-monitor'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -151,6 +153,18 @@ const AuthenticatedStrategicAuditRoute =
     path: '/audit',
     getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
+const AuthenticatedStrategicApprovalsRoute =
+  AuthenticatedStrategicApprovalsRouteImport.update({
+    id: '/approvals',
+    path: '/approvals',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedOperationalLiveMonitorRoute =
+  AuthenticatedOperationalLiveMonitorRouteImport.update({
+    id: '/live-monitor',
+    path: '/live-monitor',
+    getParentRoute: () => AuthenticatedOperationalRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -158,6 +172,8 @@ export interface FileRoutesByFullPath {
   '/ground': typeof AuthenticatedGroundRouteWithChildren
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
+  '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
   '/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
@@ -177,6 +193,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
+  '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
   '/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
@@ -201,6 +219,8 @@ export interface FileRoutesById {
   '/_authenticated/ground': typeof AuthenticatedGroundRouteWithChildren
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/_authenticated/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
+  '/_authenticated/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/_authenticated/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/_authenticated/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
   '/_authenticated/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
@@ -225,6 +245,8 @@ export interface FileRouteTypes {
     | '/ground'
     | '/operational'
     | '/strategic'
+    | '/operational/live-monitor'
+    | '/strategic/approvals'
     | '/strategic/audit'
     | '/strategic/department-heads'
     | '/strategic/departments'
@@ -244,6 +266,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/operational/live-monitor'
+    | '/strategic/approvals'
     | '/strategic/audit'
     | '/strategic/department-heads'
     | '/strategic/departments'
@@ -267,6 +291,8 @@ export interface FileRouteTypes {
     | '/_authenticated/ground'
     | '/_authenticated/operational'
     | '/_authenticated/strategic'
+    | '/_authenticated/operational/live-monitor'
+    | '/_authenticated/strategic/approvals'
     | '/_authenticated/strategic/audit'
     | '/_authenticated/strategic/department-heads'
     | '/_authenticated/strategic/departments'
@@ -439,6 +465,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategicAuditRouteImport
       parentRoute: typeof AuthenticatedStrategicRoute
     }
+    '/_authenticated/strategic/approvals': {
+      id: '/_authenticated/strategic/approvals'
+      path: '/approvals'
+      fullPath: '/strategic/approvals'
+      preLoaderRoute: typeof AuthenticatedStrategicApprovalsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
+    '/_authenticated/operational/live-monitor': {
+      id: '/_authenticated/operational/live-monitor'
+      path: '/live-monitor'
+      fullPath: '/operational/live-monitor'
+      preLoaderRoute: typeof AuthenticatedOperationalLiveMonitorRouteImport
+      parentRoute: typeof AuthenticatedOperationalRoute
+    }
   }
 }
 
@@ -454,11 +494,14 @@ const AuthenticatedGroundRouteWithChildren =
   AuthenticatedGroundRoute._addFileChildren(AuthenticatedGroundRouteChildren)
 
 interface AuthenticatedOperationalRouteChildren {
+  AuthenticatedOperationalLiveMonitorRoute: typeof AuthenticatedOperationalLiveMonitorRoute
   AuthenticatedOperationalIndexRoute: typeof AuthenticatedOperationalIndexRoute
 }
 
 const AuthenticatedOperationalRouteChildren: AuthenticatedOperationalRouteChildren =
   {
+    AuthenticatedOperationalLiveMonitorRoute:
+      AuthenticatedOperationalLiveMonitorRoute,
     AuthenticatedOperationalIndexRoute: AuthenticatedOperationalIndexRoute,
   }
 
@@ -468,6 +511,7 @@ const AuthenticatedOperationalRouteWithChildren =
   )
 
 interface AuthenticatedStrategicRouteChildren {
+  AuthenticatedStrategicApprovalsRoute: typeof AuthenticatedStrategicApprovalsRoute
   AuthenticatedStrategicAuditRoute: typeof AuthenticatedStrategicAuditRoute
   AuthenticatedStrategicDepartmentHeadsRoute: typeof AuthenticatedStrategicDepartmentHeadsRoute
   AuthenticatedStrategicDepartmentsRoute: typeof AuthenticatedStrategicDepartmentsRoute
@@ -485,6 +529,7 @@ interface AuthenticatedStrategicRouteChildren {
 
 const AuthenticatedStrategicRouteChildren: AuthenticatedStrategicRouteChildren =
   {
+    AuthenticatedStrategicApprovalsRoute: AuthenticatedStrategicApprovalsRoute,
     AuthenticatedStrategicAuditRoute: AuthenticatedStrategicAuditRoute,
     AuthenticatedStrategicDepartmentHeadsRoute:
       AuthenticatedStrategicDepartmentHeadsRoute,
@@ -531,3 +576,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
