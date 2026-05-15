@@ -1,96 +1,104 @@
 
-## Goal
+# Full Production Rollout Plan
 
-Two tracks:
-1. **Fix the recurring `Unauthorized: No authorization header provided` runtime error** so dashboards load reliably.
-2. **Complete the role workflows** (MA, DH, Trainer) so the app matches the provided specification — admin can seed departments + DH/Trainer accounts with real credentials, DH can register trainers/students and submit semester schedules, trainers can run sessions on mobile.
+This is a large, multi-system build. I will execute it phase-by-phase, fully (no stubs). Below is the complete plan so you can confirm scope before I burn through implementation. **Reply "go" and I start Phase 1 immediately and run straight through Phase 5.**
 
 ---
 
-## Track 1 — Fix the Unauthorized error (root cause)
+## Phase 1 — Database hardening + Offline Sync Queue
 
-### Diagnosis
-- `src/start.ts` already registers `attachSupabaseAuth` as `functionMiddleware`, and the attacher reads `supabase.auth.getSession()` and sets the `Authorization` header. This is the correct wiring.
-- Earlier "fix" passed `{ headers: authHeaders }` as a serverFn argument (e.g. `audit({ headers: authHeaders })`). **`createServerFn` does not accept a `headers` key on the call** — the value is silently dropped. It works only by coincidence when the global middleware also fires.
-- The real failure mode: queries fire before the Supabase session has hydrated in the browser, OR a query runs that isn't gated by `authReady && hasSession`.
+**DB migration (one shot):**
+- Add `pending_sync` table (server-side reconciliation log): `id, trainer_registry_id, schedule_id, client_uuid (unique), payload jsonb, kind ('attendance'|'session_log'), client_timestamp, server_received_at, status ('applied'|'conflict'|'rejected'), conflict_reason`.
+- Add unique index on `attendance_logs(schedule_id, student_id)` to make idempotent upserts safe.
+- Add unique index on `session_logs(schedule_id)`.
+- `submit_session_batch(payload jsonb)` SECURITY DEFINER RPC — atomic upsert of session_log + attendance rows, returns per-row status (applied/conflict). Server timestamp wins on conflict; client gets `conflict_reason`.
 
-### Fix
-1. **Remove all `{ headers: authHeaders }` arguments** from serverFn invocations across:
-   - `src/hooks/use-me.ts`
-   - `src/routes/_authenticated/strategic/index.tsx`
-   - `src/routes/_authenticated/strategic/departments.tsx`
-   - `src/routes/_authenticated/strategic/department-heads.tsx`
-   - `src/routes/_authenticated/strategic/modules.tsx`
-   Rely on the global `attachSupabaseAuth` middleware (already in `src/start.ts`).
-2. **Gate the `_authenticated` layout's `beforeLoad`** with `supabase.auth.getUser()` (already correct) — this guarantees a session before any child loader/component runs.
-3. **Keep the `enabled: authReady && hasSession` guard** in `useQuery` for components, but simplify `useAuthSession` to drop the `authHeaders` export.
-4. **Add a root-level `onAuthStateChange` listener** in `src/routes/__root.tsx` that calls `queryClient.invalidateQueries()` + `router.invalidate()` so login/logout reflects immediately without stale 401s.
+**Client offline layer (`src/lib/offline/`):**
+- `db.ts` — Dexie (IndexedDB) with stores: `outbox` (pending mutations), `cache_schedules`, `cache_students`, `meta`.
+- `queue.ts` — `enqueue(mutation)`, `flush()`, exponential backoff, dedupe by `client_uuid`.
+- `sync-engine.ts` — listens to `online`/`offline` + `visibilitychange`, calls `submitSessionBatch` server fn, applies returned conflict resolutions, emits events for UI banner.
+- `use-offline-sync.ts` hook — exposes `{ online, pendingCount, lastSyncAt, conflicts }`.
+- Global `<OfflineBanner />` mounted in `__root.tsx`.
 
-### Verify
-- `curl` `/strategic` unauthenticated → 302 to `/login`.
-- Sign in as MA → `/strategic` loads, no `_serverFn` 401s in console/network.
+**Conflict resolution rules (explicit, coded):**
+1. Same `(schedule_id, student_id)` already has a server log newer than client timestamp → server wins, client entry marked `conflict`, surfaced to trainer.
+2. Geo-fence violation at server time → reject with `conflict_reason='geo_fence'`.
+3. Outside attendance window → reject with `conflict_reason='window_expired'`.
+4. Duplicate submission (same `client_uuid`) → idempotent no-op (`status='applied'`).
 
 ---
 
-## Track 2 — Spec compliance (MA, DH, Trainer workflows)
+## Phase 2 — Mobile Trainer Check-In Flow
 
-### A. MA — User & Account Provisioning (Workflow 1)
-Currently DH "creation" only inserts into `department_heads` (a mapping table); it doesn't create real auth users. Per spec, MA must create DH **and** trainer accounts with email/password.
+New route tree under `/_authenticated/trainer/` (mobile-first, single column, large tap targets, bottom nav):
+- `trainer/index.tsx` — today's schedule cards + completion velocity tracker.
+- `trainer/session.$scheduleId.tsx` — full check-in flow:
+  1. Geo capture (`navigator.geolocation`) → compare to `venues.latitude/longitude/geo_radius`.
+  2. Attendance roster (students from section) with present/absent toggles.
+  3. Lesson Plan + Learning Outcome textareas.
+  4. Submit → enqueues to outbox → flushes immediately if online, otherwise queued.
+  5. Confirmation screen + updated "Completed Sessions: X of Y".
+- All writes go through the offline queue (works offline, syncs on reconnect).
+- Responsive breakpoint via existing `useIsMobile`; route uses Tailwind mobile-first classes only.
 
-1. Add server functions in `src/lib/dh.functions.ts` / new `src/lib/users.functions.ts`:
-   - `createDepartmentHead({ email, password, fullName, departmentId })` — uses `supabaseAdmin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name } })`, then inserts into `profiles` (department_id), `user_roles` (role='DH'), and `department_heads`.
-   - `createTrainer({ email, password, fullName, departmentId, qualifications })` — admin-creates auth user, inserts `trainer_registry` row, links `profiles.trainer_registry_id`, inserts `user_roles` (role='T').
-   - Both protected by `requireSupabaseAuth` + `has_role(MA)` check.
-2. Update `/strategic/department-heads` UI to take email + password + name (default password helper button → `Head@123`).
-3. Update `/strategic/trainers` UI to a working create form (email + password + name + dept + qualifications); default password helper → `Trainer@123`.
+---
 
-### B. DH — Departmental Setup & Schedule Submission (Workflows 3 & 4)
-1. **Operational shell** (`/operational`): build sidebar with Levels & Sections, Trainers, Students, Schedule Management, Live Monitoring, Attendance Disputes.
-2. **Levels & Sections page** — CRUD scoped to current DH's department (RLS already enforces).
-3. **Trainer Management** — list dept trainers; "Add Trainer" calls `createTrainer` (DH-restricted variant or MA-only — spec says MA creates trainers; we'll keep creation MA-side and let DH only view/assign).
-4. **Student bulk upload** — CSV → parse client-side (papaparse) → batch insert into `students` with dept_id auto-set + level_id/section_id resolved from CSV columns.
-5. **Semester Schedule generation** — Excel upload (xlsx lib) → temporal slicing engine that:
-   - Resolves trainer name → `hidden_staff_id` from `trainer_registry`.
-   - Calculates each session date from start date + frequency days + duration.
-   - Inserts rows into `schedules` with status='DRAFT'.
-   - "Submit for Approval" → bulk update status='PENDING'.
-6. **Conflict detection helper** runs server-side before submission (trainer overlap, venue overlap).
+## Phase 3 — Notifications + DH Approval Queue
 
-### C. MA — Schedule Approval (Workflow 2)
-Already partially scaffolded in `/strategic/index.tsx`. Add:
-- Detail view per pending schedule with conflict matrix.
-- Approve / Send-back actions writing `schedules.status` and `schedules.admin_feedback`.
-- Notify DH via `notifications` insert.
+**Notification engine:**
+- DB trigger on `approval_queue` insert → inserts `notifications` row for relevant DH (`department_id` match via `schedules`).
+- DB trigger on `attendance_overrides` insert → notifies MA + affected trainer.
+- DB trigger on `leave_requests` insert → notifies DH of department.
+- Server fn `sendEmail` using Resend via existing `LOVABLE_API_KEY` pattern OR Lovable email; fallback: log + in-app. (I'll wire Resend if you add `RESEND_API_KEY`; otherwise in-app + browser Push API for installed users.)
+- Web Push: register service worker (production-only guard per Lovable PWA rules), store subscription in new `push_subscriptions` table, server fn `pushNotify`.
+- Realtime channel `notifications:user_id=eq.<uid>` for instant in-app toast.
 
-### D. Trainer — Mobile Session Workflow (Workflow 7)
-1. Build `/ground` shell (mobile-first).
-2. Today's schedule list filtered by `trainer_registry_id = current_trainer_registry_id()` and date=today.
-3. Session detail: mode toggle (Theory/Practical/Both), 30-minute gatekeeper using `global_config.attendance_window_minutes` + browser geolocation vs venue lat/lng + `geo_fence_radius`.
-4. Attendance roster (toggle present/absent per student) → submit to `attendance_logs`.
-5. Mandatory LO + Lesson Plan inputs → write to `session_logs`.
-6. End Session → status update + completion counter.
+**DH Approval Queue UI** (`/_authenticated/dh/approvals`):
+- Live list of pending schedules with conflict badges (invalid_qualification, excessive_load, conflict_venue, conflict_trainer).
+- Approve / Reject (with feedback) actions → updates `schedules.status` + removes queue row + notifies creator.
+- Realtime subscription for live updates.
 
-### E. Realtime
-- Enable `supabase_realtime` publication for `schedules`, `session_logs`, `attendance_logs`, `notifications`.
-- Subscribe in DH live-monitoring view.
+---
+
+## Phase 4 — Reporting, Exports, Live Sync
+
+**Exports** (`src/lib/reports.functions.ts`):
+- `exportAttendanceCSV({ from, to, department_id? })`
+- `exportSessionLogsCSV(...)`
+- `exportTrainerVelocityCSV(...)`
+- Server fn returns CSV string; client triggers download via Blob.
+- XLSX variant via `xlsx` package for MA users.
+
+**Live sync everywhere:**
+- Enable realtime on: `schedules`, `attendance_logs`, `session_logs`, `approval_queue`, `attendance_overrides`, `notifications`.
+- DH dashboard "Live Monitoring": realtime `session_logs` stream filtered by department → instant cards.
+- Strategic dashboard: realtime `audit_logs` feed.
+
+---
+
+## Phase 5 — Seed Test Accounts
+
+Server fn `seedDemoData` (MA-only, idempotent):
+- Departments: ICT, Construction, Hospitality.
+- DHs: `DH1@tvet.com`/`Head@123` (ICT), `DH2@tvet.com`, `DH3@tvet.com`.
+- Trainers: `trainer1@tvet.com`/`Trainer@123` … `trainer6@tvet.com`, distributed across departments with qualifications.
+- Levels (L3/L4/L5), sections, modules, venues with real lat/lon (Kigali coords for geo testing).
+- Students: ~30 per section.
+- Sample schedules across this week.
+- Triggered from new `/strategic/settings` button "Seed Demo Data".
 
 ---
 
 ## Technical notes
-- Use `supabaseAdmin` (in `src/integrations/supabase/client.server`) only inside MA-gated serverFns for `auth.admin.createUser`.
-- All new serverFns live in `*.functions.ts` files (client-importable) with `requireSupabaseAuth` + an MA/DH role check helper (`assertRole(context, 'MA')`).
-- Excel parsing via `xlsx` package; CSV via `papaparse`. Add with `bun add` before importing.
-- Bootstrap MA: `bootstrap_first_user_as_ma` trigger already exists — first signup becomes MA.
+- All server fns use existing `requireSupabaseAuth` + role gating.
+- Migrations bundled into 2 files (Phase 1 schema, Phase 3 triggers).
+- New deps: `dexie`, `xlsx`. (No `vite-plugin-pwa` — Web Push uses a hand-written SW guarded against iframe per Lovable rules.)
+- Email provider: I'll proceed with **in-app + Web Push only** unless you confirm you want Resend (needs `RESEND_API_KEY` secret).
 
-## Sequencing (suggested)
-1. Track 1 fix (small, ~6 file edits) — unblocks current build.
-2. Track 2A (MA can create real DH + Trainer accounts).
-3. Track 2B (DH setup + schedule upload).
-4. Track 2C (MA approval workflow polish).
-5. Track 2D (Trainer mobile flow).
-6. Track 2E (Realtime).
+---
 
-## Out of scope for this iteration
-- Offline sync for the trainer app (`global_config.allow_offline_sync` flag exists but not wired).
-- Push/email notifications (in-app `notifications` table only).
-- Excel template file — user will provide later; we'll use a sensible default schema documented in-app.
+**Confirm to proceed:**
+1. Use Web Push + in-app only, or also wire Resend email (requires you adding `RESEND_API_KEY`)?
+2. Seed account passwords as specified (`Head@123` / `Trainer@123`) — OK?
+
+Say **"go"** (with answers to 1 & 2) and I'll execute Phases 1→5 end-to-end.
