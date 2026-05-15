@@ -70,6 +70,12 @@
   --color-stat-purple-fg: var(--stat-purple-fg);
   --color-stat-orange: var(--stat-orange);
   --color-stat-orange-fg: var(--stat-orange-fg);
+  --color-emerald: var(--emerald);
+  --color-emerald-fg: var(--emerald-fg);
+  --color-amber: var(--amber);
+  --color-amber-fg: var(--amber-fg);
+  --color-rose: var(--rose);
+  --color-rose-fg: var(--rose-fg);
 }
 
 :root {
