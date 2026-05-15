@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getWeeklyMatrix, swapTrainer } from "@/lib/dh-extras.functions";
-import { listMyTrainers } from "@/lib/dh.functions";
+import { listTrainers } from "@/lib/dh.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,7 @@ function WeeklyMatrix() {
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date()));
   const matrix = useServerFn(getWeeklyMatrix);
   const swap = useServerFn(swapTrainer);
-  const trainersFn = useServerFn(listMyTrainers);
+  const trainersFn = useServerFn(listTrainers);
 
   const { data } = useQuery({
     queryKey: ["dh-matrix", fmt(weekStart)],
