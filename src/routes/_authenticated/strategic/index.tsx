@@ -16,6 +16,7 @@ import { Activity, Globe2, Clock, CheckSquare, AlertCircle } from "lucide-react"
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { toast } from "sonner";
 import { useMe } from "@/hooks/use-me";
+import { useAuthSession } from "@/hooks/use-auth-session";
 
 export const Route = createFileRoute("/_authenticated/strategic/")({
   component: StrategicDashboard,
@@ -23,8 +24,9 @@ export const Route = createFileRoute("/_authenticated/strategic/")({
 
 function StrategicDashboard() {
   const qc = useQueryClient();
+  const { authReady, hasSession, userId } = useAuthSession();
   const { data: me, isLoading: meLoading } = useMe();
-  const canQuery = Boolean(me?.roles.includes("MA"));
+  const canQuery = authReady && hasSession && Boolean(userId) && me?.userId === userId && Boolean(me.roles.includes("MA"));
   const stats = useServerFn(getStrategicStats);
   const audit = useServerFn(listRecentAuditLogs);
   const queue = useServerFn(listApprovalQueue);
@@ -33,11 +35,11 @@ function StrategicDashboard() {
   const approve = useServerFn(approveSchedule);
   const sendBack = useServerFn(sendBackSchedule);
 
-  const { data: kpi } = useQuery({ queryKey: ["strategic-stats"], queryFn: () => stats(), enabled: canQuery, throwOnError: false, staleTime: 30000 });
-  const { data: feed } = useQuery({ queryKey: ["audit-feed"], queryFn: () => audit(), enabled: canQuery, throwOnError: false, staleTime: 30000 });
-  const { data: pending } = useQuery({ queryKey: ["approval-queue"], queryFn: () => queue(), enabled: canQuery, throwOnError: false, staleTime: 15000 });
-  const { data: comparison } = useQuery({ queryKey: ["dept-comparison"], queryFn: () => dept(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
-  const { data: overrideRows } = useQuery({ queryKey: ["overrides"], queryFn: () => overrides(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
+  const { data: kpi } = useQuery({ queryKey: ["strategic-stats", userId], queryFn: () => stats(), enabled: canQuery, throwOnError: false, staleTime: 30000 });
+  const { data: feed } = useQuery({ queryKey: ["audit-feed", userId], queryFn: () => audit(), enabled: canQuery, throwOnError: false, staleTime: 30000 });
+  const { data: pending } = useQuery({ queryKey: ["approval-queue", userId], queryFn: () => queue(), enabled: canQuery, throwOnError: false, staleTime: 15000 });
+  const { data: comparison } = useQuery({ queryKey: ["dept-comparison", userId], queryFn: () => dept(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
+  const { data: overrideRows } = useQuery({ queryKey: ["overrides", userId], queryFn: () => overrides(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
 
   useEffect(() => {
     if (!canQuery) return;

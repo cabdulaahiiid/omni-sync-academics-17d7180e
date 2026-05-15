@@ -9,16 +9,19 @@ import { supabase } from "@/integrations/supabase/client";
 export function useAuthSession() {
   const [authReady, setAuthReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     supabase.auth.getUser().then(({ data, error }) => {
       if (!active) return;
       setHasSession(Boolean(data.user) && !error);
+      setUserId(error ? null : (data.user?.id ?? null));
       setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setHasSession(Boolean(session?.access_token));
+      setUserId(session?.user?.id ?? null);
       setAuthReady(true);
     });
     return () => {
@@ -27,5 +30,5 @@ export function useAuthSession() {
     };
   }, []);
 
-  return { authReady, hasSession };
+  return { authReady, hasSession, userId };
 }
