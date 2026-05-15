@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuthSession } from "@/hooks/use-auth-session";
 import {
   getStrategicStats, listRecentAuditLogs, listApprovalQueue,
   approveSchedule, sendBackSchedule, getDepartmentComparison, listRecentOverrides,
@@ -16,6 +15,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Activity, Globe2, Clock, CheckSquare, AlertCircle } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { toast } from "sonner";
+import { useMe } from "@/hooks/use-me";
 
 export const Route = createFileRoute("/_authenticated/strategic/")({
   component: StrategicDashboard,
@@ -23,8 +23,8 @@ export const Route = createFileRoute("/_authenticated/strategic/")({
 
 function StrategicDashboard() {
   const qc = useQueryClient();
-  const { authReady, hasSession } = useAuthSession();
-  const canQuery = authReady && hasSession;
+  const { data: me, isLoading: meLoading } = useMe();
+  const canQuery = Boolean(me?.roles.includes("MA"));
   const stats = useServerFn(getStrategicStats);
   const audit = useServerFn(listRecentAuditLogs);
   const queue = useServerFn(listApprovalQueue);
@@ -38,6 +38,10 @@ function StrategicDashboard() {
   const { data: pending } = useQuery({ queryKey: ["approval-queue"], queryFn: () => queue(), enabled: canQuery, throwOnError: false, staleTime: 15000 });
   const { data: comparison } = useQuery({ queryKey: ["dept-comparison"], queryFn: () => dept(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
   const { data: overrideRows } = useQuery({ queryKey: ["overrides"], queryFn: () => overrides(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
+
+  if (meLoading) {
+    return <div className="flex min-h-64 items-center justify-center text-muted-foreground">Loading…</div>;
+  }
 
   useEffect(() => {
     const ch = supabase.channel("strategic-live")
