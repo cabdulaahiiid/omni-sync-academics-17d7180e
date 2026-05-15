@@ -141,6 +141,12 @@ function AuthSync() {
       const nextUserId = session?.user?.id ?? null;
       if (lastUserId === nextUserId) return;
       lastUserId = nextUserId;
+      if (event === "SIGNED_OUT") {
+        qc.cancelQueries();
+        qc.clear();
+        router.invalidate();
+        return;
+      }
       router.invalidate();
       qc.invalidateQueries();
     });

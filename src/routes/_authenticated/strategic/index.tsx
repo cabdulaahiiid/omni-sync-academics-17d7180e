@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuthSession } from "@/hooks/use-auth-session";
 import {
   getStrategicStats, listRecentAuditLogs, listApprovalQueue,
   approveSchedule, sendBackSchedule, getDepartmentComparison, listRecentOverrides,
@@ -16,6 +15,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Activity, Globe2, Clock, CheckSquare, AlertCircle } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { toast } from "sonner";
+import { useMe } from "@/hooks/use-me";
 
 export const Route = createFileRoute("/_authenticated/strategic/")({
   component: StrategicDashboard,
@@ -23,8 +23,8 @@ export const Route = createFileRoute("/_authenticated/strategic/")({
 
 function StrategicDashboard() {
   const qc = useQueryClient();
-  const { authReady, hasSession } = useAuthSession();
-  const canQuery = authReady && hasSession;
+  const { data: me, isLoading: meLoading } = useMe();
+  const canQuery = Boolean(me?.roles.includes("MA"));
   const stats = useServerFn(getStrategicStats);
   const audit = useServerFn(listRecentAuditLogs);
   const queue = useServerFn(listApprovalQueue);
@@ -40,6 +40,7 @@ function StrategicDashboard() {
   const { data: overrideRows } = useQuery({ queryKey: ["overrides"], queryFn: () => overrides(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
 
   useEffect(() => {
+    if (!canQuery) return;
     const ch = supabase.channel("strategic-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "audit_logs" }, () => {
         qc.invalidateQueries({ queryKey: ["audit-feed"] });
@@ -50,7 +51,7 @@ function StrategicDashboard() {
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [qc]);
+  }, [canQuery, qc]);
 
   const [feedbackTarget, setFeedbackTarget] = useState<string | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
@@ -65,6 +66,10 @@ function StrategicDashboard() {
     onSuccess: () => { toast.success("Sent back for correction"); setFeedbackTarget(null); setFeedbackText(""); qc.invalidateQueries({ queryKey: ["approval-queue"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  if (meLoading) {
+    return <div className="flex min-h-64 items-center justify-center text-muted-foreground">Loading…</div>;
+  }
 
   const cards = [
     { label: "Active Sessions", value: kpi?.active_sessions ?? 0, icon: Activity, color: "stat-blue" },
