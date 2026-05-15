@@ -408,6 +408,48 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_sync: {
+        Row: {
+          client_timestamp: string
+          client_uuid: string
+          conflict_reason: string | null
+          id: string
+          kind: string
+          payload: Json
+          result: Json | null
+          schedule_id: string
+          server_received_at: string
+          status: string
+          trainer_registry_id: string
+        }
+        Insert: {
+          client_timestamp: string
+          client_uuid: string
+          conflict_reason?: string | null
+          id?: string
+          kind: string
+          payload: Json
+          result?: Json | null
+          schedule_id: string
+          server_received_at?: string
+          status?: string
+          trainer_registry_id: string
+        }
+        Update: {
+          client_timestamp?: string
+          client_uuid?: string
+          conflict_reason?: string | null
+          id?: string
+          kind?: string
+          payload?: Json
+          result?: Json | null
+          schedule_id?: string
+          server_received_at?: string
+          status?: string
+          trainer_registry_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active: boolean
@@ -876,6 +918,19 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      submit_session_batch: {
+        Args: {
+          _attendance: Json
+          _client_timestamp: string
+          _client_uuid: string
+          _latitude: number
+          _learning_outcome: string
+          _lesson_plan: string
+          _longitude: number
+          _schedule_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {
