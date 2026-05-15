@@ -26,8 +26,8 @@ export const submitSessionBatch = createServerFn({ method: "POST" })
       _client_timestamp: data.client_timestamp,
       _lesson_plan: data.lesson_plan,
       _learning_outcome: data.learning_outcome,
-      _latitude: data.latitude,
-      _longitude: data.longitude,
+      _latitude: (data.latitude ?? 0) as number,
+      _longitude: (data.longitude ?? 0) as number,
       _attendance: data.attendance,
     });
     if (error) throw new Error(error.message);
