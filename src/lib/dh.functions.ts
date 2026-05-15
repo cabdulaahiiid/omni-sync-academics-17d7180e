@@ -3,8 +3,9 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-function genTempPassword() {
-  return Math.random().toString(36).slice(2, 10) + "A!" + Math.random().toString(36).slice(2, 6);
+async function assertMA(supabase: any, userId: string) {
+  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "MA").maybeSingle();
+  if (!data) throw new Error("Forbidden: Master Admin only");
 }
 
 export const listDepartmentHeads = createServerFn({ method: "GET" })
@@ -45,13 +46,12 @@ export const createDepartmentHead = createServerFn({ method: "POST" })
       email: z.string().email(),
       full_name: z.string().min(1).max(120),
       department_id: z.string().uuid(),
+      password: z.string().min(6).max(72),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    if (!context.claims?.app_metadata && !(await context.supabase.from("user_roles").select("role").eq("user_id", context.userId).eq("role", "MA").maybeSingle()).data) {
-      throw new Error("Forbidden");
-    }
-    const tempPassword = genTempPassword();
+    await assertMA(context.supabase, context.userId);
+    const tempPassword = data.password;
     const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: tempPassword,
@@ -60,7 +60,6 @@ export const createDepartmentHead = createServerFn({ method: "POST" })
     });
     if (cErr || !created.user) throw new Error(cErr?.message ?? "Failed to create user");
     const newId = created.user.id;
-    // Insert role + profile + dh row using admin (bypasses RLS edge cases)
     await supabaseAdmin.from("profiles").upsert({
       id: newId, full_name: data.full_name, email: data.email, department_id: data.department_id,
     });
@@ -90,6 +89,83 @@ export const revokeDepartmentHead = createServerFn({ method: "POST" })
     }
     await context.supabase.from("audit_logs").insert({
       actor_id: context.userId, action_type: "REVOKE", entity_type: "department_heads", entity_id: data.id,
+    });
+    return { ok: true };
+  });
+
+// ===== Trainers =====
+export const listTrainers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: trainers, error } = await context.supabase
+      .from("trainer_registry")
+      .select("id, full_name, email, phone, department_id, qualifications, status, created_at")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    const deptIds = Array.from(new Set((trainers ?? []).map((t) => t.department_id)));
+    const { data: depts } = deptIds.length
+      ? await context.supabase.from("departments").select("id, name").in("id", deptIds)
+      : { data: [] as { id: string; name: string }[] };
+    const dMap = Object.fromEntries((depts ?? []).map((d) => [d.id, d.name]));
+    return (trainers ?? []).map((t) => ({ ...t, department_name: dMap[t.department_id] ?? "—" }));
+  });
+
+export const createTrainer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      email: z.string().email(),
+      full_name: z.string().min(1).max(120),
+      department_id: z.string().uuid(),
+      password: z.string().min(6).max(72),
+      phone: z.string().max(40).optional().nullable(),
+      qualifications: z.array(z.string().min(1).max(60)).default([]),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertMA(context.supabase, context.userId);
+    const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { full_name: data.full_name },
+    });
+    if (cErr || !created.user) throw new Error(cErr?.message ?? "Failed to create user");
+    const newId = created.user.id;
+    const { data: tr, error: trErr } = await supabaseAdmin.from("trainer_registry")
+      .insert({
+        full_name: data.full_name,
+        email: data.email,
+        phone: data.phone ?? null,
+        department_id: data.department_id,
+        qualifications: data.qualifications,
+      }).select().single();
+    if (trErr) throw new Error(trErr.message);
+    await supabaseAdmin.from("profiles").upsert({
+      id: newId, full_name: data.full_name, email: data.email,
+      department_id: data.department_id, trainer_registry_id: tr.id,
+    });
+    await supabaseAdmin.from("user_roles").insert({ user_id: newId, role: "T" });
+    await context.supabase.from("audit_logs").insert({
+      actor_id: context.userId, action_type: "CREATE", entity_type: "trainer_registry", entity_id: tr.id,
+      after_state: { user_id: newId, department_id: data.department_id, email: data.email },
+    });
+    return { ok: true, temp_password: data.password, email: data.email };
+  });
+
+export const revokeTrainer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertMA(context.supabase, context.userId);
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("id").eq("trainer_registry_id", data.id).maybeSingle();
+    await supabaseAdmin.from("trainer_registry").update({ status: "SUSPENDED" }).eq("id", data.id);
+    if (profile?.id) {
+      await supabaseAdmin.from("user_roles").delete().eq("user_id", profile.id).eq("role", "T");
+    }
+    await context.supabase.from("audit_logs").insert({
+      actor_id: context.userId, action_type: "REVOKE", entity_type: "trainer_registry", entity_id: data.id,
     });
     return { ok: true };
   });

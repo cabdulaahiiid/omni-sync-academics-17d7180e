@@ -1,100 +1,96 @@
-# Iteration Plan — Phase 2 + Phase 3 (Master Admin)
 
-Following your mockup as the visual target. Trainer PWA, DH operational portal, real-time sync, offline queue, and analytics ship in later iterations.
+## Goal
 
-## 1. Phase 2 — Auth & Role Routing
+Two tracks:
+1. **Fix the recurring `Unauthorized: No authorization header provided` runtime error** so dashboards load reliably.
+2. **Complete the role workflows** (MA, DH, Trainer) so the app matches the provided specification — admin can seed departments + DH/Trainer accounts with real credentials, DH can register trainers/students and submit semester schedules, trainers can run sessions on mobile.
 
-- Rename `/admin` → `/strategic`, `/dh` → `/operational`, `/trainer` → `/ground`. Sidebar links and `_authenticated` guards updated accordingly.
-- Update `/login` page:
-  - Header: "TVET OMNI-SYNC ERP" + tagline "Institutional Secure Portal"
-  - On successful sign-in, fetch `user_roles.role` and redirect: MA→`/strategic`, DH→`/operational`, T→`/ground`.
-  - Show "Invalid credentials" on auth error, "No role assigned — contact administrator" if user has no role row.
-- Keep first-signup→MA bootstrap trigger from foundation.
+---
 
-## 2. Phase 3 — Strategic Command Center (`/strategic`)
+## Track 1 — Fix the Unauthorized error (root cause)
 
-Dashboard matches your mockup (navy sidebar, white surface, colored stat cards):
+### Diagnosis
+- `src/start.ts` already registers `attachSupabaseAuth` as `functionMiddleware`, and the attacher reads `supabase.auth.getSession()` and sets the `Authorization` header. This is the correct wiring.
+- Earlier "fix" passed `{ headers: authHeaders }` as a serverFn argument (e.g. `audit({ headers: authHeaders })`). **`createServerFn` does not accept a `headers` key on the call** — the value is silently dropped. It works only by coincidence when the global middleware also fires.
+- The real failure mode: queries fire before the Supabase session has hydrated in the browser, OR a query runs that isn't gated by `authReady && hasSession`.
 
-**KPI cards (top row, 5 across, responsive grid):**
-- Active Sessions — count of `schedules` where `status='LIVE'` and today
-- Geo Compliance % — `session_logs.geo_verified=true / total today`
-- Trainer Punctuality % — sessions started within attendance_window
-- Attendance % — present logs / total logs (last 7d)
-- Pending Approvals — `schedules.status='PENDING'` count
+### Fix
+1. **Remove all `{ headers: authHeaders }` arguments** from serverFn invocations across:
+   - `src/hooks/use-me.ts`
+   - `src/routes/_authenticated/strategic/index.tsx`
+   - `src/routes/_authenticated/strategic/departments.tsx`
+   - `src/routes/_authenticated/strategic/department-heads.tsx`
+   - `src/routes/_authenticated/strategic/modules.tsx`
+   Rely on the global `attachSupabaseAuth` middleware (already in `src/start.ts`).
+2. **Gate the `_authenticated` layout's `beforeLoad`** with `supabase.auth.getUser()` (already correct) — this guarantees a session before any child loader/component runs.
+3. **Keep the `enabled: authReady && hasSession` guard** in `useQuery` for components, but simplify `useAuthSession` to drop the `authHeaders` export.
+4. **Add a root-level `onAuthStateChange` listener** in `src/routes/__root.tsx` that calls `queryClient.invalidateQueries()` + `router.invalidate()` so login/logout reflects immediately without stale 401s.
 
-**Widgets (2-column below KPIs):**
-- Approval Queue — list of pending schedules with conflict badges (from `approval_queue` table flags), Approve / Send Back actions
-- Live Activity Feed — last 20 `audit_logs` entries with actor/action/entity
-- Department Comparison — bar chart (Recharts) of per-department attendance rates
-- Override Logs — last 10 `attendance_overrides` with reason
+### Verify
+- `curl` `/strategic` unauthenticated → 302 to `/login`.
+- Sign in as MA → `/strategic` loads, no `_serverFn` 401s in console/network.
 
-All data fetched via `createServerFn` + `requireSupabaseAuth`, wrapped in TanStack Query with 30s `staleTime`. Realtime subscription on `audit_logs` and `schedules` to invalidate queries (Supabase Realtime, replacing Firestore listeners).
+---
 
-## 3. WF1 — Department & DH Management
+## Track 2 — Spec compliance (MA, DH, Trainer workflows)
 
-- `/strategic/departments` — already built; add status badge + soft-delete (status=ARCHIVED).
-- `/strategic/department-heads` — new page:
-  - List existing DH assignments (join `department_heads` × `profiles` × `departments`).
-  - "Create DH Account" dialog: email + full_name + department dropdown. Server fn:
-    1. Calls `supabaseAdmin.auth.admin.createUser({ email, password: temp, email_confirm: true })`
-    2. Inserts into `user_roles` (role='DH'), `profiles` (department_id), `department_heads`.
-    3. Returns the temp password to display once (admin shares with DH).
-  - Reassign / revoke buttons.
-  - Every mutation writes an `audit_logs` row.
+### A. MA — User & Account Provisioning (Workflow 1)
+Currently DH "creation" only inserts into `department_heads` (a mapping table); it doesn't create real auth users. Per spec, MA must create DH **and** trainer accounts with email/password.
 
-## 4. WF2 — Module Registry (bulk Excel upload)
+1. Add server functions in `src/lib/dh.functions.ts` / new `src/lib/users.functions.ts`:
+   - `createDepartmentHead({ email, password, fullName, departmentId })` — uses `supabaseAdmin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name } })`, then inserts into `profiles` (department_id), `user_roles` (role='DH'), and `department_heads`.
+   - `createTrainer({ email, password, fullName, departmentId, qualifications })` — admin-creates auth user, inserts `trainer_registry` row, links `profiles.trainer_registry_id`, inserts `user_roles` (role='T').
+   - Both protected by `requireSupabaseAuth` + `has_role(MA)` check.
+2. Update `/strategic/department-heads` UI to take email + password + name (default password helper button → `Head@123`).
+3. Update `/strategic/trainers` UI to a working create form (email + password + name + dept + qualifications); default password helper → `Trainer@123`.
 
-- `/strategic/modules` — list view with filters by department/level/status.
-- "Bulk Upload" dialog:
-  - Accept `.xlsx` via `<input type="file">`.
-  - Parse client-side with `xlsx` (SheetJS) — defer server parsing.
-  - Expected columns (sensible default; documented in dialog + downloadable template button):
-    `code | name | department_name | level_name | type | qualifications | total_hours | total_sessions`
-    - `qualifications` = comma-separated string → `text[]`
-    - `type` ∈ `Theory | Practical | Both`
-    - `level_name` resolved against `levels` (per department), `department_name` against `departments`.
-  - Preview table with row-level validation (red badge for unresolved FKs, duplicates).
-  - "Confirm Upload" calls server fn that bulk-inserts valid rows in a single transaction; returns `{ inserted, skipped, errors[] }`.
-- Manual "Add Module" form retained.
-- Audit log entry per upload batch.
+### B. DH — Departmental Setup & Schedule Submission (Workflows 3 & 4)
+1. **Operational shell** (`/operational`): build sidebar with Levels & Sections, Trainers, Students, Schedule Management, Live Monitoring, Attendance Disputes.
+2. **Levels & Sections page** — CRUD scoped to current DH's department (RLS already enforces).
+3. **Trainer Management** — list dept trainers; "Add Trainer" calls `createTrainer` (DH-restricted variant or MA-only — spec says MA creates trainers; we'll keep creation MA-side and let DH only view/assign).
+4. **Student bulk upload** — CSV → parse client-side (papaparse) → batch insert into `students` with dept_id auto-set + level_id/section_id resolved from CSV columns.
+5. **Semester Schedule generation** — Excel upload (xlsx lib) → temporal slicing engine that:
+   - Resolves trainer name → `hidden_staff_id` from `trainer_registry`.
+   - Calculates each session date from start date + frequency days + duration.
+   - Inserts rows into `schedules` with status='DRAFT'.
+   - "Submit for Approval" → bulk update status='PENDING'.
+6. **Conflict detection helper** runs server-side before submission (trainer overlap, venue overlap).
 
-## 5. WF3 — Approval Engine
+### C. MA — Schedule Approval (Workflow 2)
+Already partially scaffolded in `/strategic/index.tsx`. Add:
+- Detail view per pending schedule with conflict matrix.
+- Approve / Send-back actions writing `schedules.status` and `schedules.admin_feedback`.
+- Notify DH via `notifications` insert.
 
-- Server function `checkScheduleConflicts(schedule_id)`:
-  - **Trainer overlap** — same `trainer_registry_id`, same `date`, time window intersects.
-  - **Venue overlap** — same `venue_id`, same `date`, time window intersects.
-  - **Invalid qualification** — module's `qualifications[]` ∩ trainer's `trainer_skills.module_code` empty.
-  - **Excessive load** — trainer scheduled >8h on same day or >40h same week.
-  - Writes/updates `approval_queue` row with the four boolean flags.
-- Approval Queue widget on dashboard shows conflict chips per schedule.
-- Actions:
-  - **Approve** → `schedules.status='LIVE'`, audit log, realtime fan-out (Phase 6 hook stubbed for now).
-  - **Send Back** → dialog for `admin_feedback`, `schedules.status='FEEDBACK_REQUIRED'`.
-- Schedules table is mostly empty in v1 — we'll populate via WF6 (semester upload) in the next iteration; for now, conflict-detection logic is wired and tested against any manually-inserted rows.
+### D. Trainer — Mobile Session Workflow (Workflow 7)
+1. Build `/ground` shell (mobile-first).
+2. Today's schedule list filtered by `trainer_registry_id = current_trainer_registry_id()` and date=today.
+3. Session detail: mode toggle (Theory/Practical/Both), 30-minute gatekeeper using `global_config.attendance_window_minutes` + browser geolocation vs venue lat/lng + `geo_fence_radius`.
+4. Attendance roster (toggle present/absent per student) → submit to `attendance_logs`.
+5. Mandatory LO + Lesson Plan inputs → write to `session_logs`.
+6. End Session → status update + completion counter.
 
-## 6. Visual System (matching your mockup)
+### E. Realtime
+- Enable `supabase_realtime` publication for `schedules`, `session_logs`, `attendance_logs`, `notifications`.
+- Subscribe in DH live-monitoring view.
 
-- Sidebar: navy `#1e2a47`, white text, active item with subtle accent strip.
-- KPI cards: white surface, colored left border per metric (uses semantic tokens already in `src/styles.css`).
-- Tables: Shadcn `Table` + sortable headers, row hover, pagination at 25.
-- Empty states with icon + CTA on every list page.
-- Toasts via Sonner for all mutations.
+---
 
-## 7. Out of Scope (next iterations)
+## Technical notes
+- Use `supabaseAdmin` (in `src/integrations/supabase/client.server`) only inside MA-gated serverFns for `auth.admin.createUser`.
+- All new serverFns live in `*.functions.ts` files (client-importable) with `requireSupabaseAuth` + an MA/DH role check helper (`assertRole(context, 'MA')`).
+- Excel parsing via `xlsx` package; CSV via `papaparse`. Add with `bun add` before importing.
+- Bootstrap MA: `bootstrap_first_user_as_ma` trigger already exists — first signup becomes MA.
 
-| Iteration | Contents |
-|---|---|
-| **Next** | DH Operational Center, WF4 Trainer registry (with hidden_staff_id mapping), WF5 Student bulk upload, WF6 Semester upload + 16-week auto-slice |
-| **Then** | Trainer PWA: WF9 timetable, WF10 geo gate, WF11 attendance sheet, WF12 session completion |
-| **Then** | Phase 6 realtime fan-out, Phase 7 offline queue (IndexedDB + sync) |
-| **Then** | WF7 Quick Swap, WF8 Attendance Override (24h window), Phase 8 audit UI, Phase 9 reports |
+## Sequencing (suggested)
+1. Track 1 fix (small, ~6 file edits) — unblocks current build.
+2. Track 2A (MA can create real DH + Trainer accounts).
+3. Track 2B (DH setup + schedule upload).
+4. Track 2C (MA approval workflow polish).
+5. Track 2D (Trainer mobile flow).
+6. Track 2E (Realtime).
 
-## Technical Notes
-
-- Routes renamed by moving `src/routes/_authenticated/admin/` → `_authenticated/strategic/` and updating `createFileRoute` paths. `routeTree.gen.ts` regenerates on save.
-- All server functions follow `createServerFn().middleware([requireSupabaseAuth]).inputValidator(zod).handler(...)` pattern, with `attachSupabaseAuth` already wired in `src/start.ts`.
-- Excel parsing uses `xlsx` npm package (browser-side) — fits Worker constraints since we never parse on the server.
-- Realtime: subscribe in `useEffect` inside dashboard component, invalidate TanStack queries on `postgres_changes` events.
-- No new tables needed — schema from foundation already covers everything.
-
-Reply with **Approve** to start, or tell me what to adjust.
+## Out of scope for this iteration
+- Offline sync for the trainer app (`global_config.allow_offline_sync` flag exists but not wired).
+- Push/email notifications (in-app `notifications` table only).
+- Excel template file — user will provide later; we'll use a sensible default schema documented in-app.

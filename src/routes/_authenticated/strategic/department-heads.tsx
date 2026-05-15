@@ -21,32 +21,33 @@ export const Route = createFileRoute("/_authenticated/strategic/department-heads
 
 function DHPage() {
   const qc = useQueryClient();
-  const { authReady, hasSession, authHeaders } = useAuthSession();
+  const { authReady, hasSession } = useAuthSession();
   const canQuery = authReady && hasSession;
   const list = useServerFn(listDepartmentHeads);
   const create = useServerFn(createDepartmentHead);
   const revoke = useServerFn(revokeDepartmentHead);
   const listD = useServerFn(listDepartments);
-  const { data: rows, isLoading } = useQuery({ queryKey: ["dh"], queryFn: () => list({ headers: authHeaders }), enabled: canQuery, throwOnError: false });
-  const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => listD({ headers: authHeaders }), enabled: canQuery, throwOnError: false });
+  const { data: rows, isLoading } = useQuery({ queryKey: ["dh"], queryFn: () => list(), enabled: canQuery, throwOnError: false });
+  const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => listD(), enabled: canQuery, throwOnError: false });
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [deptId, setDeptId] = useState("");
+  const [password, setPassword] = useState("Head@123");
   const [credentials, setCredentials] = useState<{ email: string; temp_password: string } | null>(null);
 
   const createMut = useMutation({
-    mutationFn: () => create({ data: { email, full_name: fullName, department_id: deptId }, headers: authHeaders }),
+    mutationFn: () => create({ data: { email, full_name: fullName, department_id: deptId, password } }),
     onSuccess: (r) => {
       toast.success("Department Head created");
       setCredentials({ email: r.email, temp_password: r.temp_password });
-      setOpen(false); setEmail(""); setFullName(""); setDeptId("");
+      setOpen(false); setEmail(""); setFullName(""); setDeptId(""); setPassword("Head@123");
       qc.invalidateQueries({ queryKey: ["dh"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
   const revokeMut = useMutation({
-    mutationFn: (id: string) => revoke({ data: { id }, headers: authHeaders }),
+    mutationFn: (id: string) => revoke({ data: { id } }),
     onSuccess: () => { toast.success("Revoked"); qc.invalidateQueries({ queryKey: ["dh"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -65,6 +66,7 @@ function DHPage() {
             <div className="space-y-4">
               <div className="space-y-2"><Label>Full name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
               <div className="space-y-2"><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Password</Label><Input value={password} onChange={(e) => setPassword(e.target.value)} /></div>
               <div className="space-y-2">
                 <Label>Department</Label>
                 <Select value={deptId} onValueChange={setDeptId}>
@@ -77,7 +79,7 @@ function DHPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || createMut.isPending}>
+              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || !password || createMut.isPending}>
                 {createMut.isPending ? "Creating…" : "Create"}
               </Button>
             </DialogFooter>
