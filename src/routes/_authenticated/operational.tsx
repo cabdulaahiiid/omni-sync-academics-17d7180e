@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useMe } from "@/hooks/use-me";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -65,13 +65,13 @@ function OperationalShell() {
             const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
-              <Link key={item.to} to={item.to} onClick={() => setOpen(false)}
+              <a key={item.to} href={item.to} onClick={() => setOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
                   active ? "bg-white/10 text-white shadow-sm" : "text-white/70 hover:bg-white/5 hover:text-white",
                 )}>
                 <Icon className="h-4 w-4" /> {item.label}
-              </Link>
+              </a>
             );
           })}
         </nav>
