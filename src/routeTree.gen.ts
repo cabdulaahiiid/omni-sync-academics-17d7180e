@@ -32,6 +32,7 @@ import { Route as AuthenticatedStrategicDepartmentHeadsRouteImport } from './rou
 import { Route as AuthenticatedStrategicAuditRouteImport } from './routes/_authenticated/strategic/audit'
 import { Route as AuthenticatedStrategicApprovalsRouteImport } from './routes/_authenticated/strategic/approvals'
 import { Route as AuthenticatedOperationalLiveMonitorRouteImport } from './routes/_authenticated/operational/live-monitor'
+import { Route as AuthenticatedGroundScheduleIdRouteImport } from './routes/_authenticated/ground/$scheduleId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -165,6 +166,12 @@ const AuthenticatedOperationalLiveMonitorRoute =
     path: '/live-monitor',
     getParentRoute: () => AuthenticatedOperationalRoute,
   } as any)
+const AuthenticatedGroundScheduleIdRoute =
+  AuthenticatedGroundScheduleIdRouteImport.update({
+    id: '/$scheduleId',
+    path: '/$scheduleId',
+    getParentRoute: () => AuthenticatedGroundRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -172,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/ground': typeof AuthenticatedGroundRouteWithChildren
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
   '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
@@ -193,6 +201,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
   '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
@@ -219,6 +228,7 @@ export interface FileRoutesById {
   '/_authenticated/ground': typeof AuthenticatedGroundRouteWithChildren
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/_authenticated/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
   '/_authenticated/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/_authenticated/strategic/audit': typeof AuthenticatedStrategicAuditRoute
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/ground'
     | '/operational'
     | '/strategic'
+    | '/ground/$scheduleId'
     | '/operational/live-monitor'
     | '/strategic/approvals'
     | '/strategic/audit'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/ground/$scheduleId'
     | '/operational/live-monitor'
     | '/strategic/approvals'
     | '/strategic/audit'
@@ -291,6 +303,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ground'
     | '/_authenticated/operational'
     | '/_authenticated/strategic'
+    | '/_authenticated/ground/$scheduleId'
     | '/_authenticated/operational/live-monitor'
     | '/_authenticated/strategic/approvals'
     | '/_authenticated/strategic/audit'
@@ -479,14 +492,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperationalLiveMonitorRouteImport
       parentRoute: typeof AuthenticatedOperationalRoute
     }
+    '/_authenticated/ground/$scheduleId': {
+      id: '/_authenticated/ground/$scheduleId'
+      path: '/$scheduleId'
+      fullPath: '/ground/$scheduleId'
+      preLoaderRoute: typeof AuthenticatedGroundScheduleIdRouteImport
+      parentRoute: typeof AuthenticatedGroundRoute
+    }
   }
 }
 
 interface AuthenticatedGroundRouteChildren {
+  AuthenticatedGroundScheduleIdRoute: typeof AuthenticatedGroundScheduleIdRoute
   AuthenticatedGroundIndexRoute: typeof AuthenticatedGroundIndexRoute
 }
 
 const AuthenticatedGroundRouteChildren: AuthenticatedGroundRouteChildren = {
+  AuthenticatedGroundScheduleIdRoute: AuthenticatedGroundScheduleIdRoute,
   AuthenticatedGroundIndexRoute: AuthenticatedGroundIndexRoute,
 }
 
