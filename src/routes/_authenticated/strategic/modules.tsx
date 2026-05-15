@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listModules, bulkInsertModules } from "@/lib/modules.functions";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,9 +25,10 @@ type Row = {
 
 function ModulesPage() {
   const qc = useQueryClient();
+  const { authReady, hasSession } = useAuthSession();
   const list = useServerFn(listModules);
   const bulk = useServerFn(bulkInsertModules);
-  const { data: modules, isLoading } = useQuery({ queryKey: ["modules"], queryFn: () => list() });
+  const { data: modules, isLoading } = useQuery({ queryKey: ["modules"], queryFn: () => list(), enabled: authReady && hasSession, throwOnError: false });
   const [open, setOpen] = useState(false);
   const [parsed, setParsed] = useState<Row[]>([]);
   const [fileName, setFileName] = useState("");
