@@ -31,6 +31,7 @@ import { Route as AuthenticatedStrategicDepartmentsRouteImport } from './routes/
 import { Route as AuthenticatedStrategicDepartmentHeadsRouteImport } from './routes/_authenticated/strategic/department-heads'
 import { Route as AuthenticatedStrategicAuditRouteImport } from './routes/_authenticated/strategic/audit'
 import { Route as AuthenticatedStrategicApprovalsRouteImport } from './routes/_authenticated/strategic/approvals'
+import { Route as AuthenticatedOperationalMatrixRouteImport } from './routes/_authenticated/operational/matrix'
 import { Route as AuthenticatedOperationalLiveMonitorRouteImport } from './routes/_authenticated/operational/live-monitor'
 import { Route as AuthenticatedGroundScheduleIdRouteImport } from './routes/_authenticated/ground/$scheduleId'
 
@@ -160,6 +161,12 @@ const AuthenticatedStrategicApprovalsRoute =
     path: '/approvals',
     getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
+const AuthenticatedOperationalMatrixRoute =
+  AuthenticatedOperationalMatrixRouteImport.update({
+    id: '/matrix',
+    path: '/matrix',
+    getParentRoute: () => AuthenticatedOperationalRoute,
+  } as any)
 const AuthenticatedOperationalLiveMonitorRoute =
   AuthenticatedOperationalLiveMonitorRouteImport.update({
     id: '/live-monitor',
@@ -181,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/strategic': typeof AuthenticatedStrategicRouteWithChildren
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
+  '/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
   '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
@@ -203,6 +211,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
+  '/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
   '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
@@ -230,6 +239,7 @@ export interface FileRoutesById {
   '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/_authenticated/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
+  '/_authenticated/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
   '/_authenticated/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/_authenticated/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/_authenticated/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
@@ -257,6 +267,7 @@ export interface FileRouteTypes {
     | '/strategic'
     | '/ground/$scheduleId'
     | '/operational/live-monitor'
+    | '/operational/matrix'
     | '/strategic/approvals'
     | '/strategic/audit'
     | '/strategic/department-heads'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/ground/$scheduleId'
     | '/operational/live-monitor'
+    | '/operational/matrix'
     | '/strategic/approvals'
     | '/strategic/audit'
     | '/strategic/department-heads'
@@ -305,6 +317,7 @@ export interface FileRouteTypes {
     | '/_authenticated/strategic'
     | '/_authenticated/ground/$scheduleId'
     | '/_authenticated/operational/live-monitor'
+    | '/_authenticated/operational/matrix'
     | '/_authenticated/strategic/approvals'
     | '/_authenticated/strategic/audit'
     | '/_authenticated/strategic/department-heads'
@@ -485,6 +498,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategicApprovalsRouteImport
       parentRoute: typeof AuthenticatedStrategicRoute
     }
+    '/_authenticated/operational/matrix': {
+      id: '/_authenticated/operational/matrix'
+      path: '/matrix'
+      fullPath: '/operational/matrix'
+      preLoaderRoute: typeof AuthenticatedOperationalMatrixRouteImport
+      parentRoute: typeof AuthenticatedOperationalRoute
+    }
     '/_authenticated/operational/live-monitor': {
       id: '/_authenticated/operational/live-monitor'
       path: '/live-monitor'
@@ -517,6 +537,7 @@ const AuthenticatedGroundRouteWithChildren =
 
 interface AuthenticatedOperationalRouteChildren {
   AuthenticatedOperationalLiveMonitorRoute: typeof AuthenticatedOperationalLiveMonitorRoute
+  AuthenticatedOperationalMatrixRoute: typeof AuthenticatedOperationalMatrixRoute
   AuthenticatedOperationalIndexRoute: typeof AuthenticatedOperationalIndexRoute
 }
 
@@ -524,6 +545,7 @@ const AuthenticatedOperationalRouteChildren: AuthenticatedOperationalRouteChildr
   {
     AuthenticatedOperationalLiveMonitorRoute:
       AuthenticatedOperationalLiveMonitorRoute,
+    AuthenticatedOperationalMatrixRoute: AuthenticatedOperationalMatrixRoute,
     AuthenticatedOperationalIndexRoute: AuthenticatedOperationalIndexRoute,
   }
 
@@ -598,3 +620,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
