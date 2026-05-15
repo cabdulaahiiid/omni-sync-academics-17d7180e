@@ -1,16 +1,11 @@
 import { useOfflineSync } from "@/hooks/use-offline-sync";
-import { WifiOff, RefreshCw, AlertTriangle } from "lucide-react";
+import { RefreshCw, AlertTriangle } from "lucide-react";
 
 export function OfflineBanner() {
   const { online, pending, conflicts, syncing, flush } = useOfflineSync();
-  if (online && pending === 0 && conflicts === 0) return null;
+  if (pending === 0 && conflicts === 0) return null;
   return (
     <div className="fixed bottom-3 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-background/95 px-4 py-2 text-xs shadow-lg backdrop-blur">
-      {!online && (
-        <span className="flex items-center gap-1 text-muted-foreground">
-          <WifiOff className="h-3.5 w-3.5" /> Offline
-        </span>
-      )}
       {pending > 0 && (
         <span className="flex items-center gap-1 text-foreground">
           <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
