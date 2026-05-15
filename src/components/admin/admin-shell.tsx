@@ -21,7 +21,8 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean };
+const NAV: NavItem[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/departments", label: "Departments", icon: Building2 },
   { to: "/admin/trainers", label: "Trainers", icon: Users },
@@ -84,7 +85,7 @@ export function AdminShell() {
             return (
               <Link
                 key={item.to}
-                to={item.to}
+                to={item.to as string}
                 onClick={() => setOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
