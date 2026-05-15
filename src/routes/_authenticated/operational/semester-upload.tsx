@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { uploadSemesterSchedule } from "@/lib/dh-extras.functions";
-import { listSemesters } from "@/lib/data.functions";
+import { listSemesters } from "@/lib/ma.functions";
 import { useMe } from "@/hooks/use-me";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
