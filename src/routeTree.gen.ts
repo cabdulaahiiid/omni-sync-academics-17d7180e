@@ -18,10 +18,18 @@ import { Route as AuthenticatedGroundRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedStrategicIndexRouteImport } from './routes/_authenticated/strategic/index'
 import { Route as AuthenticatedOperationalIndexRouteImport } from './routes/_authenticated/operational/index'
 import { Route as AuthenticatedGroundIndexRouteImport } from './routes/_authenticated/ground/index'
+import { Route as AuthenticatedStrategicVenuesRouteImport } from './routes/_authenticated/strategic/venues'
+import { Route as AuthenticatedStrategicUsersRouteImport } from './routes/_authenticated/strategic/users'
 import { Route as AuthenticatedStrategicTrainersRouteImport } from './routes/_authenticated/strategic/trainers'
+import { Route as AuthenticatedStrategicStudentsRouteImport } from './routes/_authenticated/strategic/students'
+import { Route as AuthenticatedStrategicSettingsRouteImport } from './routes/_authenticated/strategic/settings'
+import { Route as AuthenticatedStrategicSemestersRouteImport } from './routes/_authenticated/strategic/semesters'
+import { Route as AuthenticatedStrategicSectionsRouteImport } from './routes/_authenticated/strategic/sections'
 import { Route as AuthenticatedStrategicModulesRouteImport } from './routes/_authenticated/strategic/modules'
+import { Route as AuthenticatedStrategicLevelsRouteImport } from './routes/_authenticated/strategic/levels'
 import { Route as AuthenticatedStrategicDepartmentsRouteImport } from './routes/_authenticated/strategic/departments'
 import { Route as AuthenticatedStrategicDepartmentHeadsRouteImport } from './routes/_authenticated/strategic/department-heads'
+import { Route as AuthenticatedStrategicAuditRouteImport } from './routes/_authenticated/strategic/audit'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -71,16 +79,58 @@ const AuthenticatedGroundIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedGroundRoute,
   } as any)
+const AuthenticatedStrategicVenuesRoute =
+  AuthenticatedStrategicVenuesRouteImport.update({
+    id: '/venues',
+    path: '/venues',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedStrategicUsersRoute =
+  AuthenticatedStrategicUsersRouteImport.update({
+    id: '/users',
+    path: '/users',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
 const AuthenticatedStrategicTrainersRoute =
   AuthenticatedStrategicTrainersRouteImport.update({
     id: '/trainers',
     path: '/trainers',
     getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
+const AuthenticatedStrategicStudentsRoute =
+  AuthenticatedStrategicStudentsRouteImport.update({
+    id: '/students',
+    path: '/students',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedStrategicSettingsRoute =
+  AuthenticatedStrategicSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedStrategicSemestersRoute =
+  AuthenticatedStrategicSemestersRouteImport.update({
+    id: '/semesters',
+    path: '/semesters',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedStrategicSectionsRoute =
+  AuthenticatedStrategicSectionsRouteImport.update({
+    id: '/sections',
+    path: '/sections',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
 const AuthenticatedStrategicModulesRoute =
   AuthenticatedStrategicModulesRouteImport.update({
     id: '/modules',
     path: '/modules',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedStrategicLevelsRoute =
+  AuthenticatedStrategicLevelsRouteImport.update({
+    id: '/levels',
+    path: '/levels',
     getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
 const AuthenticatedStrategicDepartmentsRoute =
@@ -95,6 +145,12 @@ const AuthenticatedStrategicDepartmentHeadsRoute =
     path: '/department-heads',
     getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
+const AuthenticatedStrategicAuditRoute =
+  AuthenticatedStrategicAuditRouteImport.update({
+    id: '/audit',
+    path: '/audit',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -102,10 +158,18 @@ export interface FileRoutesByFullPath {
   '/ground': typeof AuthenticatedGroundRouteWithChildren
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
   '/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
+  '/strategic/levels': typeof AuthenticatedStrategicLevelsRoute
   '/strategic/modules': typeof AuthenticatedStrategicModulesRoute
+  '/strategic/sections': typeof AuthenticatedStrategicSectionsRoute
+  '/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
+  '/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
+  '/strategic/students': typeof AuthenticatedStrategicStudentsRoute
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
+  '/strategic/users': typeof AuthenticatedStrategicUsersRoute
+  '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/ground/': typeof AuthenticatedGroundIndexRoute
   '/operational/': typeof AuthenticatedOperationalIndexRoute
   '/strategic/': typeof AuthenticatedStrategicIndexRoute
@@ -113,10 +177,18 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
   '/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
+  '/strategic/levels': typeof AuthenticatedStrategicLevelsRoute
   '/strategic/modules': typeof AuthenticatedStrategicModulesRoute
+  '/strategic/sections': typeof AuthenticatedStrategicSectionsRoute
+  '/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
+  '/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
+  '/strategic/students': typeof AuthenticatedStrategicStudentsRoute
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
+  '/strategic/users': typeof AuthenticatedStrategicUsersRoute
+  '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/ground': typeof AuthenticatedGroundIndexRoute
   '/operational': typeof AuthenticatedOperationalIndexRoute
   '/strategic': typeof AuthenticatedStrategicIndexRoute
@@ -129,10 +201,18 @@ export interface FileRoutesById {
   '/_authenticated/ground': typeof AuthenticatedGroundRouteWithChildren
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/_authenticated/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/_authenticated/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
   '/_authenticated/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
+  '/_authenticated/strategic/levels': typeof AuthenticatedStrategicLevelsRoute
   '/_authenticated/strategic/modules': typeof AuthenticatedStrategicModulesRoute
+  '/_authenticated/strategic/sections': typeof AuthenticatedStrategicSectionsRoute
+  '/_authenticated/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
+  '/_authenticated/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
+  '/_authenticated/strategic/students': typeof AuthenticatedStrategicStudentsRoute
   '/_authenticated/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
+  '/_authenticated/strategic/users': typeof AuthenticatedStrategicUsersRoute
+  '/_authenticated/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/_authenticated/ground/': typeof AuthenticatedGroundIndexRoute
   '/_authenticated/operational/': typeof AuthenticatedOperationalIndexRoute
   '/_authenticated/strategic/': typeof AuthenticatedStrategicIndexRoute
@@ -145,10 +225,18 @@ export interface FileRouteTypes {
     | '/ground'
     | '/operational'
     | '/strategic'
+    | '/strategic/audit'
     | '/strategic/department-heads'
     | '/strategic/departments'
+    | '/strategic/levels'
     | '/strategic/modules'
+    | '/strategic/sections'
+    | '/strategic/semesters'
+    | '/strategic/settings'
+    | '/strategic/students'
     | '/strategic/trainers'
+    | '/strategic/users'
+    | '/strategic/venues'
     | '/ground/'
     | '/operational/'
     | '/strategic/'
@@ -156,10 +244,18 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/strategic/audit'
     | '/strategic/department-heads'
     | '/strategic/departments'
+    | '/strategic/levels'
     | '/strategic/modules'
+    | '/strategic/sections'
+    | '/strategic/semesters'
+    | '/strategic/settings'
+    | '/strategic/students'
     | '/strategic/trainers'
+    | '/strategic/users'
+    | '/strategic/venues'
     | '/ground'
     | '/operational'
     | '/strategic'
@@ -171,10 +267,18 @@ export interface FileRouteTypes {
     | '/_authenticated/ground'
     | '/_authenticated/operational'
     | '/_authenticated/strategic'
+    | '/_authenticated/strategic/audit'
     | '/_authenticated/strategic/department-heads'
     | '/_authenticated/strategic/departments'
+    | '/_authenticated/strategic/levels'
     | '/_authenticated/strategic/modules'
+    | '/_authenticated/strategic/sections'
+    | '/_authenticated/strategic/semesters'
+    | '/_authenticated/strategic/settings'
+    | '/_authenticated/strategic/students'
     | '/_authenticated/strategic/trainers'
+    | '/_authenticated/strategic/users'
+    | '/_authenticated/strategic/venues'
     | '/_authenticated/ground/'
     | '/_authenticated/operational/'
     | '/_authenticated/strategic/'
@@ -251,6 +355,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroundIndexRouteImport
       parentRoute: typeof AuthenticatedGroundRoute
     }
+    '/_authenticated/strategic/venues': {
+      id: '/_authenticated/strategic/venues'
+      path: '/venues'
+      fullPath: '/strategic/venues'
+      preLoaderRoute: typeof AuthenticatedStrategicVenuesRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
+    '/_authenticated/strategic/users': {
+      id: '/_authenticated/strategic/users'
+      path: '/users'
+      fullPath: '/strategic/users'
+      preLoaderRoute: typeof AuthenticatedStrategicUsersRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
     '/_authenticated/strategic/trainers': {
       id: '/_authenticated/strategic/trainers'
       path: '/trainers'
@@ -258,11 +376,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategicTrainersRouteImport
       parentRoute: typeof AuthenticatedStrategicRoute
     }
+    '/_authenticated/strategic/students': {
+      id: '/_authenticated/strategic/students'
+      path: '/students'
+      fullPath: '/strategic/students'
+      preLoaderRoute: typeof AuthenticatedStrategicStudentsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
+    '/_authenticated/strategic/settings': {
+      id: '/_authenticated/strategic/settings'
+      path: '/settings'
+      fullPath: '/strategic/settings'
+      preLoaderRoute: typeof AuthenticatedStrategicSettingsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
+    '/_authenticated/strategic/semesters': {
+      id: '/_authenticated/strategic/semesters'
+      path: '/semesters'
+      fullPath: '/strategic/semesters'
+      preLoaderRoute: typeof AuthenticatedStrategicSemestersRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
+    '/_authenticated/strategic/sections': {
+      id: '/_authenticated/strategic/sections'
+      path: '/sections'
+      fullPath: '/strategic/sections'
+      preLoaderRoute: typeof AuthenticatedStrategicSectionsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
     '/_authenticated/strategic/modules': {
       id: '/_authenticated/strategic/modules'
       path: '/modules'
       fullPath: '/strategic/modules'
       preLoaderRoute: typeof AuthenticatedStrategicModulesRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
+    '/_authenticated/strategic/levels': {
+      id: '/_authenticated/strategic/levels'
+      path: '/levels'
+      fullPath: '/strategic/levels'
+      preLoaderRoute: typeof AuthenticatedStrategicLevelsRouteImport
       parentRoute: typeof AuthenticatedStrategicRoute
     }
     '/_authenticated/strategic/departments': {
@@ -277,6 +430,13 @@ declare module '@tanstack/react-router' {
       path: '/department-heads'
       fullPath: '/strategic/department-heads'
       preLoaderRoute: typeof AuthenticatedStrategicDepartmentHeadsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
+    '/_authenticated/strategic/audit': {
+      id: '/_authenticated/strategic/audit'
+      path: '/audit'
+      fullPath: '/strategic/audit'
+      preLoaderRoute: typeof AuthenticatedStrategicAuditRouteImport
       parentRoute: typeof AuthenticatedStrategicRoute
     }
   }
@@ -308,21 +468,37 @@ const AuthenticatedOperationalRouteWithChildren =
   )
 
 interface AuthenticatedStrategicRouteChildren {
+  AuthenticatedStrategicAuditRoute: typeof AuthenticatedStrategicAuditRoute
   AuthenticatedStrategicDepartmentHeadsRoute: typeof AuthenticatedStrategicDepartmentHeadsRoute
   AuthenticatedStrategicDepartmentsRoute: typeof AuthenticatedStrategicDepartmentsRoute
+  AuthenticatedStrategicLevelsRoute: typeof AuthenticatedStrategicLevelsRoute
   AuthenticatedStrategicModulesRoute: typeof AuthenticatedStrategicModulesRoute
+  AuthenticatedStrategicSectionsRoute: typeof AuthenticatedStrategicSectionsRoute
+  AuthenticatedStrategicSemestersRoute: typeof AuthenticatedStrategicSemestersRoute
+  AuthenticatedStrategicSettingsRoute: typeof AuthenticatedStrategicSettingsRoute
+  AuthenticatedStrategicStudentsRoute: typeof AuthenticatedStrategicStudentsRoute
   AuthenticatedStrategicTrainersRoute: typeof AuthenticatedStrategicTrainersRoute
+  AuthenticatedStrategicUsersRoute: typeof AuthenticatedStrategicUsersRoute
+  AuthenticatedStrategicVenuesRoute: typeof AuthenticatedStrategicVenuesRoute
   AuthenticatedStrategicIndexRoute: typeof AuthenticatedStrategicIndexRoute
 }
 
 const AuthenticatedStrategicRouteChildren: AuthenticatedStrategicRouteChildren =
   {
+    AuthenticatedStrategicAuditRoute: AuthenticatedStrategicAuditRoute,
     AuthenticatedStrategicDepartmentHeadsRoute:
       AuthenticatedStrategicDepartmentHeadsRoute,
     AuthenticatedStrategicDepartmentsRoute:
       AuthenticatedStrategicDepartmentsRoute,
+    AuthenticatedStrategicLevelsRoute: AuthenticatedStrategicLevelsRoute,
     AuthenticatedStrategicModulesRoute: AuthenticatedStrategicModulesRoute,
+    AuthenticatedStrategicSectionsRoute: AuthenticatedStrategicSectionsRoute,
+    AuthenticatedStrategicSemestersRoute: AuthenticatedStrategicSemestersRoute,
+    AuthenticatedStrategicSettingsRoute: AuthenticatedStrategicSettingsRoute,
+    AuthenticatedStrategicStudentsRoute: AuthenticatedStrategicStudentsRoute,
     AuthenticatedStrategicTrainersRoute: AuthenticatedStrategicTrainersRoute,
+    AuthenticatedStrategicUsersRoute: AuthenticatedStrategicUsersRoute,
+    AuthenticatedStrategicVenuesRoute: AuthenticatedStrategicVenuesRoute,
     AuthenticatedStrategicIndexRoute: AuthenticatedStrategicIndexRoute,
   }
 
