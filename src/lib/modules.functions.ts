@@ -41,7 +41,12 @@ export const bulkInsertModules = createServerFn({ method: "POST" })
     const dMap = new Map((depts ?? []).map((d) => [d.name.toLowerCase(), d.id]));
     const lMap = new Map((levels ?? []).map((l) => [`${l.department_id}::${l.name}`, l.id]));
     const errors: { row: number; reason: string }[] = [];
-    const payload: Record<string, unknown>[] = [];
+    type ModuleInsert = {
+      code: string; name: string; department_id: string; level_id: string;
+      type: "Theory" | "Practical" | "Both"; qualifications: string[];
+      total_hours: number; total_sessions: number;
+    };
+    const payload: ModuleInsert[] = [];
     data.rows.forEach((r, idx) => {
       const dept_id = dMap.get(r.department_name.toLowerCase());
       if (!dept_id) {
