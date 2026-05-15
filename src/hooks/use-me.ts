@@ -4,11 +4,11 @@ import { getMe } from "@/lib/data.functions";
 import { useAuthSession } from "@/hooks/use-auth-session";
 
 export function useMe() {
-  const { authReady, hasSession } = useAuthSession();
+  const { authReady, hasSession, authHeaders } = useAuthSession();
   const fn = useServerFn(getMe);
   const query = useQuery({
     queryKey: ["me"],
-    queryFn: () => fn(),
+    queryFn: () => fn({ headers: authHeaders }),
     enabled: authReady && hasSession,
     retry: false,
     throwOnError: false,
