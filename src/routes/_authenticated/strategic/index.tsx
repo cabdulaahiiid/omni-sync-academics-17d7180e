@@ -39,11 +39,8 @@ function StrategicDashboard() {
   const { data: comparison } = useQuery({ queryKey: ["dept-comparison"], queryFn: () => dept(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
   const { data: overrideRows } = useQuery({ queryKey: ["overrides"], queryFn: () => overrides(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
 
-  if (meLoading) {
-    return <div className="flex min-h-64 items-center justify-center text-muted-foreground">Loading…</div>;
-  }
-
   useEffect(() => {
+    if (!canQuery) return;
     const ch = supabase.channel("strategic-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "audit_logs" }, () => {
         qc.invalidateQueries({ queryKey: ["audit-feed"] });
@@ -54,7 +51,7 @@ function StrategicDashboard() {
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [qc]);
+  }, [canQuery, qc]);
 
   const [feedbackTarget, setFeedbackTarget] = useState<string | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
@@ -69,6 +66,10 @@ function StrategicDashboard() {
     onSuccess: () => { toast.success("Sent back for correction"); setFeedbackTarget(null); setFeedbackText(""); qc.invalidateQueries({ queryKey: ["approval-queue"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  if (meLoading) {
+    return <div className="flex min-h-64 items-center justify-center text-muted-foreground">Loading…</div>;
+  }
 
   const cards = [
     { label: "Active Sessions", value: kpi?.active_sessions ?? 0, icon: Activity, color: "stat-blue" },
