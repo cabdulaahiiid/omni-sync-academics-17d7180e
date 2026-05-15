@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listDepartments, upsertDepartment, deleteDepartment } from "@/lib/data.functions";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,10 +24,11 @@ type Dept = { id: string; name: string; description: string | null; status: "ACT
 
 function DepartmentsPage() {
   const qc = useQueryClient();
+  const { authReady, hasSession } = useAuthSession();
   const list = useServerFn(listDepartments);
   const upsert = useServerFn(upsertDepartment);
   const del = useServerFn(deleteDepartment);
-  const { data: rows, isLoading } = useQuery({ queryKey: ["departments"], queryFn: () => list() });
+  const { data: rows, isLoading } = useQuery({ queryKey: ["departments"], queryFn: () => list(), enabled: authReady && hasSession, throwOnError: false });
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Dept | null>(null);
   const [name, setName] = useState("");
