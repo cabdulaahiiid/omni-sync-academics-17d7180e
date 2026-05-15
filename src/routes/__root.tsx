@@ -80,10 +80,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Institutional ERP for TVET — schedules, attendance, and operations." },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "TVET OMNI-SYNC ERP" },
-      { property: "og:description", content: "Institutional ERP for TVET." },
+      { property: "og:description", content: "Institutional ERP for TVET — schedules, attendance, and operations." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "TVET OMNI-SYNC ERP" },
+      { name: "twitter:description", content: "Institutional ERP for TVET — schedules, attendance, and operations." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0595aa0e-764f-49e4-9272-4102034899bf/id-preview-e7812ac0--16267a41-18fb-4638-917c-8e52fc4e5d2b.lovable.app-1778871380612.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0595aa0e-764f-49e4-9272-4102034899bf/id-preview-e7812ac0--16267a41-18fb-4638-917c-8e52fc4e5d2b.lovable.app-1778871380612.png" },
     ],
     links: [
       {
