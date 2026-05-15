@@ -98,14 +98,14 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  /* Dark navy sidebar to match the mockup */
-  --sidebar: oklch(0.22 0.05 260);
+  /* Deep navy sidebar (#0A192F) */
+  --sidebar: oklch(0.17 0.04 255);
   --sidebar-foreground: oklch(0.95 0.01 250);
-  --sidebar-primary: oklch(0.55 0.18 255);
+  --sidebar-primary: oklch(0.6 0.18 250);
   --sidebar-primary-foreground: oklch(0.99 0.005 250);
-  --sidebar-accent: oklch(0.28 0.06 260);
+  --sidebar-accent: oklch(0.24 0.05 258);
   --sidebar-accent-foreground: oklch(0.99 0.005 250);
-  --sidebar-border: oklch(0.3 0.05 260);
+  --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.55 0.18 255);
 
   /* Stat card semantic tokens (mockup blue/green/purple/orange) */
@@ -117,6 +117,14 @@
   --stat-purple-fg: oklch(0.99 0 0);
   --stat-orange: oklch(0.7 0.18 50);
   --stat-orange-fg: oklch(0.99 0 0);
+
+  /* Feedback colors from reference: emerald / amber / rose */
+  --emerald: oklch(0.7 0.16 160);
+  --emerald-fg: oklch(0.99 0 0);
+  --amber: oklch(0.78 0.16 75);
+  --amber-fg: oklch(0.2 0.05 60);
+  --rose: oklch(0.68 0.2 15);
+  --rose-fg: oklch(0.99 0 0);
 }
 
 .dark {
