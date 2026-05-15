@@ -1,95 +1,100 @@
+# Iteration Plan — Phase 2 + Phase 3 (Master Admin)
 
-# TVET OMNI-SYNC ERP — Foundation v1
+Following your mockup as the visual target. Trainer PWA, DH operational portal, real-time sync, offline queue, and analytics ship in later iterations.
 
-Scope: Backend foundation, role-based auth (MA/DH/T), and the **Master Admin portal** with CRUD for all master data. Scheduling engine, trainer PWA, attendance, and approvals come in later phases.
+## 1. Phase 2 — Auth & Role Routing
 
----
+- Rename `/admin` → `/strategic`, `/dh` → `/operational`, `/trainer` → `/ground`. Sidebar links and `_authenticated` guards updated accordingly.
+- Update `/login` page:
+  - Header: "TVET OMNI-SYNC ERP" + tagline "Institutional Secure Portal"
+  - On successful sign-in, fetch `user_roles.role` and redirect: MA→`/strategic`, DH→`/operational`, T→`/ground`.
+  - Show "Invalid credentials" on auth error, "No role assigned — contact administrator" if user has no role row.
+- Keep first-signup→MA bootstrap trigger from foundation.
 
-## 1. Backend (Lovable Cloud / Postgres)
+## 2. Phase 3 — Strategic Command Center (`/strategic`)
 
-Enable Lovable Cloud and create all 20 tables from your spec, mapped from Firestore to Postgres:
-- `AutoID` → `uuid PRIMARY KEY DEFAULT gen_random_uuid()`
-- `Reference(X)` → FK with `ON DELETE` rules
-- `Enum(...)` → Postgres `ENUM` types
-- `JSON` → `jsonb`
-- `Array` → `text[]`
-- `Timestamp` → `timestamptz DEFAULT now()`
+Dashboard matches your mockup (navy sidebar, white surface, colored stat cards):
 
-**Roles** stored in a separate `user_roles` table (NOT on `users`) with an `app_role` enum (`MA`, `DH`, `T`) and a `SECURITY DEFINER has_role()` function — avoids RLS recursion and privilege escalation.
+**KPI cards (top row, 5 across, responsive grid):**
+- Active Sessions — count of `schedules` where `status='LIVE'` and today
+- Geo Compliance % — `session_logs.geo_verified=true / total today`
+- Trainer Punctuality % — sessions started within attendance_window
+- Attendance % — present logs / total logs (last 7d)
+- Pending Approvals — `schedules.status='PENDING'` count
 
-**Hidden trainer ID**: `trainer_registry.hidden_staff_id uuid DEFAULT gen_random_uuid()` — never exposed to DH/Trainer clients via column-level RLS / restricted views.
+**Widgets (2-column below KPIs):**
+- Approval Queue — list of pending schedules with conflict badges (from `approval_queue` table flags), Approve / Send Back actions
+- Live Activity Feed — last 20 `audit_logs` entries with actor/action/entity
+- Department Comparison — bar chart (Recharts) of per-department attendance rates
+- Override Logs — last 10 `attendance_overrides` with reason
 
-**Profiles table** linked to `auth.users` with auto-create trigger (`handle_new_user`) populating `full_name`, `email`, default role.
+All data fetched via `createServerFn` + `requireSupabaseAuth`, wrapped in TanStack Query with 30s `staleTime`. Realtime subscription on `audit_logs` and `schedules` to invalidate queries (Supabase Realtime, replacing Firestore listeners).
 
-## 2. RLS Policies (every table)
+## 3. WF1 — Department & DH Management
 
-- **MA**: full read/write everywhere via `has_role(auth.uid(), 'MA')`.
-- **DH**: read/write only rows where `department_id` matches their `department_heads.department_id`.
-- **T**: read only their own schedules / attendance; write only own session logs.
-- `audit_logs`, `trainer_registry.hidden_staff_id`: MA-only.
-- `global_config`: MA write, all roles read.
+- `/strategic/departments` — already built; add status badge + soft-delete (status=ARCHIVED).
+- `/strategic/department-heads` — new page:
+  - List existing DH assignments (join `department_heads` × `profiles` × `departments`).
+  - "Create DH Account" dialog: email + full_name + department dropdown. Server fn:
+    1. Calls `supabaseAdmin.auth.admin.createUser({ email, password: temp, email_confirm: true })`
+    2. Inserts into `user_roles` (role='DH'), `profiles` (department_id), `department_heads`.
+    3. Returns the temp password to display once (admin shares with DH).
+  - Reassign / revoke buttons.
+  - Every mutation writes an `audit_logs` row.
 
-## 3. Auth
+## 4. WF2 — Module Registry (bulk Excel upload)
 
-- Email/password sign-in (Lovable Cloud native).
-- Login page → routes user to `/admin`, `/dh`, or `/trainer` based on role.
-- `_authenticated` layout + per-role guards (`_admin`, `_dh`, `_trainer`).
-- Session listener at root (invalidates queries on auth change).
+- `/strategic/modules` — list view with filters by department/level/status.
+- "Bulk Upload" dialog:
+  - Accept `.xlsx` via `<input type="file">`.
+  - Parse client-side with `xlsx` (SheetJS) — defer server parsing.
+  - Expected columns (sensible default; documented in dialog + downloadable template button):
+    `code | name | department_name | level_name | type | qualifications | total_hours | total_sessions`
+    - `qualifications` = comma-separated string → `text[]`
+    - `type` ∈ `Theory | Practical | Both`
+    - `level_name` resolved against `levels` (per department), `department_name` against `departments`.
+  - Preview table with row-level validation (red badge for unresolved FKs, duplicates).
+  - "Confirm Upload" calls server fn that bulk-inserts valid rows in a single transaction; returns `{ inserted, skipped, errors[] }`.
+- Manual "Add Module" form retained.
+- Audit log entry per upload batch.
 
-## 4. Master Admin Portal (built in v1)
+## 5. WF3 — Approval Engine
 
-Layout matches mockup: dark navy sidebar (logo + profile + nav), top bar with notifications + avatar, content area with colored stat cards.
+- Server function `checkScheduleConflicts(schedule_id)`:
+  - **Trainer overlap** — same `trainer_registry_id`, same `date`, time window intersects.
+  - **Venue overlap** — same `venue_id`, same `date`, time window intersects.
+  - **Invalid qualification** — module's `qualifications[]` ∩ trainer's `trainer_skills.module_code` empty.
+  - **Excessive load** — trainer scheduled >8h on same day or >40h same week.
+  - Writes/updates `approval_queue` row with the four boolean flags.
+- Approval Queue widget on dashboard shows conflict chips per schedule.
+- Actions:
+  - **Approve** → `schedules.status='LIVE'`, audit log, realtime fan-out (Phase 6 hook stubbed for now).
+  - **Send Back** → dialog for `admin_feedback`, `schedules.status='FEEDBACK_REQUIRED'`.
+- Schedules table is mostly empty in v1 — we'll populate via WF6 (semester upload) in the next iteration; for now, conflict-detection logic is wired and tested against any manually-inserted rows.
 
-**Pages:**
-- `/admin` — Dashboard: stat cards (Departments, Trainers, Students, Active Schedules), Schedule Change Requests preview, Attendance/Punctuality charts (Recharts).
-- `/admin/users` — User Management: create users, assign role (MA/DH/T), link to department / trainer registry.
-- `/admin/departments` — CRUD departments + suspend/activate.
-- `/admin/department-heads` — Assign DH users to departments.
-- `/admin/trainers` — TrainerRegistry CRUD, qualifications, skills (TrainerSkills sub-table), suspend/activate. Hidden staff ID visible only to MA.
-- `/admin/levels` — CRUD Levels (I–V) per department.
-- `/admin/sections` — CRUD Sections per level.
-- `/admin/students` — CRUD Students with level/section/department.
-- `/admin/modules` — CRUD Modules with code, type, qualifications, hours/sessions.
-- `/admin/venues` — CRUD Venues with lat/lng + geo radius (map-free numeric inputs in v1).
-- `/admin/semesters` — SemesterRegistry CRUD with status.
-- `/admin/settings` — GlobalConfig (geo-fence radius, attendance window, offline sync toggle).
-- `/admin/audit-logs` — Read-only audit log viewer with filter by actor/entity/date.
+## 6. Visual System (matching your mockup)
 
-**Patterns used everywhere:**
-- TanStack Query (`ensureQueryData` + `useSuspenseQuery`) backed by `createServerFn` + `requireSupabaseAuth`.
-- Shadcn Table, Dialog, Form (react-hook-form + zod), Sonner toasts.
-- Audit-log helper called from every mutation server fn (writes `before_state` / `after_state` to `audit_logs`).
+- Sidebar: navy `#1e2a47`, white text, active item with subtle accent strip.
+- KPI cards: white surface, colored left border per metric (uses semantic tokens already in `src/styles.css`).
+- Tables: Shadcn `Table` + sortable headers, row hover, pagination at 25.
+- Empty states with icon + CTA on every list page.
+- Toasts via Sonner for all mutations.
 
-## 5. Stub portals (placeholders for next phase)
+## 7. Out of Scope (next iterations)
 
-- `/dh` — empty Department Head shell with sidebar, "Coming next" panel.
-- `/trainer` — mobile-optimized shell, "Coming next" panel.
+| Iteration | Contents |
+|---|---|
+| **Next** | DH Operational Center, WF4 Trainer registry (with hidden_staff_id mapping), WF5 Student bulk upload, WF6 Semester upload + 16-week auto-slice |
+| **Then** | Trainer PWA: WF9 timetable, WF10 geo gate, WF11 attendance sheet, WF12 session completion |
+| **Then** | Phase 6 realtime fan-out, Phase 7 offline queue (IndexedDB + sync) |
+| **Then** | WF7 Quick Swap, WF8 Attendance Override (24h window), Phase 8 audit UI, Phase 9 reports |
 
-So role-routing works end-to-end now and we just fill these in next.
+## Technical Notes
 
-## 6. Design system
+- Routes renamed by moving `src/routes/_authenticated/admin/` → `_authenticated/strategic/` and updating `createFileRoute` paths. `routeTree.gen.ts` regenerates on save.
+- All server functions follow `createServerFn().middleware([requireSupabaseAuth]).inputValidator(zod).handler(...)` pattern, with `attachSupabaseAuth` already wired in `src/start.ts`.
+- Excel parsing uses `xlsx` npm package (browser-side) — fits Worker constraints since we never parse on the server.
+- Realtime: subscribe in `useEffect` inside dashboard component, invalidate TanStack queries on `postgres_changes` events.
+- No new tables needed — schema from foundation already covers everything.
 
-- Navy primary (`oklch` deep blue, ~#1e2a47), white surface, muted slate.
-- Stat-card variants: `blue`, `green`, `purple`, `orange` — defined as semantic tokens in `src/styles.css`, never inline classes.
-- Inter font, rounded-lg radius, subtle shadows.
-- Sidebar: dark navy with white text, primary-tinted active state.
-
----
-
-## Technical notes
-
-- TanStack Start file-based routes; `_authenticated/_admin.tsx` layout with `beforeLoad` redirect.
-- Server fns live in `src/lib/*.functions.ts`; admin-elevated helpers in `*.server.ts`.
-- All enums created as Postgres types in the migration.
-- Foreign keys use `ON DELETE RESTRICT` for reference data, `CASCADE` only for child rows (e.g. `trainer_skills`).
-- `gen_random_uuid()` for hidden_staff_id; never sent to non-MA clients.
-- No PWA / offline / geo-check in v1 — those land with the Trainer portal phase.
-
-## Out of scope for v1 (next phases)
-
-1. DH schedule builder + conflict detection engine + approval queue.
-2. Trainer PWA with geo-fenced check-in, attendance window enforcement, offline sync.
-3. AttendanceOverrides workflow, LeaveRequests workflow, Notifications delivery.
-4. Real-time sync subscriptions, analytics dashboards beyond the basic counts.
-
-Approve this and I'll build it.
+Reply with **Approve** to start, or tell me what to adjust.

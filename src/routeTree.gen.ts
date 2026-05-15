@@ -12,19 +12,24 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
-import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
-import { Route as AuthenticatedAdminVenuesRouteImport } from './routes/_authenticated/admin/venues'
-import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
-import { Route as AuthenticatedAdminTrainersRouteImport } from './routes/_authenticated/admin/trainers'
-import { Route as AuthenticatedAdminStudentsRouteImport } from './routes/_authenticated/admin/students'
-import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin/settings'
-import { Route as AuthenticatedAdminSemestersRouteImport } from './routes/_authenticated/admin/semesters'
-import { Route as AuthenticatedAdminSectionsRouteImport } from './routes/_authenticated/admin/sections'
-import { Route as AuthenticatedAdminModulesRouteImport } from './routes/_authenticated/admin/modules'
-import { Route as AuthenticatedAdminLevelsRouteImport } from './routes/_authenticated/admin/levels'
-import { Route as AuthenticatedAdminDepartmentsRouteImport } from './routes/_authenticated/admin/departments'
-import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin/audit'
+import { Route as AuthenticatedStrategicRouteImport } from './routes/_authenticated/strategic'
+import { Route as AuthenticatedOperationalRouteImport } from './routes/_authenticated/operational'
+import { Route as AuthenticatedGroundRouteImport } from './routes/_authenticated/ground'
+import { Route as AuthenticatedStrategicIndexRouteImport } from './routes/_authenticated/strategic/index'
+import { Route as AuthenticatedOperationalIndexRouteImport } from './routes/_authenticated/operational/index'
+import { Route as AuthenticatedGroundIndexRouteImport } from './routes/_authenticated/ground/index'
+import { Route as AuthenticatedStrategicVenuesRouteImport } from './routes/_authenticated/strategic/venues'
+import { Route as AuthenticatedStrategicUsersRouteImport } from './routes/_authenticated/strategic/users'
+import { Route as AuthenticatedStrategicTrainersRouteImport } from './routes/_authenticated/strategic/trainers'
+import { Route as AuthenticatedStrategicStudentsRouteImport } from './routes/_authenticated/strategic/students'
+import { Route as AuthenticatedStrategicSettingsRouteImport } from './routes/_authenticated/strategic/settings'
+import { Route as AuthenticatedStrategicSemestersRouteImport } from './routes/_authenticated/strategic/semesters'
+import { Route as AuthenticatedStrategicSectionsRouteImport } from './routes/_authenticated/strategic/sections'
+import { Route as AuthenticatedStrategicModulesRouteImport } from './routes/_authenticated/strategic/modules'
+import { Route as AuthenticatedStrategicLevelsRouteImport } from './routes/_authenticated/strategic/levels'
+import { Route as AuthenticatedStrategicDepartmentsRouteImport } from './routes/_authenticated/strategic/departments'
+import { Route as AuthenticatedStrategicDepartmentHeadsRouteImport } from './routes/_authenticated/strategic/department-heads'
+import { Route as AuthenticatedStrategicAuditRouteImport } from './routes/_authenticated/strategic/audit'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -40,185 +45,243 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AuthenticatedStrategicRoute = AuthenticatedStrategicRouteImport.update({
+  id: '/strategic',
+  path: '/strategic',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthenticatedAdminRoute,
+const AuthenticatedOperationalRoute =
+  AuthenticatedOperationalRouteImport.update({
+    id: '/operational',
+    path: '/operational',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedGroundRoute = AuthenticatedGroundRouteImport.update({
+  id: '/ground',
+  path: '/ground',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedAdminVenuesRoute =
-  AuthenticatedAdminVenuesRouteImport.update({
+const AuthenticatedStrategicIndexRoute =
+  AuthenticatedStrategicIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedOperationalIndexRoute =
+  AuthenticatedOperationalIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedOperationalRoute,
+  } as any)
+const AuthenticatedGroundIndexRoute =
+  AuthenticatedGroundIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedGroundRoute,
+  } as any)
+const AuthenticatedStrategicVenuesRoute =
+  AuthenticatedStrategicVenuesRouteImport.update({
     id: '/venues',
     path: '/venues',
-    getParentRoute: () => AuthenticatedAdminRoute,
+    getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
-const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AuthenticatedAdminRoute,
-} as any)
-const AuthenticatedAdminTrainersRoute =
-  AuthenticatedAdminTrainersRouteImport.update({
+const AuthenticatedStrategicUsersRoute =
+  AuthenticatedStrategicUsersRouteImport.update({
+    id: '/users',
+    path: '/users',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedStrategicTrainersRoute =
+  AuthenticatedStrategicTrainersRouteImport.update({
     id: '/trainers',
     path: '/trainers',
-    getParentRoute: () => AuthenticatedAdminRoute,
+    getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
-const AuthenticatedAdminStudentsRoute =
-  AuthenticatedAdminStudentsRouteImport.update({
+const AuthenticatedStrategicStudentsRoute =
+  AuthenticatedStrategicStudentsRouteImport.update({
     id: '/students',
     path: '/students',
-    getParentRoute: () => AuthenticatedAdminRoute,
+    getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
-const AuthenticatedAdminSettingsRoute =
-  AuthenticatedAdminSettingsRouteImport.update({
+const AuthenticatedStrategicSettingsRoute =
+  AuthenticatedStrategicSettingsRouteImport.update({
     id: '/settings',
     path: '/settings',
-    getParentRoute: () => AuthenticatedAdminRoute,
+    getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
-const AuthenticatedAdminSemestersRoute =
-  AuthenticatedAdminSemestersRouteImport.update({
+const AuthenticatedStrategicSemestersRoute =
+  AuthenticatedStrategicSemestersRouteImport.update({
     id: '/semesters',
     path: '/semesters',
-    getParentRoute: () => AuthenticatedAdminRoute,
+    getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
-const AuthenticatedAdminSectionsRoute =
-  AuthenticatedAdminSectionsRouteImport.update({
+const AuthenticatedStrategicSectionsRoute =
+  AuthenticatedStrategicSectionsRouteImport.update({
     id: '/sections',
     path: '/sections',
-    getParentRoute: () => AuthenticatedAdminRoute,
+    getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
-const AuthenticatedAdminModulesRoute =
-  AuthenticatedAdminModulesRouteImport.update({
+const AuthenticatedStrategicModulesRoute =
+  AuthenticatedStrategicModulesRouteImport.update({
     id: '/modules',
     path: '/modules',
-    getParentRoute: () => AuthenticatedAdminRoute,
+    getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
-const AuthenticatedAdminLevelsRoute =
-  AuthenticatedAdminLevelsRouteImport.update({
+const AuthenticatedStrategicLevelsRoute =
+  AuthenticatedStrategicLevelsRouteImport.update({
     id: '/levels',
     path: '/levels',
-    getParentRoute: () => AuthenticatedAdminRoute,
+    getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
-const AuthenticatedAdminDepartmentsRoute =
-  AuthenticatedAdminDepartmentsRouteImport.update({
+const AuthenticatedStrategicDepartmentsRoute =
+  AuthenticatedStrategicDepartmentsRouteImport.update({
     id: '/departments',
     path: '/departments',
-    getParentRoute: () => AuthenticatedAdminRoute,
+    getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
-const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
-  id: '/audit',
-  path: '/audit',
-  getParentRoute: () => AuthenticatedAdminRoute,
-} as any)
+const AuthenticatedStrategicDepartmentHeadsRoute =
+  AuthenticatedStrategicDepartmentHeadsRouteImport.update({
+    id: '/department-heads',
+    path: '/department-heads',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedStrategicAuditRoute =
+  AuthenticatedStrategicAuditRouteImport.update({
+    id: '/audit',
+    path: '/audit',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/admin': typeof AuthenticatedAdminRouteWithChildren
-  '/admin/audit': typeof AuthenticatedAdminAuditRoute
-  '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
-  '/admin/levels': typeof AuthenticatedAdminLevelsRoute
-  '/admin/modules': typeof AuthenticatedAdminModulesRoute
-  '/admin/sections': typeof AuthenticatedAdminSectionsRoute
-  '/admin/semesters': typeof AuthenticatedAdminSemestersRoute
-  '/admin/settings': typeof AuthenticatedAdminSettingsRoute
-  '/admin/students': typeof AuthenticatedAdminStudentsRoute
-  '/admin/trainers': typeof AuthenticatedAdminTrainersRoute
-  '/admin/users': typeof AuthenticatedAdminUsersRoute
-  '/admin/venues': typeof AuthenticatedAdminVenuesRoute
-  '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/ground': typeof AuthenticatedGroundRouteWithChildren
+  '/operational': typeof AuthenticatedOperationalRouteWithChildren
+  '/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
+  '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
+  '/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
+  '/strategic/levels': typeof AuthenticatedStrategicLevelsRoute
+  '/strategic/modules': typeof AuthenticatedStrategicModulesRoute
+  '/strategic/sections': typeof AuthenticatedStrategicSectionsRoute
+  '/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
+  '/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
+  '/strategic/students': typeof AuthenticatedStrategicStudentsRoute
+  '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
+  '/strategic/users': typeof AuthenticatedStrategicUsersRoute
+  '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/ground/': typeof AuthenticatedGroundIndexRoute
+  '/operational/': typeof AuthenticatedOperationalIndexRoute
+  '/strategic/': typeof AuthenticatedStrategicIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/admin/audit': typeof AuthenticatedAdminAuditRoute
-  '/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
-  '/admin/levels': typeof AuthenticatedAdminLevelsRoute
-  '/admin/modules': typeof AuthenticatedAdminModulesRoute
-  '/admin/sections': typeof AuthenticatedAdminSectionsRoute
-  '/admin/semesters': typeof AuthenticatedAdminSemestersRoute
-  '/admin/settings': typeof AuthenticatedAdminSettingsRoute
-  '/admin/students': typeof AuthenticatedAdminStudentsRoute
-  '/admin/trainers': typeof AuthenticatedAdminTrainersRoute
-  '/admin/users': typeof AuthenticatedAdminUsersRoute
-  '/admin/venues': typeof AuthenticatedAdminVenuesRoute
-  '/admin': typeof AuthenticatedAdminIndexRoute
+  '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
+  '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
+  '/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
+  '/strategic/levels': typeof AuthenticatedStrategicLevelsRoute
+  '/strategic/modules': typeof AuthenticatedStrategicModulesRoute
+  '/strategic/sections': typeof AuthenticatedStrategicSectionsRoute
+  '/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
+  '/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
+  '/strategic/students': typeof AuthenticatedStrategicStudentsRoute
+  '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
+  '/strategic/users': typeof AuthenticatedStrategicUsersRoute
+  '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/ground': typeof AuthenticatedGroundIndexRoute
+  '/operational': typeof AuthenticatedOperationalIndexRoute
+  '/strategic': typeof AuthenticatedStrategicIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
-  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
-  '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
-  '/_authenticated/admin/departments': typeof AuthenticatedAdminDepartmentsRoute
-  '/_authenticated/admin/levels': typeof AuthenticatedAdminLevelsRoute
-  '/_authenticated/admin/modules': typeof AuthenticatedAdminModulesRoute
-  '/_authenticated/admin/sections': typeof AuthenticatedAdminSectionsRoute
-  '/_authenticated/admin/semesters': typeof AuthenticatedAdminSemestersRoute
-  '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
-  '/_authenticated/admin/students': typeof AuthenticatedAdminStudentsRoute
-  '/_authenticated/admin/trainers': typeof AuthenticatedAdminTrainersRoute
-  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
-  '/_authenticated/admin/venues': typeof AuthenticatedAdminVenuesRoute
-  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/ground': typeof AuthenticatedGroundRouteWithChildren
+  '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
+  '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/_authenticated/strategic/audit': typeof AuthenticatedStrategicAuditRoute
+  '/_authenticated/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
+  '/_authenticated/strategic/departments': typeof AuthenticatedStrategicDepartmentsRoute
+  '/_authenticated/strategic/levels': typeof AuthenticatedStrategicLevelsRoute
+  '/_authenticated/strategic/modules': typeof AuthenticatedStrategicModulesRoute
+  '/_authenticated/strategic/sections': typeof AuthenticatedStrategicSectionsRoute
+  '/_authenticated/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
+  '/_authenticated/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
+  '/_authenticated/strategic/students': typeof AuthenticatedStrategicStudentsRoute
+  '/_authenticated/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
+  '/_authenticated/strategic/users': typeof AuthenticatedStrategicUsersRoute
+  '/_authenticated/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/_authenticated/ground/': typeof AuthenticatedGroundIndexRoute
+  '/_authenticated/operational/': typeof AuthenticatedOperationalIndexRoute
+  '/_authenticated/strategic/': typeof AuthenticatedStrategicIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
-    | '/admin'
-    | '/admin/audit'
-    | '/admin/departments'
-    | '/admin/levels'
-    | '/admin/modules'
-    | '/admin/sections'
-    | '/admin/semesters'
-    | '/admin/settings'
-    | '/admin/students'
-    | '/admin/trainers'
-    | '/admin/users'
-    | '/admin/venues'
-    | '/admin/'
+    | '/ground'
+    | '/operational'
+    | '/strategic'
+    | '/strategic/audit'
+    | '/strategic/department-heads'
+    | '/strategic/departments'
+    | '/strategic/levels'
+    | '/strategic/modules'
+    | '/strategic/sections'
+    | '/strategic/semesters'
+    | '/strategic/settings'
+    | '/strategic/students'
+    | '/strategic/trainers'
+    | '/strategic/users'
+    | '/strategic/venues'
+    | '/ground/'
+    | '/operational/'
+    | '/strategic/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
-    | '/admin/audit'
-    | '/admin/departments'
-    | '/admin/levels'
-    | '/admin/modules'
-    | '/admin/sections'
-    | '/admin/semesters'
-    | '/admin/settings'
-    | '/admin/students'
-    | '/admin/trainers'
-    | '/admin/users'
-    | '/admin/venues'
-    | '/admin'
+    | '/strategic/audit'
+    | '/strategic/department-heads'
+    | '/strategic/departments'
+    | '/strategic/levels'
+    | '/strategic/modules'
+    | '/strategic/sections'
+    | '/strategic/semesters'
+    | '/strategic/settings'
+    | '/strategic/students'
+    | '/strategic/trainers'
+    | '/strategic/users'
+    | '/strategic/venues'
+    | '/ground'
+    | '/operational'
+    | '/strategic'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/login'
-    | '/_authenticated/admin'
-    | '/_authenticated/admin/audit'
-    | '/_authenticated/admin/departments'
-    | '/_authenticated/admin/levels'
-    | '/_authenticated/admin/modules'
-    | '/_authenticated/admin/sections'
-    | '/_authenticated/admin/semesters'
-    | '/_authenticated/admin/settings'
-    | '/_authenticated/admin/students'
-    | '/_authenticated/admin/trainers'
-    | '/_authenticated/admin/users'
-    | '/_authenticated/admin/venues'
-    | '/_authenticated/admin/'
+    | '/_authenticated/ground'
+    | '/_authenticated/operational'
+    | '/_authenticated/strategic'
+    | '/_authenticated/strategic/audit'
+    | '/_authenticated/strategic/department-heads'
+    | '/_authenticated/strategic/departments'
+    | '/_authenticated/strategic/levels'
+    | '/_authenticated/strategic/modules'
+    | '/_authenticated/strategic/sections'
+    | '/_authenticated/strategic/semesters'
+    | '/_authenticated/strategic/settings'
+    | '/_authenticated/strategic/students'
+    | '/_authenticated/strategic/trainers'
+    | '/_authenticated/strategic/users'
+    | '/_authenticated/strategic/venues'
+    | '/_authenticated/ground/'
+    | '/_authenticated/operational/'
+    | '/_authenticated/strategic/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -250,139 +313,210 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+    '/_authenticated/strategic': {
+      id: '/_authenticated/strategic'
+      path: '/strategic'
+      fullPath: '/strategic'
+      preLoaderRoute: typeof AuthenticatedStrategicRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/admin/': {
-      id: '/_authenticated/admin/'
+    '/_authenticated/operational': {
+      id: '/_authenticated/operational'
+      path: '/operational'
+      fullPath: '/operational'
+      preLoaderRoute: typeof AuthenticatedOperationalRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/ground': {
+      id: '/_authenticated/ground'
+      path: '/ground'
+      fullPath: '/ground'
+      preLoaderRoute: typeof AuthenticatedGroundRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/strategic/': {
+      id: '/_authenticated/strategic/'
       path: '/'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/'
+      preLoaderRoute: typeof AuthenticatedStrategicIndexRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
-    '/_authenticated/admin/venues': {
-      id: '/_authenticated/admin/venues'
+    '/_authenticated/operational/': {
+      id: '/_authenticated/operational/'
+      path: '/'
+      fullPath: '/operational/'
+      preLoaderRoute: typeof AuthenticatedOperationalIndexRouteImport
+      parentRoute: typeof AuthenticatedOperationalRoute
+    }
+    '/_authenticated/ground/': {
+      id: '/_authenticated/ground/'
+      path: '/'
+      fullPath: '/ground/'
+      preLoaderRoute: typeof AuthenticatedGroundIndexRouteImport
+      parentRoute: typeof AuthenticatedGroundRoute
+    }
+    '/_authenticated/strategic/venues': {
+      id: '/_authenticated/strategic/venues'
       path: '/venues'
-      fullPath: '/admin/venues'
-      preLoaderRoute: typeof AuthenticatedAdminVenuesRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/venues'
+      preLoaderRoute: typeof AuthenticatedStrategicVenuesRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
-    '/_authenticated/admin/users': {
-      id: '/_authenticated/admin/users'
+    '/_authenticated/strategic/users': {
+      id: '/_authenticated/strategic/users'
       path: '/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/users'
+      preLoaderRoute: typeof AuthenticatedStrategicUsersRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
-    '/_authenticated/admin/trainers': {
-      id: '/_authenticated/admin/trainers'
+    '/_authenticated/strategic/trainers': {
+      id: '/_authenticated/strategic/trainers'
       path: '/trainers'
-      fullPath: '/admin/trainers'
-      preLoaderRoute: typeof AuthenticatedAdminTrainersRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/trainers'
+      preLoaderRoute: typeof AuthenticatedStrategicTrainersRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
-    '/_authenticated/admin/students': {
-      id: '/_authenticated/admin/students'
+    '/_authenticated/strategic/students': {
+      id: '/_authenticated/strategic/students'
       path: '/students'
-      fullPath: '/admin/students'
-      preLoaderRoute: typeof AuthenticatedAdminStudentsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/students'
+      preLoaderRoute: typeof AuthenticatedStrategicStudentsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
-    '/_authenticated/admin/settings': {
-      id: '/_authenticated/admin/settings'
+    '/_authenticated/strategic/settings': {
+      id: '/_authenticated/strategic/settings'
       path: '/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/settings'
+      preLoaderRoute: typeof AuthenticatedStrategicSettingsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
-    '/_authenticated/admin/semesters': {
-      id: '/_authenticated/admin/semesters'
+    '/_authenticated/strategic/semesters': {
+      id: '/_authenticated/strategic/semesters'
       path: '/semesters'
-      fullPath: '/admin/semesters'
-      preLoaderRoute: typeof AuthenticatedAdminSemestersRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/semesters'
+      preLoaderRoute: typeof AuthenticatedStrategicSemestersRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
-    '/_authenticated/admin/sections': {
-      id: '/_authenticated/admin/sections'
+    '/_authenticated/strategic/sections': {
+      id: '/_authenticated/strategic/sections'
       path: '/sections'
-      fullPath: '/admin/sections'
-      preLoaderRoute: typeof AuthenticatedAdminSectionsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/sections'
+      preLoaderRoute: typeof AuthenticatedStrategicSectionsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
-    '/_authenticated/admin/modules': {
-      id: '/_authenticated/admin/modules'
+    '/_authenticated/strategic/modules': {
+      id: '/_authenticated/strategic/modules'
       path: '/modules'
-      fullPath: '/admin/modules'
-      preLoaderRoute: typeof AuthenticatedAdminModulesRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/modules'
+      preLoaderRoute: typeof AuthenticatedStrategicModulesRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
-    '/_authenticated/admin/levels': {
-      id: '/_authenticated/admin/levels'
+    '/_authenticated/strategic/levels': {
+      id: '/_authenticated/strategic/levels'
       path: '/levels'
-      fullPath: '/admin/levels'
-      preLoaderRoute: typeof AuthenticatedAdminLevelsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/levels'
+      preLoaderRoute: typeof AuthenticatedStrategicLevelsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
-    '/_authenticated/admin/departments': {
-      id: '/_authenticated/admin/departments'
+    '/_authenticated/strategic/departments': {
+      id: '/_authenticated/strategic/departments'
       path: '/departments'
-      fullPath: '/admin/departments'
-      preLoaderRoute: typeof AuthenticatedAdminDepartmentsRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/departments'
+      preLoaderRoute: typeof AuthenticatedStrategicDepartmentsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
-    '/_authenticated/admin/audit': {
-      id: '/_authenticated/admin/audit'
+    '/_authenticated/strategic/department-heads': {
+      id: '/_authenticated/strategic/department-heads'
+      path: '/department-heads'
+      fullPath: '/strategic/department-heads'
+      preLoaderRoute: typeof AuthenticatedStrategicDepartmentHeadsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
+    '/_authenticated/strategic/audit': {
+      id: '/_authenticated/strategic/audit'
       path: '/audit'
-      fullPath: '/admin/audit'
-      preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      fullPath: '/strategic/audit'
+      preLoaderRoute: typeof AuthenticatedStrategicAuditRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
   }
 }
 
-interface AuthenticatedAdminRouteChildren {
-  AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
-  AuthenticatedAdminDepartmentsRoute: typeof AuthenticatedAdminDepartmentsRoute
-  AuthenticatedAdminLevelsRoute: typeof AuthenticatedAdminLevelsRoute
-  AuthenticatedAdminModulesRoute: typeof AuthenticatedAdminModulesRoute
-  AuthenticatedAdminSectionsRoute: typeof AuthenticatedAdminSectionsRoute
-  AuthenticatedAdminSemestersRoute: typeof AuthenticatedAdminSemestersRoute
-  AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
-  AuthenticatedAdminStudentsRoute: typeof AuthenticatedAdminStudentsRoute
-  AuthenticatedAdminTrainersRoute: typeof AuthenticatedAdminTrainersRoute
-  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
-  AuthenticatedAdminVenuesRoute: typeof AuthenticatedAdminVenuesRoute
-  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+interface AuthenticatedGroundRouteChildren {
+  AuthenticatedGroundIndexRoute: typeof AuthenticatedGroundIndexRoute
 }
 
-const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
-  AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
-  AuthenticatedAdminDepartmentsRoute: AuthenticatedAdminDepartmentsRoute,
-  AuthenticatedAdminLevelsRoute: AuthenticatedAdminLevelsRoute,
-  AuthenticatedAdminModulesRoute: AuthenticatedAdminModulesRoute,
-  AuthenticatedAdminSectionsRoute: AuthenticatedAdminSectionsRoute,
-  AuthenticatedAdminSemestersRoute: AuthenticatedAdminSemestersRoute,
-  AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
-  AuthenticatedAdminStudentsRoute: AuthenticatedAdminStudentsRoute,
-  AuthenticatedAdminTrainersRoute: AuthenticatedAdminTrainersRoute,
-  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
-  AuthenticatedAdminVenuesRoute: AuthenticatedAdminVenuesRoute,
-  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+const AuthenticatedGroundRouteChildren: AuthenticatedGroundRouteChildren = {
+  AuthenticatedGroundIndexRoute: AuthenticatedGroundIndexRoute,
 }
 
-const AuthenticatedAdminRouteWithChildren =
-  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+const AuthenticatedGroundRouteWithChildren =
+  AuthenticatedGroundRoute._addFileChildren(AuthenticatedGroundRouteChildren)
+
+interface AuthenticatedOperationalRouteChildren {
+  AuthenticatedOperationalIndexRoute: typeof AuthenticatedOperationalIndexRoute
+}
+
+const AuthenticatedOperationalRouteChildren: AuthenticatedOperationalRouteChildren =
+  {
+    AuthenticatedOperationalIndexRoute: AuthenticatedOperationalIndexRoute,
+  }
+
+const AuthenticatedOperationalRouteWithChildren =
+  AuthenticatedOperationalRoute._addFileChildren(
+    AuthenticatedOperationalRouteChildren,
+  )
+
+interface AuthenticatedStrategicRouteChildren {
+  AuthenticatedStrategicAuditRoute: typeof AuthenticatedStrategicAuditRoute
+  AuthenticatedStrategicDepartmentHeadsRoute: typeof AuthenticatedStrategicDepartmentHeadsRoute
+  AuthenticatedStrategicDepartmentsRoute: typeof AuthenticatedStrategicDepartmentsRoute
+  AuthenticatedStrategicLevelsRoute: typeof AuthenticatedStrategicLevelsRoute
+  AuthenticatedStrategicModulesRoute: typeof AuthenticatedStrategicModulesRoute
+  AuthenticatedStrategicSectionsRoute: typeof AuthenticatedStrategicSectionsRoute
+  AuthenticatedStrategicSemestersRoute: typeof AuthenticatedStrategicSemestersRoute
+  AuthenticatedStrategicSettingsRoute: typeof AuthenticatedStrategicSettingsRoute
+  AuthenticatedStrategicStudentsRoute: typeof AuthenticatedStrategicStudentsRoute
+  AuthenticatedStrategicTrainersRoute: typeof AuthenticatedStrategicTrainersRoute
+  AuthenticatedStrategicUsersRoute: typeof AuthenticatedStrategicUsersRoute
+  AuthenticatedStrategicVenuesRoute: typeof AuthenticatedStrategicVenuesRoute
+  AuthenticatedStrategicIndexRoute: typeof AuthenticatedStrategicIndexRoute
+}
+
+const AuthenticatedStrategicRouteChildren: AuthenticatedStrategicRouteChildren =
+  {
+    AuthenticatedStrategicAuditRoute: AuthenticatedStrategicAuditRoute,
+    AuthenticatedStrategicDepartmentHeadsRoute:
+      AuthenticatedStrategicDepartmentHeadsRoute,
+    AuthenticatedStrategicDepartmentsRoute:
+      AuthenticatedStrategicDepartmentsRoute,
+    AuthenticatedStrategicLevelsRoute: AuthenticatedStrategicLevelsRoute,
+    AuthenticatedStrategicModulesRoute: AuthenticatedStrategicModulesRoute,
+    AuthenticatedStrategicSectionsRoute: AuthenticatedStrategicSectionsRoute,
+    AuthenticatedStrategicSemestersRoute: AuthenticatedStrategicSemestersRoute,
+    AuthenticatedStrategicSettingsRoute: AuthenticatedStrategicSettingsRoute,
+    AuthenticatedStrategicStudentsRoute: AuthenticatedStrategicStudentsRoute,
+    AuthenticatedStrategicTrainersRoute: AuthenticatedStrategicTrainersRoute,
+    AuthenticatedStrategicUsersRoute: AuthenticatedStrategicUsersRoute,
+    AuthenticatedStrategicVenuesRoute: AuthenticatedStrategicVenuesRoute,
+    AuthenticatedStrategicIndexRoute: AuthenticatedStrategicIndexRoute,
+  }
+
+const AuthenticatedStrategicRouteWithChildren =
+  AuthenticatedStrategicRoute._addFileChildren(
+    AuthenticatedStrategicRouteChildren,
+  )
 
 interface AuthenticatedRouteChildren {
-  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedGroundRoute: typeof AuthenticatedGroundRouteWithChildren
+  AuthenticatedOperationalRoute: typeof AuthenticatedOperationalRouteWithChildren
+  AuthenticatedStrategicRoute: typeof AuthenticatedStrategicRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedGroundRoute: AuthenticatedGroundRouteWithChildren,
+  AuthenticatedOperationalRoute: AuthenticatedOperationalRouteWithChildren,
+  AuthenticatedStrategicRoute: AuthenticatedStrategicRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
