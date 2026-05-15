@@ -25,10 +25,10 @@ type Row = {
 
 function ModulesPage() {
   const qc = useQueryClient();
-  const { authReady, hasSession, authHeaders } = useAuthSession();
+  const { authReady, hasSession } = useAuthSession();
   const list = useServerFn(listModules);
   const bulk = useServerFn(bulkInsertModules);
-  const { data: modules, isLoading } = useQuery({ queryKey: ["modules"], queryFn: () => list({ headers: authHeaders }), enabled: authReady && hasSession, throwOnError: false });
+  const { data: modules, isLoading } = useQuery({ queryKey: ["modules"], queryFn: () => list(), enabled: authReady && hasSession, throwOnError: false });
   const [open, setOpen] = useState(false);
   const [parsed, setParsed] = useState<Row[]>([]);
   const [fileName, setFileName] = useState("");
@@ -72,7 +72,7 @@ function ModulesPage() {
   }
 
   const uploadMut = useMutation({
-    mutationFn: () => bulk({ data: { rows: parsed }, headers: authHeaders }),
+    mutationFn: () => bulk({ data: { rows: parsed } }),
     onSuccess: (r) => {
       toast.success(`Inserted ${r.inserted} modules${r.errors.length ? ` · ${r.errors.length} errors` : ""}`);
       if (r.errors.length) {
