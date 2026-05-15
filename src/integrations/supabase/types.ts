@@ -16,31 +16,52 @@ export type Database = {
     Tables: {
       approval_queue: {
         Row: {
+          comment: string | null
           conflict_trainer: boolean
           conflict_venue: boolean
           created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision: Database["public"]["Enums"]["approval_decision"]
           excessive_load: boolean
           id: string
           invalid_qualification: boolean
           schedule_id: string
+          submitted_by: string | null
+          target_id: string | null
+          type: Database["public"]["Enums"]["approval_type"]
         }
         Insert: {
+          comment?: string | null
           conflict_trainer?: boolean
           conflict_venue?: boolean
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: Database["public"]["Enums"]["approval_decision"]
           excessive_load?: boolean
           id?: string
           invalid_qualification?: boolean
           schedule_id: string
+          submitted_by?: string | null
+          target_id?: string | null
+          type?: Database["public"]["Enums"]["approval_type"]
         }
         Update: {
+          comment?: string | null
           conflict_trainer?: boolean
           conflict_venue?: boolean
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: Database["public"]["Enums"]["approval_decision"]
           excessive_load?: boolean
           id?: string
           invalid_qualification?: boolean
           schedule_id?: string
+          submitted_by?: string | null
+          target_id?: string | null
+          type?: Database["public"]["Enums"]["approval_type"]
         }
         Relationships: [
           {
@@ -498,15 +519,19 @@ export type Database = {
       schedules: {
         Row: {
           admin_feedback: string | null
+          attendance_locked_at: string | null
+          checkin_at: string | null
           created_at: string
           created_by: string | null
           date: string
           day: string
           department_id: string
           end_time: string
+          ended_at: string | null
           hidden_staff_id: string
           id: string
           level_id: string
+          mode: Database["public"]["Enums"]["session_mode"] | null
           module_code: string
           module_name: string
           section_id: string
@@ -520,15 +545,19 @@ export type Database = {
         }
         Insert: {
           admin_feedback?: string | null
+          attendance_locked_at?: string | null
+          checkin_at?: string | null
           created_at?: string
           created_by?: string | null
           date: string
           day: string
           department_id: string
           end_time: string
+          ended_at?: string | null
           hidden_staff_id: string
           id?: string
           level_id: string
+          mode?: Database["public"]["Enums"]["session_mode"] | null
           module_code: string
           module_name: string
           section_id: string
@@ -542,15 +571,19 @@ export type Database = {
         }
         Update: {
           admin_feedback?: string | null
+          attendance_locked_at?: string | null
+          checkin_at?: string | null
           created_at?: string
           created_by?: string | null
           date?: string
           day?: string
           department_id?: string
           end_time?: string
+          ended_at?: string | null
           hidden_staff_id?: string
           id?: string
           level_id?: string
+          mode?: Database["public"]["Enums"]["session_mode"] | null
           module_code?: string
           module_name?: string
           section_id?: string
@@ -648,28 +681,40 @@ export type Database = {
       }
       semester_registry: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           end_date: string
           id: string
           name: string
+          source_file_url: string | null
           start_date: string
           status: Database["public"]["Enums"]["semester_status"]
+          uploaded_by: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           end_date: string
           id?: string
           name: string
+          source_file_url?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["semester_status"]
+          uploaded_by?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           end_date?: string
           id?: string
           name?: string
+          source_file_url?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["semester_status"]
+          uploaded_by?: string | null
         }
         Relationships: []
       }
@@ -785,6 +830,8 @@ export type Database = {
           id: string
           phone: string | null
           qualifications: string[]
+          sessions_completed: number
+          sessions_target: number
           status: Database["public"]["Enums"]["entity_status"]
         }
         Insert: {
@@ -796,6 +843,8 @@ export type Database = {
           id?: string
           phone?: string | null
           qualifications?: string[]
+          sessions_completed?: number
+          sessions_target?: number
           status?: Database["public"]["Enums"]["entity_status"]
         }
         Update: {
@@ -807,6 +856,8 @@ export type Database = {
           id?: string
           phone?: string | null
           qualifications?: string[]
+          sessions_completed?: number
+          sessions_target?: number
           status?: Database["public"]["Enums"]["entity_status"]
         }
         Relationships: [
@@ -912,12 +963,46 @@ export type Database = {
     Functions: {
       current_department_id: { Args: never; Returns: string }
       current_trainer_registry_id: { Args: never; Returns: string }
+      decide_approval: {
+        Args: {
+          _comment: string
+          _decision: Database["public"]["Enums"]["approval_decision"]
+          _id: string
+        }
+        Returns: undefined
+      }
+      dh_override_attendance: {
+        Args: {
+          _attendance_log_id: string
+          _audit_comment: string
+          _new_value: boolean
+        }
+        Returns: undefined
+      }
+      dh_swap_trainer: {
+        Args: { _new_trainer: string; _reason: string; _schedule_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      set_session_mode: {
+        Args: {
+          _mode: Database["public"]["Enums"]["session_mode"]
+          _schedule_id: string
+        }
+        Returns: undefined
+      }
+      submit_for_approval: {
+        Args: {
+          _target_ids: string[]
+          _type: Database["public"]["Enums"]["approval_type"]
+        }
+        Returns: number
       }
       submit_session_batch: {
         Args: {
@@ -932,9 +1017,23 @@ export type Database = {
         }
         Returns: Json
       }
+      trainer_checkin: {
+        Args: { _latitude: number; _longitude: number; _schedule_id: string }
+        Returns: Json
+      }
+      trainer_end_session: {
+        Args: {
+          _learning_outcome: string
+          _lesson_plan: string
+          _schedule_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "MA" | "DH" | "T"
+      approval_decision: "pending" | "approved" | "rejected"
+      approval_type: "semester" | "session"
       entity_active: "ACTIVE" | "INACTIVE"
       entity_status: "ACTIVE" | "SUSPENDED"
       leave_status: "PENDING" | "APPROVED" | "REJECTED"
@@ -949,7 +1048,18 @@ export type Database = {
         | "COMPLETED"
         | "CANCELLED"
         | "ARCHIVED"
-      semester_status: "ACTIVE" | "CLOSED" | "ARCHIVED"
+        | "PENDING_MA"
+        | "ACTIVE"
+        | "ENDED"
+      semester_status:
+        | "ACTIVE"
+        | "CLOSED"
+        | "ARCHIVED"
+        | "DRAFT"
+        | "PENDING_MA"
+        | "LIVE"
+        | "ENDED"
+      session_mode: "Theory" | "Practical" | "Both"
       session_status: "LIVE" | "COMPLETED"
       venue_type: "Workshop" | "Lab" | "Classroom"
     }
@@ -1080,6 +1190,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["MA", "DH", "T"],
+      approval_decision: ["pending", "approved", "rejected"],
+      approval_type: ["semester", "session"],
       entity_active: ["ACTIVE", "INACTIVE"],
       entity_status: ["ACTIVE", "SUSPENDED"],
       leave_status: ["PENDING", "APPROVED", "REJECTED"],
@@ -1094,8 +1206,20 @@ export const Constants = {
         "COMPLETED",
         "CANCELLED",
         "ARCHIVED",
+        "PENDING_MA",
+        "ACTIVE",
+        "ENDED",
       ],
-      semester_status: ["ACTIVE", "CLOSED", "ARCHIVED"],
+      semester_status: [
+        "ACTIVE",
+        "CLOSED",
+        "ARCHIVED",
+        "DRAFT",
+        "PENDING_MA",
+        "LIVE",
+        "ENDED",
+      ],
+      session_mode: ["Theory", "Practical", "Both"],
       session_status: ["LIVE", "COMPLETED"],
       venue_type: ["Workshop", "Lab", "Classroom"],
     },

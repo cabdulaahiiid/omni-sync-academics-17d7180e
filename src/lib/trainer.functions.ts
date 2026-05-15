@@ -111,3 +111,79 @@ export const getScheduleDetail = createServerFn({ method: "POST" })
       existingAttendance: existingAtt ?? [],
     };
   });
+
+// ---------- Step 4: set mode ----------
+export const setSessionMode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      schedule_id: z.string().uuid(),
+      mode: z.enum(["Theory", "Practical", "Both"]),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("set_session_mode", {
+      _schedule_id: data.schedule_id,
+      _mode: data.mode,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ---------- Step 5/6: 30-minute / 200m gatekeeper check-in ----------
+export const trainerCheckIn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      schedule_id: z.string().uuid(),
+      latitude: z.number(),
+      longitude: z.number(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: result, error } = await context.supabase.rpc("trainer_checkin", {
+      _schedule_id: data.schedule_id,
+      _latitude: data.latitude,
+      _longitude: data.longitude,
+    });
+    if (error) throw new Error(error.message);
+    return result as { checkin_at: string; roster_unlock_until: string; distance_m: number | null };
+  });
+
+// ---------- Step 9/10: end session ----------
+export const trainerEndSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      schedule_id: z.string().uuid(),
+      learning_outcome: z.string().min(5).max(5000),
+      lesson_plan: z.string().min(5).max(5000),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("trainer_end_session", {
+      _schedule_id: data.schedule_id,
+      _learning_outcome: data.learning_outcome,
+      _lesson_plan: data.lesson_plan,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ---------- Step 11: progress counter ----------
+export const getMyProgress = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: profile } = await context.supabase
+      .from("profiles").select("trainer_registry_id").maybeSingle();
+    if (!profile?.trainer_registry_id) return { completed: 0, target: 15 };
+    const { data: tr } = await context.supabase
+      .from("trainer_registry")
+      .select("sessions_completed, sessions_target")
+      .eq("id", profile.trainer_registry_id)
+      .maybeSingle();
+    return {
+      completed: tr?.sessions_completed ?? 0,
+      target: tr?.sessions_target ?? 15,
+    };
+  });
