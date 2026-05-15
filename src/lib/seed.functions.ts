@@ -24,10 +24,11 @@ export const seedDemoData = createServerFn({ method: "POST" })
       if (data) { deptIds[d.name] = data.id; created.departments++; }
     }
 
-    // Levels
+    // Levels (DB uses Roman numerals)
+    const levelEnum = ["III", "IV", "V"] as const;
     const levelIds: Record<string, string> = {};
     for (const dept of Object.keys(deptIds)) {
-      for (const lvl of ["L3", "L4", "L5"]) {
+      for (const lvl of levelEnum) {
         const { data: existing } = await supabaseAdmin.from("levels")
           .select("id").eq("department_id", deptIds[dept]).eq("name", lvl).maybeSingle();
         if (existing) { levelIds[`${dept}-${lvl}`] = existing.id; continue; }
@@ -40,7 +41,7 @@ export const seedDemoData = createServerFn({ method: "POST" })
     // Sections
     const sectionIds: string[] = [];
     for (const dept of Object.keys(deptIds)) {
-      for (const lvl of ["L3", "L4"]) {
+      for (const lvl of ["III", "IV"] as const) {
         for (const grp of ["A", "B"]) {
           const name = `${dept}-${lvl}-${grp}`;
           const { data: ex } = await supabaseAdmin.from("sections")
@@ -70,10 +71,10 @@ export const seedDemoData = createServerFn({ method: "POST" })
     // Modules
     const moduleIds: { id: string; code: string; name: string; dept: string; level: string }[] = [];
     const modDefs = [
-      { dept: "ICT", code: "ICT201", name: "Web Development", level: "L4" },
-      { dept: "ICT", code: "ICT202", name: "Networking", level: "L4" },
-      { dept: "Construction", code: "CON101", name: "Bricklaying", level: "L3" },
-      { dept: "Hospitality", code: "HOS101", name: "Food Service", level: "L3" },
+      { dept: "ICT", code: "ICT201", name: "Web Development", level: "IV" },
+      { dept: "ICT", code: "ICT202", name: "Networking", level: "IV" },
+      { dept: "Construction", code: "CON101", name: "Bricklaying", level: "III" },
+      { dept: "Hospitality", code: "HOS101", name: "Food Service", level: "III" },
     ];
     for (const m of modDefs) {
       const { data: ex } = await supabaseAdmin.from("modules").select("id").eq("code", m.code).maybeSingle();
@@ -164,7 +165,7 @@ export const seedDemoData = createServerFn({ method: "POST" })
           .select("id").eq("trainer_registry_id", tr!.id).eq("module_code", q).maybeSingle();
         if (!hasSkill) {
           await supabaseAdmin.from("trainer_skills").insert({
-            trainer_registry_id: tr!.id, module_code: q, qualification_level: "L4",
+            trainer_registry_id: tr!.id, module_code: q, qualification_level: "IV",
           });
         }
       }
@@ -208,6 +209,7 @@ export const seedDemoData = createServerFn({ method: "POST" })
           const { data: exists } = await supabaseAdmin.from("schedules").select("id")
             .eq("trainer_registry_id", tr.id).eq("date", ds).eq("module_code", q).maybeSingle();
           if (exists) continue;
+          if (!semId) continue;
           await supabaseAdmin.from("schedules").insert({
             trainer_registry_id: tr.id, trainer_name: tr.name,
             hidden_staff_id: tr.id,
