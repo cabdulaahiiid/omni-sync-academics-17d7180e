@@ -17,15 +17,22 @@ import {
   Settings,
   LogOut,
   Menu,
+  CheckSquare,
+  BarChart3,
+  FileBarChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { NotificationsBell } from "@/components/notifications-bell";
+import { OfflineBanner } from "@/components/offline-banner";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean };
 const NAV: NavItem[] = [
   { to: "/strategic", label: "Command Center", icon: LayoutDashboard, end: true },
+  { to: "/strategic/insights", label: "Insights", icon: BarChart3 },
+  { to: "/strategic/approvals", label: "Approvals", icon: CheckSquare },
   { to: "/strategic/departments", label: "Departments", icon: Building2 },
   { to: "/strategic/department-heads", label: "Department Heads", icon: UserCog },
   { to: "/strategic/trainers", label: "Trainers", icon: Users },
@@ -36,6 +43,7 @@ const NAV: NavItem[] = [
   { to: "/strategic/sections", label: "Sections", icon: Grid3x3 },
   { to: "/strategic/semesters", label: "Semesters", icon: CalendarRange },
   { to: "/strategic/users", label: "Users & Roles", icon: ShieldCheck },
+  { to: "/strategic/reports", label: "Reports", icon: FileBarChart },
   { to: "/strategic/audit", label: "Audit Logs", icon: ScrollText },
   { to: "/strategic/settings", label: "Settings", icon: Settings },
 ];
@@ -132,11 +140,12 @@ export function StrategicShell() {
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Master Administrator</p>
             <p className="text-sm font-medium">{me?.profile?.full_name || me?.profile?.email}</p>
           </div>
-          <Button size="sm" className="rounded-xl">+ Profile</Button>
+          <NotificationsBell />
         </header>
         <main className="flex-1 overflow-auto p-4 lg:p-6">
           <Outlet />
         </main>
+        <OfflineBanner />
       </div>
     </div>
   );

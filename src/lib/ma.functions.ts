@@ -95,3 +95,14 @@ export const dashboardInsights = createServerFn({ method: "GET" })
     ]);
     return { live: live ?? 0, pending: pending ?? 0, ended: ended ?? 0, trainers: trainers ?? 0 };
   });
+
+export const listSemesters = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("semester_registry")
+      .select("id, name, start_date, end_date, status")
+      .order("start_date", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
