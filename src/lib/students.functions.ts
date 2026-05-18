@@ -2,6 +2,21 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+/** List levels + sections in the current user's department for select dropdowns. */
+export const listDeptLevelsSections = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: profile } = await supabase.from("profiles").select("department_id").eq("id", userId).maybeSingle();
+    const deptId = profile?.department_id;
+    if (!deptId) return { levels: [], sections: [] };
+    const [{ data: levels }, { data: sections }] = await Promise.all([
+      supabase.from("levels").select("id, name").eq("department_id", deptId).order("name"),
+      supabase.from("sections").select("id, name, level_id").eq("department_id", deptId).order("name"),
+    ]);
+    return { levels: levels ?? [], sections: sections ?? [] };
+  });
+
 /** List students in the current DH's department (MA sees all). */
 export const listMyStudents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
