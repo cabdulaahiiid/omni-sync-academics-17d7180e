@@ -33,6 +33,7 @@ import { Route as AuthenticatedStrategicDepartmentsRouteImport } from './routes/
 import { Route as AuthenticatedStrategicDepartmentHeadsRouteImport } from './routes/_authenticated/strategic/department-heads'
 import { Route as AuthenticatedStrategicAuditRouteImport } from './routes/_authenticated/strategic/audit'
 import { Route as AuthenticatedStrategicApprovalsRouteImport } from './routes/_authenticated/strategic/approvals'
+import { Route as AuthenticatedOperationalStudentsRouteImport } from './routes/_authenticated/operational/students'
 import { Route as AuthenticatedOperationalSemesterUploadRouteImport } from './routes/_authenticated/operational/semester-upload'
 import { Route as AuthenticatedOperationalReportsRouteImport } from './routes/_authenticated/operational/reports'
 import { Route as AuthenticatedOperationalMatrixRouteImport } from './routes/_authenticated/operational/matrix'
@@ -178,6 +179,12 @@ const AuthenticatedStrategicApprovalsRoute =
     path: '/approvals',
     getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
+const AuthenticatedOperationalStudentsRoute =
+  AuthenticatedOperationalStudentsRouteImport.update({
+    id: '/students',
+    path: '/students',
+    getParentRoute: () => AuthenticatedOperationalRoute,
+  } as any)
 const AuthenticatedOperationalSemesterUploadRoute =
   AuthenticatedOperationalSemesterUploadRouteImport.update({
     id: '/semester-upload',
@@ -227,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
   '/operational/reports': typeof AuthenticatedOperationalReportsRoute
   '/operational/semester-upload': typeof AuthenticatedOperationalSemesterUploadRoute
+  '/operational/students': typeof AuthenticatedOperationalStudentsRoute
   '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
@@ -255,6 +263,7 @@ export interface FileRoutesByTo {
   '/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
   '/operational/reports': typeof AuthenticatedOperationalReportsRoute
   '/operational/semester-upload': typeof AuthenticatedOperationalSemesterUploadRoute
+  '/operational/students': typeof AuthenticatedOperationalStudentsRoute
   '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
@@ -288,6 +297,7 @@ export interface FileRoutesById {
   '/_authenticated/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
   '/_authenticated/operational/reports': typeof AuthenticatedOperationalReportsRoute
   '/_authenticated/operational/semester-upload': typeof AuthenticatedOperationalSemesterUploadRoute
+  '/_authenticated/operational/students': typeof AuthenticatedOperationalStudentsRoute
   '/_authenticated/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/_authenticated/strategic/audit': typeof AuthenticatedStrategicAuditRoute
   '/_authenticated/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
@@ -321,6 +331,7 @@ export interface FileRouteTypes {
     | '/operational/matrix'
     | '/operational/reports'
     | '/operational/semester-upload'
+    | '/operational/students'
     | '/strategic/approvals'
     | '/strategic/audit'
     | '/strategic/department-heads'
@@ -349,6 +360,7 @@ export interface FileRouteTypes {
     | '/operational/matrix'
     | '/operational/reports'
     | '/operational/semester-upload'
+    | '/operational/students'
     | '/strategic/approvals'
     | '/strategic/audit'
     | '/strategic/department-heads'
@@ -381,6 +393,7 @@ export interface FileRouteTypes {
     | '/_authenticated/operational/matrix'
     | '/_authenticated/operational/reports'
     | '/_authenticated/operational/semester-upload'
+    | '/_authenticated/operational/students'
     | '/_authenticated/strategic/approvals'
     | '/_authenticated/strategic/audit'
     | '/_authenticated/strategic/department-heads'
@@ -577,6 +590,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategicApprovalsRouteImport
       parentRoute: typeof AuthenticatedStrategicRoute
     }
+    '/_authenticated/operational/students': {
+      id: '/_authenticated/operational/students'
+      path: '/students'
+      fullPath: '/operational/students'
+      preLoaderRoute: typeof AuthenticatedOperationalStudentsRouteImport
+      parentRoute: typeof AuthenticatedOperationalRoute
+    }
     '/_authenticated/operational/semester-upload': {
       id: '/_authenticated/operational/semester-upload'
       path: '/semester-upload'
@@ -641,6 +661,7 @@ interface AuthenticatedOperationalRouteChildren {
   AuthenticatedOperationalMatrixRoute: typeof AuthenticatedOperationalMatrixRoute
   AuthenticatedOperationalReportsRoute: typeof AuthenticatedOperationalReportsRoute
   AuthenticatedOperationalSemesterUploadRoute: typeof AuthenticatedOperationalSemesterUploadRoute
+  AuthenticatedOperationalStudentsRoute: typeof AuthenticatedOperationalStudentsRoute
   AuthenticatedOperationalIndexRoute: typeof AuthenticatedOperationalIndexRoute
 }
 
@@ -654,6 +675,8 @@ const AuthenticatedOperationalRouteChildren: AuthenticatedOperationalRouteChildr
     AuthenticatedOperationalReportsRoute: AuthenticatedOperationalReportsRoute,
     AuthenticatedOperationalSemesterUploadRoute:
       AuthenticatedOperationalSemesterUploadRoute,
+    AuthenticatedOperationalStudentsRoute:
+      AuthenticatedOperationalStudentsRoute,
     AuthenticatedOperationalIndexRoute: AuthenticatedOperationalIndexRoute,
   }
 
