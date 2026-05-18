@@ -45,7 +45,7 @@ export const createStudent = createServerFn({ method: "POST" })
     const { data: profile } = await supabase.from("profiles").select("department_id").eq("id", userId).maybeSingle();
     const deptId = profile?.department_id;
     if (!deptId) throw new Error("No department assigned");
-    const { data: level } = await supabase.from("levels").select("id").eq("department_id", deptId).eq("name", data.level_name).maybeSingle();
+    const { data: level } = await supabase.from("levels").select("id").eq("department_id", deptId).eq("name", data.level_name as any).maybeSingle();
     if (!level) throw new Error(`Unknown level '${data.level_name}'`);
     const { data: section } = await supabase.from("sections").select("id").eq("department_id", deptId).eq("level_id", level.id).eq("name", data.section_name).maybeSingle();
     if (!section) throw new Error(`Unknown section '${data.section_name}'`);
@@ -78,7 +78,15 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
     const lMap = new Map((levels ?? []).map((l) => [String(l.name).toLowerCase(), l.id as string]));
     const sMap = new Map((sections ?? []).map((s) => [`${s.level_id}|${String(s.name).toLowerCase()}`, s.id as string]));
     const errors: { row: number; reason: string }[] = [];
-    const inserts: Array<Record<string, unknown>> = [];
+    type StudentInsert = {
+      registration_number: string;
+      full_name: string;
+      gender: string | null;
+      level_id: string;
+      section_id: string;
+      department_id: string;
+    };
+    const inserts: StudentInsert[] = [];
     data.rows.forEach((r, i) => {
       const lvl = lMap.get(r.level_name.toLowerCase());
       if (!lvl) { errors.push({ row: i + 1, reason: `Unknown level '${r.level_name}'` }); return; }
