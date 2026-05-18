@@ -18,6 +18,7 @@ import { Route as AuthenticatedGroundRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedStrategicIndexRouteImport } from './routes/_authenticated/strategic/index'
 import { Route as AuthenticatedOperationalIndexRouteImport } from './routes/_authenticated/operational/index'
 import { Route as AuthenticatedGroundIndexRouteImport } from './routes/_authenticated/ground/index'
+import { Route as AuthenticatedStrategicVenuesRouteImport } from './routes/_authenticated/strategic/venues'
 import { Route as AuthenticatedStrategicUsersRouteImport } from './routes/_authenticated/strategic/users'
 import { Route as AuthenticatedStrategicTrainersRouteImport } from './routes/_authenticated/strategic/trainers'
 import { Route as AuthenticatedStrategicStudentsRouteImport } from './routes/_authenticated/strategic/students'
@@ -87,6 +88,12 @@ const AuthenticatedGroundIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedGroundRoute,
+  } as any)
+const AuthenticatedStrategicVenuesRoute =
+  AuthenticatedStrategicVenuesRouteImport.update({
+    id: '/venues',
+    path: '/venues',
+    getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
 const AuthenticatedStrategicUsersRoute =
   AuthenticatedStrategicUsersRouteImport.update({
@@ -242,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/strategic/students': typeof AuthenticatedStrategicStudentsRoute
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
+  '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/ground/': typeof AuthenticatedGroundIndexRoute
   '/operational/': typeof AuthenticatedOperationalIndexRoute
   '/strategic/': typeof AuthenticatedStrategicIndexRoute
@@ -270,6 +278,7 @@ export interface FileRoutesByTo {
   '/strategic/students': typeof AuthenticatedStrategicStudentsRoute
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
+  '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/ground': typeof AuthenticatedGroundIndexRoute
   '/operational': typeof AuthenticatedOperationalIndexRoute
   '/strategic': typeof AuthenticatedStrategicIndexRoute
@@ -303,6 +312,7 @@ export interface FileRoutesById {
   '/_authenticated/strategic/students': typeof AuthenticatedStrategicStudentsRoute
   '/_authenticated/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/_authenticated/strategic/users': typeof AuthenticatedStrategicUsersRoute
+  '/_authenticated/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/_authenticated/ground/': typeof AuthenticatedGroundIndexRoute
   '/_authenticated/operational/': typeof AuthenticatedOperationalIndexRoute
   '/_authenticated/strategic/': typeof AuthenticatedStrategicIndexRoute
@@ -336,6 +346,7 @@ export interface FileRouteTypes {
     | '/strategic/students'
     | '/strategic/trainers'
     | '/strategic/users'
+    | '/strategic/venues'
     | '/ground/'
     | '/operational/'
     | '/strategic/'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/strategic/students'
     | '/strategic/trainers'
     | '/strategic/users'
+    | '/strategic/venues'
     | '/ground'
     | '/operational'
     | '/strategic'
@@ -396,6 +408,7 @@ export interface FileRouteTypes {
     | '/_authenticated/strategic/students'
     | '/_authenticated/strategic/trainers'
     | '/_authenticated/strategic/users'
+    | '/_authenticated/strategic/venues'
     | '/_authenticated/ground/'
     | '/_authenticated/operational/'
     | '/_authenticated/strategic/'
@@ -471,6 +484,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ground/'
       preLoaderRoute: typeof AuthenticatedGroundIndexRouteImport
       parentRoute: typeof AuthenticatedGroundRoute
+    }
+    '/_authenticated/strategic/venues': {
+      id: '/_authenticated/strategic/venues'
+      path: '/venues'
+      fullPath: '/strategic/venues'
+      preLoaderRoute: typeof AuthenticatedStrategicVenuesRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
     }
     '/_authenticated/strategic/users': {
       id: '/_authenticated/strategic/users'
@@ -680,6 +700,7 @@ interface AuthenticatedStrategicRouteChildren {
   AuthenticatedStrategicStudentsRoute: typeof AuthenticatedStrategicStudentsRoute
   AuthenticatedStrategicTrainersRoute: typeof AuthenticatedStrategicTrainersRoute
   AuthenticatedStrategicUsersRoute: typeof AuthenticatedStrategicUsersRoute
+  AuthenticatedStrategicVenuesRoute: typeof AuthenticatedStrategicVenuesRoute
   AuthenticatedStrategicIndexRoute: typeof AuthenticatedStrategicIndexRoute
 }
 
@@ -701,6 +722,7 @@ const AuthenticatedStrategicRouteChildren: AuthenticatedStrategicRouteChildren =
     AuthenticatedStrategicStudentsRoute: AuthenticatedStrategicStudentsRoute,
     AuthenticatedStrategicTrainersRoute: AuthenticatedStrategicTrainersRoute,
     AuthenticatedStrategicUsersRoute: AuthenticatedStrategicUsersRoute,
+    AuthenticatedStrategicVenuesRoute: AuthenticatedStrategicVenuesRoute,
     AuthenticatedStrategicIndexRoute: AuthenticatedStrategicIndexRoute,
   }
 
