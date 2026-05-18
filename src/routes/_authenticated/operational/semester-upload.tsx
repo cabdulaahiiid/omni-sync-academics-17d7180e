@@ -58,7 +58,7 @@ function SemesterUpload() {
   const { data: semesters } = useQuery({ queryKey: ["semesters"], queryFn: () => semestersFn(), staleTime: 60000 });
 
   const selectedSem = (semesters ?? []).find((s: any) => s.id === semesterId);
-  const isRejected = selectedSem?.status === "DRAFT" || selectedSem?.status === "REJECTED";
+  const isRejected = selectedSem?.status === "DRAFT";
 
   const resubmit = useMutationCore({
     mutationFn: () => resubmitFn({ data: { semester_id: semesterId } }),
