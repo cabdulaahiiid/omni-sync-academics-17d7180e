@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listTrainers, createTrainer, revokeTrainer } from "@/lib/dh.functions";
+import { listTrainers, createTrainer, revokeTrainer, updateTrainerQualifications } from "@/lib/dh.functions";
 import { listDepartments } from "@/lib/data.functions";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Copy } from "lucide-react";
+import { Plus, Trash2, Copy, Pencil, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -28,6 +28,7 @@ function TrainersPage() {
   const listD = useServerFn(listDepartments);
   const create = useServerFn(createTrainer);
   const revoke = useServerFn(revokeTrainer);
+  const updateQuals = useServerFn(updateTrainerQualifications);
   const { data: rows, isLoading } = useQuery({ queryKey: ["trainers"], queryFn: () => list(), enabled: canQuery, throwOnError: false });
   const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => listD(), enabled: canQuery, throwOnError: false });
 
@@ -39,6 +40,9 @@ function TrainersPage() {
   const [password, setPassword] = useState("Trainer@123");
   const [quals, setQuals] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; temp_password: string } | null>(null);
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+  const [editQuals, setEditQuals] = useState<string[]>([]);
+  const [newQual, setNewQual] = useState("");
 
   const createMut = useMutation({
     mutationFn: () => create({ data: {
@@ -60,6 +64,27 @@ function TrainersPage() {
     onSuccess: () => { toast.success("Trainer suspended"); qc.invalidateQueries({ queryKey: ["trainers"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const editMut = useMutation({
+    mutationFn: () => updateQuals({ data: { id: editing!.id, qualifications: editQuals } }),
+    onSuccess: () => {
+      toast.success("Qualifications updated");
+      setEditing(null); setEditQuals([]); setNewQual("");
+      qc.invalidateQueries({ queryKey: ["trainers"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function openEdit(t: { id: string; full_name: string; qualifications: string[] | null }) {
+    setEditing({ id: t.id, name: t.full_name });
+    setEditQuals([...(t.qualifications ?? [])]);
+    setNewQual("");
+  }
+  function addQual() {
+    const v = newQual.trim();
+    if (!v) return;
+    if (editQuals.includes(v)) { setNewQual(""); return; }
+    setEditQuals([...editQuals, v]); setNewQual("");
+  }
 
   return (
     <div className="space-y-6">
@@ -126,6 +151,7 @@ function TrainersPage() {
                 <TableCell className="text-xs">{(t.qualifications ?? []).join(", ") || "—"}</TableCell>
                 <TableCell><Badge variant={t.status === "ACTIVE" ? "default" : "secondary"}>{t.status}</Badge></TableCell>
                 <TableCell className="text-right">
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(t)} title="Edit qualifications"><Pencil className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" disabled={t.status !== "ACTIVE"} onClick={() => { if (confirm(`Suspend ${t.full_name}?`)) revokeMut.mutate(t.id); }}><Trash2 className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
@@ -133,6 +159,40 @@ function TrainersPage() {
           </TableBody>
         </Table>
       </Card>
+
+      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); setNewQual(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Qualifications — {editing?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="flex min-h-10 flex-wrap gap-2 rounded-md border p-2">
+              {editQuals.length === 0 && <span className="text-xs text-muted-foreground">No qualifications yet.</span>}
+              {editQuals.map((q) => (
+                <Badge key={q} variant="secondary" className="gap-1">
+                  {q}
+                  <button type="button" onClick={() => setEditQuals(editQuals.filter((x) => x !== q))} aria-label={`Remove ${q}`}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add module code (e.g. ICT-101)"
+                value={newQual}
+                onChange={(e) => setNewQual(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addQual(); } }}
+              />
+              <Button type="button" variant="outline" onClick={addQual}>Add</Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button onClick={() => editMut.mutate()} disabled={editMut.isPending}>
+              {editMut.isPending ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

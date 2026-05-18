@@ -169,3 +169,28 @@ export const revokeTrainer = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+export const updateTrainerQualifications = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      qualifications: z.array(z.string().min(1).max(80)).max(100),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertMA(context.supabase, context.userId);
+    const cleaned = Array.from(new Set(data.qualifications.map((q) => q.trim()).filter(Boolean)));
+    const { data: before } = await context.supabase
+      .from("trainer_registry").select("qualifications").eq("id", data.id).maybeSingle();
+    const { error } = await context.supabase
+      .from("trainer_registry").update({ qualifications: cleaned }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("audit_logs").insert({
+      actor_id: context.userId, action_type: "UPDATE_QUALIFICATIONS",
+      entity_type: "trainer_registry", entity_id: data.id,
+      before_state: { qualifications: before?.qualifications ?? [] },
+      after_state: { qualifications: cleaned },
+    });
+    return { ok: true, qualifications: cleaned };
+  });
