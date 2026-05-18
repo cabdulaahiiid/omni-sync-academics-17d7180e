@@ -252,6 +252,9 @@ export type Database = {
         Row: {
           allow_offline_sync: boolean
           attendance_window_minutes: number
+          campus_lat: number | null
+          campus_lng: number | null
+          campus_radius_m: number
           geo_fence_radius: number
           id: string
           updated_at: string
@@ -260,6 +263,9 @@ export type Database = {
         Insert: {
           allow_offline_sync?: boolean
           attendance_window_minutes?: number
+          campus_lat?: number | null
+          campus_lng?: number | null
+          campus_radius_m?: number
           geo_fence_radius?: number
           id?: string
           updated_at?: string
@@ -268,6 +274,9 @@ export type Database = {
         Update: {
           allow_offline_sync?: boolean
           attendance_window_minutes?: number
+          campus_lat?: number | null
+          campus_lng?: number | null
+          campus_radius_m?: number
           geo_fence_radius?: number
           id?: string
           updated_at?: string
@@ -474,6 +483,7 @@ export type Database = {
       profiles: {
         Row: {
           active: boolean
+          bypass_geofence: boolean
           created_at: string
           department_id: string | null
           email: string
@@ -483,6 +493,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          bypass_geofence?: boolean
           created_at?: string
           department_id?: string | null
           email: string
@@ -492,6 +503,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          bypass_geofence?: boolean
           created_at?: string
           department_id?: string | null
           email?: string
@@ -512,6 +524,101 @@ export type Database = {
             columns: ["trainer_registry_id"]
             isOneToOne: false
             referencedRelation: "trainer_registry"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_feedback_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          sender_id: string | null
+          thread_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          sender_id?: string | null
+          thread_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          sender_id?: string | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_feedback_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_feedback_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_feedback_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_feedback_threads: {
+        Row: {
+          admin_id: string | null
+          created_at: string
+          department_id: string | null
+          dh_id: string | null
+          id: string
+          semester_id: string
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          dh_id?: string | null
+          id?: string
+          semester_id: string
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          dh_id?: string | null
+          id?: string
+          semester_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_feedback_threads_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_feedback_threads_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_feedback_threads_dh_id_fkey"
+            columns: ["dh_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_feedback_threads_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: true
+            referencedRelation: "semester_registry"
             referencedColumns: ["id"]
           },
         ]
@@ -979,6 +1086,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      dh_reply_feedback: {
+        Args: { _message: string; _thread_id: string }
+        Returns: string
+      }
+      dh_resubmit_semester: {
+        Args: { _semester_id: string }
+        Returns: undefined
+      }
       dh_swap_trainer: {
         Args: { _new_trainer: string; _reason: string; _schedule_id: string }
         Returns: undefined
@@ -989,6 +1104,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      ma_reject_semester_with_feedback: {
+        Args: { _message: string; _semester_id: string }
+        Returns: string
       }
       set_session_mode: {
         Args: {
