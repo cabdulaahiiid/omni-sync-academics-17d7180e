@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listMyStudents, createStudent, bulkInsertStudents } from "@/lib/students.functions";
+import { listMyStudents, createStudent, bulkInsertStudents, listDeptLevelsSections } from "@/lib/students.functions";
 import { CsvDropzone, type ParsedRow } from "@/components/csv-dropzone";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UserPlus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserPlus, Download } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/operational/students")({
@@ -23,12 +24,35 @@ function StudentsHub() {
   const listFn = useServerFn(listMyStudents);
   const createFn = useServerFn(createStudent);
   const bulkFn = useServerFn(bulkInsertStudents);
+  const lsFn = useServerFn(listDeptLevelsSections);
   const { data: students, isLoading } = useQuery({ queryKey: ["dh-students"], queryFn: () => listFn() });
+  const { data: ls } = useQuery({ queryKey: ["dh-levels-sections"], queryFn: () => lsFn() });
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ registration_number: "", full_name: "", level_name: "", section_name: "", gender: "" });
   const [csvRows, setCsvRows] = useState<ParsedRow[]>([]);
   const [csvName, setCsvName] = useState("");
+  const [bulkLevelId, setBulkLevelId] = useState<string>("");
+  const [bulkSectionId, setBulkSectionId] = useState<string>("");
+
+  const levels = ls?.levels ?? [];
+  const sections = (ls?.sections ?? []).filter((s) => !bulkLevelId || s.level_id === bulkLevelId);
+  const bulkLevelName = levels.find((l) => l.id === bulkLevelId)?.name ?? "";
+  const bulkSectionName = sections.find((s) => s.id === bulkSectionId)?.name ?? "";
+
+  function downloadSample() {
+    const csv = [
+      "student_id_code,full_name,gender",
+      "TVET-2026-0001,Jane Doe,F",
+      "TVET-2026-0002,John Smith,M",
+      "TVET-2026-0003,Alex Mwangi,",
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "tvet-omni-sync-students-sample.csv";
+    a.click(); URL.revokeObjectURL(url);
+  }
 
   const create = useMutation({
     mutationFn: () => createFn({ data: { ...form, gender: form.gender || null } }),
@@ -43,11 +67,12 @@ function StudentsHub() {
 
   const bulk = useMutation({
     mutationFn: () => {
+      if (!bulkLevelName || !bulkSectionName) throw new Error("Select level and section first");
       const rows = csvRows.map((r) => ({
         registration_number: r.student_id_code || r.registration_number || "",
         full_name: r.full_name || "",
-        level_name: r.level || r.level_name || "",
-        section_name: r.section || r.section_name || "",
+        level_name: bulkLevelName,
+        section_name: bulkSectionName,
         gender: r.gender || null,
       })).filter((r) => r.registration_number && r.full_name);
       return bulkFn({ data: { rows } });
@@ -93,20 +118,48 @@ function StudentsHub() {
       </div>
 
       <Card className="rounded-2xl">
-        <CardHeader><CardTitle className="text-base">Bulk roster upload</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base">Bulk roster upload</CardTitle>
+          <Button variant="outline" size="sm" onClick={downloadSample}>
+            <Download className="mr-2 h-4 w-4" /> Sample CSV
+          </Button>
+        </CardHeader>
         <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <Label>Level</Label>
+              <Select value={bulkLevelId} onValueChange={(v) => { setBulkLevelId(v); setBulkSectionId(""); }}>
+                <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
+                <SelectContent>
+                  {levels.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Section</Label>
+              <Select value={bulkSectionId} onValueChange={setBulkSectionId} disabled={!bulkLevelId}>
+                <SelectTrigger><SelectValue placeholder={bulkLevelId ? "Select section" : "Pick level first"} /></SelectTrigger>
+                <SelectContent>
+                  {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <CsvDropzone
-            helpText="Required columns: student_id_code, full_name, level, section (optional: gender)"
-            sampleHeaders={["student_id_code", "full_name", "level", "section"]}
+            helpText="Required columns: student_id_code, full_name (optional: gender). Level and section come from the selectors above."
+            sampleHeaders={["student_id_code", "full_name", "gender"]}
             onParsed={(rows, name) => { setCsvRows(rows); setCsvName(name); toast.success(`Parsed ${rows.length} rows`); }}
           />
           {csvRows.length > 0 && (
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">{csvName} · {csvRows.length} rows ready</p>
-              <Button onClick={() => bulk.mutate()} disabled={bulk.isPending}>
+              <Button onClick={() => bulk.mutate()} disabled={bulk.isPending || !bulkLevelId || !bulkSectionId}>
                 {bulk.isPending ? "Importing…" : `Process and import (${csvRows.length})`}
               </Button>
             </div>
+          )}
+          {csvRows.length > 0 && (!bulkLevelId || !bulkSectionId) && (
+            <p className="text-xs text-amber-600">Select level and section to enable import.</p>
           )}
         </CardContent>
       </Card>
