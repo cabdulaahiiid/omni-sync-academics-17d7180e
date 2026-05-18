@@ -8,8 +8,13 @@ export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
   async ({ next }) => {
     const { data } = await supabase.auth.getSession()
     const token = data.session?.access_token
+    if (!token) {
+      // Fail fast on the client so we don't hit the server with no Bearer
+      // header — that path returns 500 + blank screen instead of a clean error.
+      throw new Error('Not authenticated')
+    }
     return next({
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { Authorization: `Bearer ${token}` },
     })
   },
 )
