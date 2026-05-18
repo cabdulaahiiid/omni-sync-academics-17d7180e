@@ -8,6 +8,10 @@ import {
 import { enqueueSessionBatch } from "@/lib/offline/queue";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
 import { useGeoGatekeeper } from "@/hooks/use-geo-gatekeeper";
+import { useQuery as useQueryCore } from "@tanstack/react-query";
+import { useServerFn as useServerFnCore } from "@tanstack/react-start";
+import { getGlobalConfig } from "@/lib/global-config.functions";
+import { useMe } from "@/hooks/use-me";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +44,32 @@ function SessionDetail() {
   });
   const { data: progress } = useQuery({ queryKey: ["my-progress"], queryFn: () => progressFn(), staleTime: 30000 });
 
-  const geo = useGeoGatekeeper(data?.venue, true);
+  const cfgFn = useServerFnCore(getGlobalConfig);
+  const { data: cfg } = useQueryCore({ queryKey: ["global-config"], queryFn: () => cfgFn(), staleTime: 60000 });
+  const { data: me } = useMe();
+  const bypass = !!me?.profile?.bypass_geofence;
+  const campusTarget = cfg?.campus_lat != null && cfg?.campus_lng != null
+    ? { latitude: cfg.campus_lat, longitude: cfg.campus_lng, geo_radius: cfg.campus_radius_m ?? 150 }
+    : data?.venue;
+  const geo = useGeoGatekeeper(campusTarget, true, { minRadius: 150, bypass });
+
+  // 10-min pre-start to 20-min post-start activation window
+  const startMs = data?.schedule?.date && data?.schedule?.start_time
+    ? new Date(`${data.schedule.date}T${data.schedule.start_time}`).getTime() : 0;
+  const endMs = data?.schedule?.date && data?.schedule?.end_time
+    ? new Date(`${data.schedule.date}T${data.schedule.end_time}`).getTime() : 0;
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
+  const canStart = startMs && now >= startMs - 10 * 60000 && now <= startMs + 20 * 60000;
+  const rosterPromptStart = endMs - 10 * 60000;
+  // Vibrate once when the check-out window opens
+  const [vibrated, setVibrated] = useState(false);
+  useEffect(() => {
+    if (!vibrated && endMs && now >= rosterPromptStart && now < endMs && "vibrate" in navigator) {
+      try { (navigator as any).vibrate?.([200, 100, 200]); } catch { /* ignore */ }
+      setVibrated(true);
+    }
+  }, [now, endMs, rosterPromptStart, vibrated]);
   const [mode, setLocalMode] = useState<typeof MODES[number] | null>(null);
   const [checkInAt, setCheckInAt] = useState<string | null>(null);
   const [rosterUntil, setRosterUntil] = useState<string | null>(null);
@@ -166,10 +195,10 @@ function SessionDetail() {
               Distance to venue: {Math.round(geo.distance)}m {geo.inRadius ? "✓ inside" : "(outside)"}
             </p>
           )}
-          <Button className="w-full" disabled={!geo.inRadius || checkInMut.isPending || checkedIn || isEnded}
+          <Button className="w-full" disabled={!canStart || !geo.inRadius || checkInMut.isPending || checkedIn || isEnded}
             onClick={() => checkInMut.mutate()}>
             <PlayCircle className="mr-2 h-4 w-4" />
-            {checkedIn ? "Checked in" : checkInMut.isPending ? "Checking in…" : "Check in now"}
+            {checkedIn ? "Checked in" : !canStart ? "Outside check-in window" : checkInMut.isPending ? "Checking in…" : "Start session"}
           </Button>
           {rosterUntil && <CountdownTimer until={rosterUntil} label="Roster window" />}
         </CardContent>
