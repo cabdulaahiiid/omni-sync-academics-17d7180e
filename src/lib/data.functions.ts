@@ -121,6 +121,136 @@ export const deleteDepartment = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ===== Levels (read-only; auto-seeded per department) =====
+export const listLevelsByDepartment = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: depts, error: e1 }, { data: lvls, error: e2 }] = await Promise.all([
+      context.supabase.from("departments").select("id,name").order("name"),
+      context.supabase.from("levels").select("id,department_id,name"),
+    ]);
+    if (e1) throw new Error(e1.message);
+    if (e2) throw new Error(e2.message);
+    const order = ["I", "II", "III", "IV", "V"];
+    return (depts ?? []).map((d) => ({
+      id: d.id,
+      name: d.name,
+      levels: (lvls ?? [])
+        .filter((l) => l.department_id === d.id)
+        .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name)),
+    }));
+  });
+
+// ===== Semesters =====
+export const listSemesters = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("semester_registry")
+      .select("*")
+      .order("start_date", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+const semesterInput = z.object({
+  id: z.string().uuid().optional(),
+  year: z.number().int().min(2000).max(2100),
+  term: z.enum(["Semester 1", "Semester 2", "Summer Course"]),
+  start_date: z.string().min(8),
+  end_date: z.string().min(8),
+  status: z.enum(["ACTIVE", "CLOSED", "ARCHIVED"]).default("ACTIVE"),
+});
+
+export const upsertSemester = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => semesterInput.parse(d))
+  .handler(async ({ data, context }) => {
+    if (new Date(data.end_date) <= new Date(data.start_date)) {
+      throw new Error("End date must be after start date");
+    }
+    const name = `Year ${data.year} – ${data.term}`;
+    const payload = {
+      name,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      status: data.status,
+      uploaded_by: context.userId,
+    };
+    if (data.id) {
+      const { data: row, error } = await context.supabase
+        .from("semester_registry").update(payload).eq("id", data.id).select().single();
+      if (error) throw new Error(error.message);
+      return row;
+    }
+    const { data: row, error } = await context.supabase
+      .from("semester_registry").insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const deleteSemester = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("semester_registry").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ===== Venues =====
+export const listVenues = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("venues").select("*").order("name");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+const venueInput = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1).max(120),
+  type: z.enum(["Classroom", "Lab", "Workshop"]),
+  capacity: z.number().int().min(0).max(10000),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  geo_radius: z.number().min(10).max(5000).default(50),
+});
+
+export const upsertVenue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => venueInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const payload = {
+      name: data.name,
+      type: data.type,
+      capacity: data.capacity,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      geo_radius: data.geo_radius,
+    };
+    if (data.id) {
+      const { data: row, error } = await context.supabase
+        .from("venues").update(payload).eq("id", data.id).select().single();
+      if (error) throw new Error(error.message);
+      return row;
+    }
+    const { data: row, error } = await context.supabase
+      .from("venues").insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const deleteVenue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("venues").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 // ===== Audit logs (live activity feed) =====
 export const listRecentAuditLogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
