@@ -18,10 +18,12 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-/** Polls geolocation every 10s. Returns distance to venue and whether trainer is inside the larger of (venue radius, 200m). */
+/** Polls geolocation every 10s. Returns distance to a target point and whether the user is inside its radius.
+ *  Pass a venue (with latitude/longitude/geo_radius) OR a campus center. */
 export function useGeoGatekeeper(
-  venue: { latitude?: number | null; longitude?: number | null; geo_radius?: number | null } | null | undefined,
+  target: { latitude?: number | null; longitude?: number | null; geo_radius?: number | null } | null | undefined,
   enabled: boolean = true,
+  options?: { minRadius?: number; bypass?: boolean },
 ): GeoState {
   const [coords, setCoords] = useState<GeoState["coords"]>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,10 +50,11 @@ export function useGeoGatekeeper(
     return () => { cancelled = true; window.clearInterval(id); };
   }, [enabled]);
 
-  const radius = Math.max(Number(venue?.geo_radius ?? 0), 200);
+  const radius = Math.max(Number(target?.geo_radius ?? 0), options?.minRadius ?? 0);
   let distance: number | null = null;
-  if (coords && venue?.latitude != null && venue?.longitude != null) {
-    distance = haversine(coords.lat, coords.lng, Number(venue.latitude), Number(venue.longitude));
+  if (coords && target?.latitude != null && target?.longitude != null) {
+    distance = haversine(coords.lat, coords.lng, Number(target.latitude), Number(target.longitude));
   }
-  return { coords, error, distance, inRadius: distance != null && distance <= radius };
+  const inRadius = options?.bypass ? true : (distance != null && distance <= radius);
+  return { coords, error, distance, inRadius };
 }

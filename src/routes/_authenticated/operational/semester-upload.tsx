@@ -10,8 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Upload, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Upload, CheckCircle2, AlertTriangle, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useMutation as useMutationCore } from "@tanstack/react-query";
+import { dhResubmitSemester } from "@/lib/feedback.functions";
+import { FeedbackChat } from "@/components/feedback-chat";
 
 export const Route = createFileRoute("/_authenticated/operational/semester-upload")({
   component: SemesterUpload,
@@ -51,7 +54,17 @@ function SemesterUpload() {
 
   const semestersFn = useServerFn(listSemesters);
   const uploadFn = useServerFn(uploadSemesterSchedule);
+  const resubmitFn = useServerFn(dhResubmitSemester);
   const { data: semesters } = useQuery({ queryKey: ["semesters"], queryFn: () => semestersFn(), staleTime: 60000 });
+
+  const selectedSem = (semesters ?? []).find((s: any) => s.id === semesterId);
+  const isRejected = selectedSem?.status === "DRAFT" || selectedSem?.status === "REJECTED";
+
+  const resubmit = useMutationCore({
+    mutationFn: () => resubmitFn({ data: { semester_id: semesterId } }),
+    onSuccess: () => toast.success("Resubmitted to Admin"),
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const mut = useMutation({
     mutationFn: () => {
@@ -104,6 +117,23 @@ function SemesterUpload() {
           </div>
         </CardContent>
       </Card>
+
+      {semesterId && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <FeedbackChat semesterId={semesterId} title="Conversation with Admin" />
+          {isRejected && (
+            <Card className="rounded-2xl">
+              <CardHeader><CardTitle className="text-base">Resubmit</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm text-muted-foreground">After applying the Admin's corrections, resubmit the semester for approval.</p>
+                <Button onClick={() => resubmit.mutate()} disabled={resubmit.isPending} className="w-full">
+                  <Send className="mr-2 h-4 w-4" /> {resubmit.isPending ? "Submitting…" : "Resubmit to Admin"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       <Card className="rounded-2xl">
         <CardHeader><CardTitle className="text-base">CSV Rows</CardTitle></CardHeader>
