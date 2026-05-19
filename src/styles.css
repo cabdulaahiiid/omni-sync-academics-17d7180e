@@ -76,6 +76,8 @@
   --color-amber-fg: var(--amber-fg);
   --color-rose: var(--rose);
   --color-rose-fg: var(--rose-fg);
+  --color-teal: var(--teal);
+  --color-teal-fg: var(--teal-fg);
 }
 
 :root {
@@ -131,6 +133,10 @@
   --amber-fg: oklch(0.2 0.05 60);
   --rose: oklch(0.68 0.2 15);
   --rose-fg: oklch(0.99 0 0);
+
+  /* Quick-action teal accent */
+  --teal: oklch(0.7 0.13 195);
+  --teal-fg: oklch(0.99 0 0);
 }
 
 .dark {
