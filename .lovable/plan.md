@@ -1,67 +1,70 @@
-# Plan: Levels auto-seed + Semesters & Venues admin
+# TVET OMNI-SYNC — Master Admin UI Redesign
 
-## 1. Automatic levels (I–V) per department
+Scope: visual/structural redesign only. No backend, schema, route, or data-fetching changes. All existing server functions, queries, and routes stay intact.
 
-The `levels` table already exists with enum `level_name = {I, II, III, IV, V}`. We'll make level provisioning automatic so admins never manage it manually.
+## 1. Sidebar (`src/components/strategic/strategic-shell.tsx`)
 
-- **DB migration**: add a trigger `AFTER INSERT ON public.departments` that inserts the 5 rows (I, II, III, IV, V) for the new department. Also run a one-time backfill: insert any missing (department_id, level) pairs for existing departments.
-- **Levels page** (`/strategic/levels`): convert from placeholder to a **read-only** view grouped by department showing the 5 levels as badges. Copy explains "Levels are provisioned automatically (I–V) for every department."
-- No UI for creating/deleting levels (intentional — fully automated).
+Convert the flat 16-item nav into a strict **accordion** grouped into 4 collapsible sections. Only one group open at a time; the group containing the active route auto-expands on load.
 
-## 2. Semesters admin page (`/strategic/semesters`)
+Groups:
+- **Core Operations** — Command Center, Insights, Approvals, Audit Logs
+- **Academic & Structure** — Departments, Modules, Venues, Levels, Sections, Semesters
+- **User Management** — Department Heads, Trainers, Students, Users & Roles
+- **Governance** — Reports, Settings
 
-MA-only CRUD using existing `semester_registry` table.
+Styling:
+- Dark slate-blue background (use existing `--sidebar` token, tune toward slate-blue in `src/styles.css` if needed).
+- Profile block (avatar + name + "Master Admin" subtitle) pinned top-left under the brand.
+- Group header rows: uppercase micro-label, right-facing chevron rotating to down when open, smooth height transition.
+- Active sub-link: subtle white/10 pill, 8px radius, left accent bar.
+- Sign-out pinned to bottom.
 
-- New server fns in `src/lib/data.functions.ts`: `listSemesters`, `upsertSemester`, `deleteSemester`.
-- Form fields:
-  - **Year** (number, e.g. 2026)
-  - **Term** (select: `Semester 1`, `Semester 2`, `Summer Course`)
-  - **Start date**, **End date** (date pickers)
-  - Auto-compose `name` as `"Year {year} – {term}"` (e.g. `"Year 2026 – Semester 1"`).
-  - **Status** select (`ACTIVE`, `CLOSED`, `ARCHIVED`) — defaults `ACTIVE`. Approval-driven states (`DRAFT`/`PENDING_MA`/`LIVE`/`ENDED`) shown read-only as badges if encountered.
-- Table: Name • Term • Year • Start • End • Status • Actions (Edit / Delete).
-- Validation: end_date > start_date; unique (year, term).
+## 2. Top Bar
 
-## 3. Venues admin page (`/strategic/venues`)
+Replace the current "Master Administrator / name" header with:
+- Wide **search input** (placeholder "Search wide search…") taking most of the bar, leading `Search` icon, 8px radius, soft border.
+- `NotificationsBell` with red badge (already supported).
+- Teal **quick-action `+` button** (rounded, primary-teal, soft shadow) — opens a dropdown stub (no logic wired; menu items can be placeholders linking to existing create flows like New Department / New Module / New Venue).
 
-MA-only CRUD using existing `venues` table.
+## 3. Command Center (`src/routes/_authenticated/strategic/index.tsx`)
 
-- New server fns: `listVenues`, `upsertVenue`, `deleteVenue`.
-- Form fields:
-  - **Name** (text)
-  - **Type** (select: `Classroom`, `Lab`, `Workshop`)
-  - **Capacity** (number)
-  - **Latitude / Longitude** (number inputs, with helper "use device GPS" button that calls `navigator.geolocation` to fill)
-  - **Geo radius (meters)** — default 50
-- Table: Name • Type • Capacity • Coordinates • Radius • Actions.
+Background: `bg-slate-50` (#F8FAFC).
 
-## 4. Sidebar / routing
+**Row 1 — 5 compact metric cards** (one per existing KPI):
+- Large numeric value, small uppercase label, tinted icon chip.
+- Inline **sparkline** (recharts `LineChart` with hidden axes, ~40px tall) — for now feed each card a small synthetic 7-point series derived from the current value (placeholder visualization, no new backend).
+- Trend **pill badge** (green ↑ or red ↓ with %); placeholder deltas computed client-side.
+- White card, soft shadow, 8px radius, no left accent stripe (cleaner than current).
 
-No new routes needed — `levels`, `semesters`, `venues` already exist in `strategic.tsx` shell. Just replace the placeholder components.
+**Row 2 — split**:
+- Left: **Approval Queue** rendered as a real `Table` (shadcn) with columns Module · Trainer · Date · Status · Actions. Status column uses badges (`Pending`, `Returned`, conflict chips). Keep existing approve / send-back mutations.
+- Right: **Department Performance** card with tabs (Attendance / Punctuality / Load). Default shows a combined `ComposedChart` — bars for attendance, overlay line for punctuality — using existing `getDepartmentComparison` data plus client-derived second series. Legend chips for ICT, Construction, Business, Engineering, Health.
 
-## Technical details
+**Row 3 — split**:
+- Left: **Live Activity Feed** with color-coded action badges — map `action_type` to variants: CREATE→green, UPDATE→blue, DELETE→red, APPROVE→teal, OVERRIDE→amber, default→slate. Timeline-style list with left dot rail.
+- Right: **Recent Override Logs** as a `Table` (Time · Schedule · From→To · Reason · By).
 
-- Pattern: mirror existing `departments.tsx` (useServerFn + react-query + Dialog form + shadcn Table).
-- All mutations gated by `has_role(auth.uid(),'MA')` via existing RLS policies — no policy changes needed.
-- Trigger SQL:
-  ```sql
-  CREATE OR REPLACE FUNCTION public.seed_department_levels()
-  RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-  BEGIN
-    INSERT INTO public.levels (department_id, name)
-    SELECT NEW.id, l::level_name FROM unnest(ARRAY['I','II','III','IV','V']) l
-    ON CONFLICT DO NOTHING;
-    RETURN NEW;
-  END $$;
-  CREATE TRIGGER trg_seed_levels AFTER INSERT ON public.departments
-    FOR EACH ROW EXECUTE FUNCTION public.seed_department_levels();
-  ```
-  (Add a UNIQUE(department_id, name) constraint on `levels` to make ON CONFLICT work, and backfill existing depts.)
+## 4. Design tokens (`src/styles.css`)
 
-## Files touched
+Add/adjust (oklch) without breaking existing tokens:
+- `--sidebar`: deepen toward slate-blue (~`oklch(0.27 0.04 255)`).
+- `--accent-teal`: introduce token for the quick-action button and APPROVE badge.
+- `--surface-muted`: `oklch(0.98 0.005 250)` for page background.
+- Sparkline stroke colors reuse existing `--stat-*` tokens.
 
-- `supabase/migrations/<new>.sql` — unique constraint, trigger, backfill.
-- `src/lib/data.functions.ts` — add listLevels, listSemesters/upsertSemester/deleteSemester, listVenues/upsertVenue/deleteVenue.
-- `src/routes/_authenticated/strategic/levels.tsx` — read-only grouped view.
-- `src/routes/_authenticated/strategic/semesters.tsx` — full CRUD.
-- `src/routes/_authenticated/strategic/venues.tsx` — full CRUD.
+## Technical notes
+
+- Files touched:
+  - `src/components/strategic/strategic-shell.tsx` (sidebar accordion + top bar)
+  - `src/routes/_authenticated/strategic/index.tsx` (dashboard layout)
+  - `src/styles.css` (token tweaks)
+  - Possibly small new components: `src/components/strategic/metric-card.tsx`, `nav-group.tsx`.
+- Uses existing shadcn `Accordion`, `Table`, `Tabs`, `Input`, `DropdownMenu`, `Badge`, recharts.
+- Zero changes to server functions, routes, RLS, or data shape.
+- Sparklines/trend deltas are presentational placeholders; flagged with a TODO so we can wire real historical series later.
+
+## Open questions
+
+1. Should the quick-action **+** menu actually open a working menu now (links to existing create dialogs across Departments / Modules / Venues / Semesters), or render as a styled-only stub?
+2. For the **search bar** — wire it to a real cross-entity search (departments, trainers, students, modules) via a new server function, or leave as a non-functional visual element this round?
+3. Sparkline trend data — keep client-side synthetic placeholders, or do you want real 7-day history (requires new server function + light schema queries)?
