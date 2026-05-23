@@ -151,7 +151,7 @@ export const updateLevel = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const payload: Record<string, unknown> = {};
+    const payload: { display_name?: string | null; status?: "ACTIVE" | "SUSPENDED" } = {};
     if (data.display_name !== undefined) payload.display_name = data.display_name || null;
     if (data.status !== undefined) payload.status = data.status;
     const { data: row, error } = await context.supabase
