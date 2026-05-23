@@ -326,20 +326,26 @@ export type Database = {
         Row: {
           created_at: string
           department_id: string
+          display_name: string | null
           id: string
           name: Database["public"]["Enums"]["level_name"]
+          status: Database["public"]["Enums"]["entity_status"]
         }
         Insert: {
           created_at?: string
           department_id: string
+          display_name?: string | null
           id?: string
           name: Database["public"]["Enums"]["level_name"]
+          status?: Database["public"]["Enums"]["entity_status"]
         }
         Update: {
           created_at?: string
           department_id?: string
+          display_name?: string | null
           id?: string
           name?: Database["public"]["Enums"]["level_name"]
+          status?: Database["public"]["Enums"]["entity_status"]
         }
         Relationships: [
           {
