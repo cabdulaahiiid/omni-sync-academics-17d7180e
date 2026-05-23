@@ -127,7 +127,7 @@ export const listLevelsByDepartment = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const [{ data: depts, error: e1 }, { data: lvls, error: e2 }] = await Promise.all([
       context.supabase.from("departments").select("id,name").order("name"),
-      context.supabase.from("levels").select("id,department_id,name"),
+      context.supabase.from("levels").select("id,department_id,name,display_name,status"),
     ]);
     if (e1) throw new Error(e1.message);
     if (e2) throw new Error(e2.message);
@@ -139,6 +139,80 @@ export const listLevelsByDepartment = createServerFn({ method: "GET" })
         .filter((l) => l.department_id === d.id)
         .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name)),
     }));
+  });
+
+export const updateLevel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      display_name: z.string().max(60).nullable().optional(),
+      status: z.enum(["ACTIVE", "SUSPENDED"]).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const payload: Record<string, unknown> = {};
+    if (data.display_name !== undefined) payload.display_name = data.display_name || null;
+    if (data.status !== undefined) payload.status = data.status;
+    const { data: row, error } = await context.supabase
+      .from("levels").update(payload).eq("id", data.id).select().single();
+    if (error) throw new Error(error.message);
+    await context.supabase.from("audit_logs").insert({
+      actor_id: context.userId, action_type: "UPDATE", entity_type: "levels",
+      entity_id: data.id, after_state: row,
+    });
+    return row;
+  });
+
+// ===== Sections =====
+export const listSections = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: sections, error: e1 }, { data: depts }, { data: lvls }] = await Promise.all([
+      context.supabase.from("sections").select("id,name,department_id,level_id,created_at").order("created_at", { ascending: false }),
+      context.supabase.from("departments").select("id,name"),
+      context.supabase.from("levels").select("id,name,display_name,department_id"),
+    ]);
+    if (e1) throw new Error(e1.message);
+    const dMap = new Map((depts ?? []).map((d) => [d.id, d.name]));
+    const lMap = new Map((lvls ?? []).map((l) => [l.id, l.display_name || l.name]));
+    return (sections ?? []).map((s) => ({
+      ...s,
+      department_name: dMap.get(s.department_id) ?? "—",
+      level_name: lMap.get(s.level_id) ?? "—",
+    }));
+  });
+
+export const createSection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      department_id: z.string().uuid(),
+      level_id: z.string().uuid(),
+      name: z.string().min(1).max(30).regex(/^[A-Za-z0-9 _-]+$/),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("sections").insert(data).select().single();
+    if (error) throw new Error(error.message);
+    await context.supabase.from("audit_logs").insert({
+      actor_id: context.userId, action_type: "CREATE", entity_type: "sections",
+      entity_id: row.id, after_state: row,
+    });
+    return row;
+  });
+
+export const deleteSection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("sections").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("audit_logs").insert({
+      actor_id: context.userId, action_type: "DELETE", entity_type: "sections", entity_id: data.id,
+    });
+    return { ok: true };
   });
 
 // ===== Semesters =====
