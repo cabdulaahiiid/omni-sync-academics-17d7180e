@@ -13,14 +13,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/strategic/departments")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    q: typeof s.q === "string" ? s.q : undefined,
-    status: s.status === "ACTIVE" || s.status === "SUSPENDED" ? s.status : undefined,
-  }),
   component: DepartmentsPage,
 });
 
@@ -29,9 +25,32 @@ type Dept = { id: string; name: string; description: string | null; status: "ACT
 function DepartmentsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const search = Route.useSearch();
-  const filterQ = search.q ?? "";
-  const filterStatus = search.status;
+  const [filterQ, setFilterQ] = useState<string>(
+    () => (typeof window !== "undefined" ? sessionStorage.getItem("depts.q") ?? "" : ""),
+  );
+  const [filterStatus, setFilterStatus] = useState<"ACTIVE" | "SUSPENDED" | undefined>(
+    () => {
+      if (typeof window === "undefined") return undefined;
+      const v = sessionStorage.getItem("depts.status");
+      return v === "ACTIVE" || v === "SUSPENDED" ? v : undefined;
+    },
+  );
+  useEffect(() => { sessionStorage.setItem("depts.q", filterQ); }, [filterQ]);
+  useEffect(() => {
+    if (filterStatus) sessionStorage.setItem("depts.status", filterStatus);
+    else sessionStorage.removeItem("depts.status");
+  }, [filterStatus]);
+
+  // Restore scroll on back-nav
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const y = Number(sessionStorage.getItem("depts.scroll") ?? "0");
+    if (y > 0) window.scrollTo({ top: y });
+    const save = () => sessionStorage.setItem("depts.scroll", String(window.scrollY));
+    window.addEventListener("scroll", save, { passive: true });
+    return () => window.removeEventListener("scroll", save);
+  }, []);
+
   const { authReady, hasSession } = useAuthSession();
   const list = useServerFn(listDepartments);
   const upsert = useServerFn(upsertDepartment);
@@ -100,16 +119,12 @@ function DepartmentsPage() {
         <Input
           placeholder="Search…"
           value={filterQ}
-          onChange={(e) =>
-            navigate({ search: (prev) => ({ ...prev, q: e.target.value || undefined }), replace: true })
-          }
+          onChange={(e) => setFilterQ(e.target.value)}
           className="max-w-xs"
         />
         <Select
           value={filterStatus ?? "all"}
-          onValueChange={(v) =>
-            navigate({ search: (prev) => ({ ...prev, status: v === "all" ? undefined : (v as "ACTIVE" | "SUSPENDED") }), replace: true })
-          }
+          onValueChange={(v) => setFilterStatus(v === "all" ? undefined : (v as "ACTIVE" | "SUSPENDED"))}
         >
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -119,7 +134,7 @@ function DepartmentsPage() {
           </SelectContent>
         </Select>
       </div>
-      <Card>
+      <Card ref={scrollRef}>
         <Table>
           <TableHeader>
             <TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Status</TableHead><TableHead className="w-40 text-right">Actions</TableHead></TableRow>
@@ -133,7 +148,7 @@ function DepartmentsPage() {
                 <TableRow
                   key={dept.id}
                   className="cursor-pointer hover:bg-accent/40"
-                  onClick={() => navigate({ to: "/strategic/departments/$id", params: { id: dept.id } })}
+                  onClick={() => navigate({ to: `/strategic/departments/${dept.id}` })}
                 >
                   <TableCell className="font-medium">
                     <span className="inline-flex items-center gap-1.5">
