@@ -165,3 +165,215 @@ function ApprovalRow({ row, onDecide, onOpenChat }: { row: any; onDecide: (d: "a
     </Card>
   );
 }
+
+function SessionApprovalsByDeptWeek() {
+  const qc = useQueryClient();
+  const listDeptsFn = useServerFn(listDeptsWithPendingSessions);
+  const listWeeksFn = useServerFn(listPendingWeeksForDept);
+  const getWeekFn = useServerFn(getWeekTimetable);
+  const decideWeekFn = useServerFn(decideWeek);
+
+  const [deptId, setDeptId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("approvals.deptId") : null,
+  );
+  const [viewWeek, setViewWeek] = useState<number | null>(null);
+  const [pendingDecision, setPendingDecision] = useState<{
+    week: number; decision: "approved" | "rejected";
+  } | null>(null);
+  const [comment, setComment] = useState("");
+
+  useEffect(() => {
+    if (deptId) localStorage.setItem("approvals.deptId", deptId);
+  }, [deptId]);
+
+  const { data: depts, isLoading: deptsLoading } = useQuery({
+    queryKey: ["approvals-depts"],
+    queryFn: () => listDeptsFn(),
+  });
+  const { data: weeks, isLoading: weeksLoading } = useQuery({
+    queryKey: ["approvals-weeks", deptId],
+    queryFn: () => listWeeksFn({ data: { department_id: deptId! } }),
+    enabled: !!deptId,
+  });
+  const { data: weekRows, isLoading: weekLoading } = useQuery({
+    queryKey: ["approvals-week", deptId, viewWeek],
+    queryFn: () => getWeekFn({ data: { department_id: deptId!, week_num: viewWeek! } }),
+    enabled: !!deptId && viewWeek != null,
+  });
+
+  const decideMut = useMutation({
+    mutationFn: () =>
+      decideWeekFn({
+        data: {
+          department_id: deptId!,
+          week_num: pendingDecision!.week,
+          decision: pendingDecision!.decision,
+          comment: comment.trim(),
+        },
+      }),
+    onSuccess: (r) => {
+      toast.success(`${pendingDecision!.decision === "approved" ? "Approved" : "Sent back"} ${r.count} session(s)`);
+      qc.invalidateQueries({ queryKey: ["approvals-weeks", deptId] });
+      qc.invalidateQueries({ queryKey: ["approvals-depts"] });
+      qc.invalidateQueries({ queryKey: ["approvals-week", deptId, pendingDecision!.week] });
+      setPendingDecision(null);
+      setComment("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Filter by Department</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {deptsLoading && <p className="text-sm text-muted-foreground">Loading departments…</p>}
+          {!deptsLoading && (
+            <Select value={deptId ?? ""} onValueChange={(v) => { setDeptId(v); setViewWeek(null); }}>
+              <SelectTrigger className="w-full max-w-md">
+                <SelectValue placeholder="Choose a department…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(depts ?? []).map((d: any) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name} {d.pending_count > 0 && <span className="ml-2 text-xs text-muted-foreground">({d.pending_count} pending)</span>}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </CardContent>
+      </Card>
+
+      {!deptId && (
+        <p className="text-sm text-muted-foreground">Select a department to view weekly schedules.</p>
+      )}
+
+      {deptId && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Weeks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {weeksLoading && <p className="text-sm text-muted-foreground">Loading weeks…</p>}
+            {!weeksLoading && (weeks ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">No sessions found for this department.</p>
+            )}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+              {(weeks ?? []).map((w: any) => (
+                <Card key={w.week_num} className="border">
+                  <CardContent className="space-y-2 p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold">Week {w.week_num}</span>
+                      {w.pending > 0 ? (
+                        <Badge variant="destructive">{w.pending} pending</Badge>
+                      ) : (
+                        <Badge variant="secondary">cleared</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{w.total} session(s) total</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Button size="sm" variant="outline" onClick={() => setViewWeek(w.week_num)}>
+                        <Eye className="mr-1 h-3 w-3" /> View
+                      </Button>
+                      <Button size="sm" disabled={w.pending === 0}
+                        onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "approved" }); }}>
+                        <Check className="mr-1 h-3 w-3" /> Approve
+                      </Button>
+                      <Button size="sm" variant="destructive" disabled={w.pending === 0}
+                        onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "rejected" }); }}>
+                        <MessageSquareWarning className="mr-1 h-3 w-3" /> Send back
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* View week dialog */}
+      <Dialog open={viewWeek != null} onOpenChange={(o) => !o && setViewWeek(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader><DialogTitle>Week {viewWeek} timetable</DialogTitle></DialogHeader>
+          {weekLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+          {!weekLoading && (
+            <div className="max-h-[60vh] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Module</TableHead>
+                    <TableHead>Trainer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Approval</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(weekRows ?? []).map((r: any) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.date}</TableCell>
+                      <TableCell>{r.start_time}–{r.end_time}</TableCell>
+                      <TableCell><span className="font-mono text-xs">{r.module_code}</span> · {r.module_name}</TableCell>
+                      <TableCell>{r.trainer_name}</TableCell>
+                      <TableCell><Badge variant="outline">{r.status}</Badge></TableCell>
+                      <TableCell>
+                        {r.approval ? (
+                          <Badge variant={r.approval.decision === "pending" ? "destructive" : "secondary"}>
+                            {r.approval.decision}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {(weekRows ?? []).length === 0 && (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No sessions.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Decide-week dialog */}
+      <Dialog open={!!pendingDecision} onOpenChange={(o) => { if (!o) { setPendingDecision(null); setComment(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {pendingDecision?.decision === "approved" ? "Approve" : "Send back"} Week {pendingDecision?.week}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This will {pendingDecision?.decision === "approved" ? "approve" : "return"} all pending sessions in this week.
+          </p>
+          <Textarea
+            rows={4}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder={pendingDecision?.decision === "rejected" ? "Required: what needs to change?" : "Optional comment"}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPendingDecision(null); setComment(""); }}>Cancel</Button>
+            <Button
+              variant={pendingDecision?.decision === "approved" ? "default" : "destructive"}
+              disabled={
+                decideMut.isPending ||
+                (pendingDecision?.decision === "rejected" && comment.trim().length < 3)
+              }
+              onClick={() => decideMut.mutate()}
+            >
+              {decideMut.isPending ? "Submitting…" : pendingDecision?.decision === "approved" ? "Approve all" : "Send back"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
