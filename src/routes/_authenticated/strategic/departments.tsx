@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listDepartments, upsertDepartment, deleteDepartment } from "@/lib/data.functions";
@@ -12,11 +12,15 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/strategic/departments")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    q: typeof s.q === "string" ? s.q : undefined,
+    status: s.status === "ACTIVE" || s.status === "SUSPENDED" ? s.status : undefined,
+  }),
   component: DepartmentsPage,
 });
 
@@ -24,6 +28,10 @@ type Dept = { id: string; name: string; description: string | null; status: "ACT
 
 function DepartmentsPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const search = Route.useSearch();
+  const filterQ = search.q ?? "";
+  const filterStatus = search.status;
   const { authReady, hasSession } = useAuthSession();
   const list = useServerFn(listDepartments);
   const upsert = useServerFn(upsertDepartment);
@@ -44,6 +52,12 @@ function DepartmentsPage() {
     mutationFn: (id: string) => del({ data: { id } }),
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["departments"] }); },
     onError: (e: Error) => toast.error(e.message),
+  });
+
+  const filteredRows = (rows ?? []).filter((d: any) => {
+    if (filterStatus && d.status !== filterStatus) return false;
+    if (filterQ && !d.name.toLowerCase().includes(filterQ.toLowerCase())) return false;
+    return true;
   });
 
   return (
@@ -82,22 +96,54 @@ function DepartmentsPage() {
           </DialogContent>
         </Dialog>
       </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          placeholder="Search…"
+          value={filterQ}
+          onChange={(e) =>
+            navigate({ search: (prev) => ({ ...prev, q: e.target.value || undefined }), replace: true })
+          }
+          className="max-w-xs"
+        />
+        <Select
+          value={filterStatus ?? "all"}
+          onValueChange={(v) =>
+            navigate({ search: (prev) => ({ ...prev, status: v === "all" ? undefined : (v as "ACTIVE" | "SUSPENDED") }), replace: true })
+          }
+        >
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="ACTIVE">Active</SelectItem>
+            <SelectItem value="SUSPENDED">Suspended</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <Card>
         <Table>
           <TableHeader>
-            <TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Status</TableHead><TableHead className="w-32 text-right">Actions</TableHead></TableRow>
+            <TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Status</TableHead><TableHead className="w-40 text-right">Actions</TableHead></TableRow>
           </TableHeader>
           <TableBody>
             {isLoading && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
-            {!isLoading && rows?.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No departments yet.</TableCell></TableRow>}
-            {rows?.map((d) => {
+            {!isLoading && filteredRows.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No departments match.</TableCell></TableRow>}
+            {filteredRows.map((d) => {
               const dept = d as Dept;
               return (
-                <TableRow key={dept.id}>
-                  <TableCell className="font-medium">{dept.name}</TableCell>
+                <TableRow
+                  key={dept.id}
+                  className="cursor-pointer hover:bg-accent/40"
+                  onClick={() => navigate({ to: "/strategic/departments/$id", params: { id: dept.id } })}
+                >
+                  <TableCell className="font-medium">
+                    <span className="inline-flex items-center gap-1.5">
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      {dept.name}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{dept.description}</TableCell>
                   <TableCell><Badge variant={dept.status === "ACTIVE" ? "default" : "secondary"}>{dept.status}</Badge></TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" onClick={() => { setEditing(dept); setName(dept.name); setDescription(dept.description ?? ""); setStatus(dept.status); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => { if (confirm(`Delete ${dept.name}?`)) delMut.mutate(dept.id); }}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
