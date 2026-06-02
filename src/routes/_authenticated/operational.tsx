@@ -9,7 +9,7 @@ import { NotificationsBell } from "@/components/notifications-bell";
 import { OfflineBanner } from "@/components/offline-banner";
 import {
   LayoutDashboard, CalendarRange,
-  Activity, FileBarChart, LogOut, Menu, ShieldCheck, Upload, ClipboardCheck, GraduationCap,
+  Activity, FileBarChart, LogOut, Menu, ShieldCheck, Upload, ClipboardCheck, GraduationCap, FileClock,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/operational")({
@@ -20,6 +20,7 @@ const NAV = [
   { to: "/operational", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/operational/matrix", label: "Schedules", icon: CalendarRange },
   { to: "/operational/semester-upload", label: "Semester Upload", icon: Upload },
+  { to: "/operational/drafts", label: "Drafts", icon: FileClock },
   { to: "/operational/students", label: "Students Hub", icon: GraduationCap },
   { to: "/operational/attendance", label: "Attendance", icon: ClipboardCheck },
   { to: "/operational/live-monitor", label: "Live Monitoring", icon: Activity },
