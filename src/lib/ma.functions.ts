@@ -101,7 +101,7 @@ export const listSemesters = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("semester_registry")
-      .select("id, name, start_date, end_date, status")
+      .select("id, name, start_date, end_date, status, distribution_status")
       .order("start_date", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
