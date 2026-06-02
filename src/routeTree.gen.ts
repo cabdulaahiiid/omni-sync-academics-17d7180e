@@ -38,6 +38,7 @@ import { Route as AuthenticatedOperationalSemesterUploadRouteImport } from './ro
 import { Route as AuthenticatedOperationalReportsRouteImport } from './routes/_authenticated/operational/reports'
 import { Route as AuthenticatedOperationalMatrixRouteImport } from './routes/_authenticated/operational/matrix'
 import { Route as AuthenticatedOperationalLiveMonitorRouteImport } from './routes/_authenticated/operational/live-monitor'
+import { Route as AuthenticatedOperationalDraftsRouteImport } from './routes/_authenticated/operational/drafts'
 import { Route as AuthenticatedOperationalAttendanceRouteImport } from './routes/_authenticated/operational/attendance'
 import { Route as AuthenticatedGroundScheduleIdRouteImport } from './routes/_authenticated/ground/$scheduleId'
 import { Route as AuthenticatedStrategicDepartmentsIdRouteImport } from './routes/_authenticated/strategic/departments.$id'
@@ -210,6 +211,12 @@ const AuthenticatedOperationalLiveMonitorRoute =
     path: '/live-monitor',
     getParentRoute: () => AuthenticatedOperationalRoute,
   } as any)
+const AuthenticatedOperationalDraftsRoute =
+  AuthenticatedOperationalDraftsRouteImport.update({
+    id: '/drafts',
+    path: '/drafts',
+    getParentRoute: () => AuthenticatedOperationalRoute,
+  } as any)
 const AuthenticatedOperationalAttendanceRoute =
   AuthenticatedOperationalAttendanceRouteImport.update({
     id: '/attendance',
@@ -237,6 +244,7 @@ export interface FileRoutesByFullPath {
   '/strategic': typeof AuthenticatedStrategicRouteWithChildren
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
+  '/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
   '/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
   '/operational/reports': typeof AuthenticatedOperationalReportsRoute
@@ -267,6 +275,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
+  '/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
   '/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
   '/operational/reports': typeof AuthenticatedOperationalReportsRoute
@@ -302,6 +311,7 @@ export interface FileRoutesById {
   '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/_authenticated/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
+  '/_authenticated/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
   '/_authenticated/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
   '/_authenticated/operational/matrix': typeof AuthenticatedOperationalMatrixRoute
   '/_authenticated/operational/reports': typeof AuthenticatedOperationalReportsRoute
@@ -337,6 +347,7 @@ export interface FileRouteTypes {
     | '/strategic'
     | '/ground/$scheduleId'
     | '/operational/attendance'
+    | '/operational/drafts'
     | '/operational/live-monitor'
     | '/operational/matrix'
     | '/operational/reports'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/ground/$scheduleId'
     | '/operational/attendance'
+    | '/operational/drafts'
     | '/operational/live-monitor'
     | '/operational/matrix'
     | '/operational/reports'
@@ -401,6 +413,7 @@ export interface FileRouteTypes {
     | '/_authenticated/strategic'
     | '/_authenticated/ground/$scheduleId'
     | '/_authenticated/operational/attendance'
+    | '/_authenticated/operational/drafts'
     | '/_authenticated/operational/live-monitor'
     | '/_authenticated/operational/matrix'
     | '/_authenticated/operational/reports'
@@ -638,6 +651,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperationalLiveMonitorRouteImport
       parentRoute: typeof AuthenticatedOperationalRoute
     }
+    '/_authenticated/operational/drafts': {
+      id: '/_authenticated/operational/drafts'
+      path: '/drafts'
+      fullPath: '/operational/drafts'
+      preLoaderRoute: typeof AuthenticatedOperationalDraftsRouteImport
+      parentRoute: typeof AuthenticatedOperationalRoute
+    }
     '/_authenticated/operational/attendance': {
       id: '/_authenticated/operational/attendance'
       path: '/attendance'
@@ -677,6 +697,7 @@ const AuthenticatedGroundRouteWithChildren =
 
 interface AuthenticatedOperationalRouteChildren {
   AuthenticatedOperationalAttendanceRoute: typeof AuthenticatedOperationalAttendanceRoute
+  AuthenticatedOperationalDraftsRoute: typeof AuthenticatedOperationalDraftsRoute
   AuthenticatedOperationalLiveMonitorRoute: typeof AuthenticatedOperationalLiveMonitorRoute
   AuthenticatedOperationalMatrixRoute: typeof AuthenticatedOperationalMatrixRoute
   AuthenticatedOperationalReportsRoute: typeof AuthenticatedOperationalReportsRoute
@@ -689,6 +710,7 @@ const AuthenticatedOperationalRouteChildren: AuthenticatedOperationalRouteChildr
   {
     AuthenticatedOperationalAttendanceRoute:
       AuthenticatedOperationalAttendanceRoute,
+    AuthenticatedOperationalDraftsRoute: AuthenticatedOperationalDraftsRoute,
     AuthenticatedOperationalLiveMonitorRoute:
       AuthenticatedOperationalLiveMonitorRoute,
     AuthenticatedOperationalMatrixRoute: AuthenticatedOperationalMatrixRoute,
@@ -790,13 +812,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -643,10 +643,13 @@ export type Database = {
           ended_at: string | null
           hidden_staff_id: string
           id: string
+          is_published: boolean
           level_id: string
           mode: Database["public"]["Enums"]["session_mode"] | null
           module_code: string
           module_name: string
+          published_at: string | null
+          published_by: string | null
           section_id: string
           semester_id: string
           start_time: string
@@ -669,10 +672,13 @@ export type Database = {
           ended_at?: string | null
           hidden_staff_id: string
           id?: string
+          is_published?: boolean
           level_id: string
           mode?: Database["public"]["Enums"]["session_mode"] | null
           module_code: string
           module_name: string
+          published_at?: string | null
+          published_by?: string | null
           section_id: string
           semester_id: string
           start_time: string
@@ -695,10 +701,13 @@ export type Database = {
           ended_at?: string | null
           hidden_staff_id?: string
           id?: string
+          is_published?: boolean
           level_id?: string
           mode?: Database["public"]["Enums"]["session_mode"] | null
           module_code?: string
           module_name?: string
+          published_at?: string | null
+          published_by?: string | null
           section_id?: string
           semester_id?: string
           start_time?: string
@@ -797,6 +806,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          distribution_status: string
           end_date: string
           id: string
           name: string
@@ -809,6 +819,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          distribution_status?: string
           end_date: string
           id?: string
           name: string
@@ -821,6 +832,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          distribution_status?: string
           end_date?: string
           id?: string
           name?: string
