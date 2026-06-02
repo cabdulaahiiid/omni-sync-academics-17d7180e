@@ -7,50 +7,43 @@ import { listSemesters } from "@/lib/ma.functions";
 import { useMe } from "@/hooks/use-me";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Upload, CheckCircle2, AlertTriangle, Send } from "lucide-react";
+import { Upload, CheckCircle2, AlertTriangle, Send, FileSpreadsheet, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation as useMutationCore } from "@tanstack/react-query";
 import { dhResubmitSemester } from "@/lib/feedback.functions";
 import { FeedbackChat } from "@/components/feedback-chat";
+import * as XLSX from "xlsx";
 
 export const Route = createFileRoute("/_authenticated/operational/semester-upload")({
   component: SemesterUpload,
 });
 
-const SAMPLE = `module_code,module_name,trainer_name,frequency,duration_min,section_name,level_name,venue_name,day,start_time
-ICT201,Web Development,David Kayitare,1,120,ICT-IV-A,IV,Lab A,MON,09:00
-ICT202,Networking,David Kayitare,1,120,ICT-IV-A,IV,Lab A,WED,09:00`;
+const REQUIRED = ["module_code","module_name","trainer_name","frequency","duration_min","section_name","level_name","venue_name","day","start_time"];
 
-function parseCSV(text: string) {
-  const lines = text.trim().split(/\r?\n/);
-  const headers = lines.shift()!.split(",").map((s) => s.trim());
-  return lines.map((line) => {
-    const cols = line.split(",").map((s) => s.trim());
-    const row: Record<string, string> = {};
-    headers.forEach((h, i) => (row[h] = cols[i] ?? ""));
-    return {
-      module_code: row.module_code,
-      module_name: row.module_name,
-      trainer_name: row.trainer_name,
-      frequency: Number(row.frequency || 1),
-      duration_min: Number(row.duration_min),
-      section_name: row.section_name,
-      level_name: row.level_name,
-      venue_name: row.venue_name,
-      day: row.day as "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN",
-      start_time: row.start_time,
-    };
-  });
+function normalizeRow(r: any) {
+  return {
+    module_code: String(r.module_code ?? "").trim(),
+    module_name: String(r.module_name ?? "").trim(),
+    trainer_name: String(r.trainer_name ?? "").trim(),
+    frequency: Number(r.frequency || 1),
+    duration_min: Number(r.duration_min),
+    section_name: String(r.section_name ?? "").trim(),
+    level_name: String(r.level_name ?? "").trim(),
+    venue_name: String(r.venue_name ?? "").trim(),
+    day: String(r.day ?? "").trim().toUpperCase() as "MON"|"TUE"|"WED"|"THU"|"FRI"|"SAT"|"SUN",
+    start_time: String(r.start_time ?? "").trim(),
+  };
 }
 
 function SemesterUpload() {
   const { data: me } = useMe();
-  const [csv, setCsv] = useState(SAMPLE);
+  const [rows, setRows] = useState<ReturnType<typeof normalizeRow>[]>([]);
+  const [fileName, setFileName] = useState<string>("");
   const [semesterId, setSemesterId] = useState("");
   const [weeks, setWeeks] = useState(16);
+  const [validated, setValidated] = useState(false);
 
   const semestersFn = useServerFn(listSemesters);
   const uploadFn = useServerFn(uploadSemesterSchedule);
@@ -58,7 +51,7 @@ function SemesterUpload() {
   const { data: semesters } = useQuery({ queryKey: ["semesters"], queryFn: () => semestersFn(), staleTime: 60000 });
 
   const selectedSem = (semesters ?? []).find((s: any) => s.id === semesterId);
-  const isRejected = selectedSem?.status === "DRAFT";
+  const isFeedbackActive = selectedSem?.distribution_status === "FEEDBACK_ACTIVE";
 
   const resubmit = useMutationCore({
     mutationFn: () => resubmitFn({ data: { semester_id: semesterId } }),
@@ -66,30 +59,61 @@ function SemesterUpload() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const mut = useMutation({
-    mutationFn: () => {
-      const rows = parseCSV(csv);
-      return uploadFn({ data: {
+  const validateMut = useMutation({
+    mutationFn: () => uploadFn({ data: {
         semester_id: semesterId,
         department_id: me!.profile!.department_id!,
         rows,
         weeks,
-      }});
+        validate_only: true,
+      }}),
+    onSuccess: (r) => {
+      if (r.ok) { setValidated(true); toast.success("Validation passed. No conflicts detected."); }
+      else { setValidated(false); toast.error(`Validation failed: ${r.errors.length} errors, ${r.conflicts.length} conflicts.`); }
     },
-    onSuccess: (r) => toast.success(`${r.created} schedules created (${r.errors.length} errors)`),
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const saveDraftMut = useMutation({
+    mutationFn: () => uploadFn({ data: {
+        semester_id: semesterId,
+        department_id: me!.profile!.department_id!,
+        rows,
+        weeks,
+        validate_only: false,
+      }}),
+    onSuccess: (r) => {
+      if (r.ok) toast.success(`Saved ${r.created} draft sessions. Open Drafts to request approval.`);
+      else toast.error("Save blocked by conflicts. Re-validate.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const lastResult = saveDraftMut.data ?? validateMut.data;
+
+  const handleFile = async (file: File) => {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf);
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const raw: any[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    if (!raw.length) { toast.error("Empty sheet"); return; }
+    const missing = REQUIRED.filter((k) => !(k in raw[0]));
+    if (missing.length) { toast.error(`Missing columns: ${missing.join(", ")}`); return; }
+    setRows(raw.map(normalizeRow));
+    setFileName(file.name);
+    setValidated(false);
+  };
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Semester Upload</h1>
-        <p className="text-sm text-muted-foreground">Paste CSV rows. Slicing engine generates {weeks} weekly schedules.</p>
+        <p className="text-sm text-muted-foreground">Upload an Excel (.xlsx) timetable. Validation blocks any trainer/venue/section double-booking before saving as drafts.</p>
       </div>
 
       <Card className="rounded-2xl">
         <CardHeader><CardTitle className="text-base">Configuration</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-3">
+        <CardContent className="grid gap-3 md:grid-cols-2">
           <div>
             <label className="text-xs font-medium">Semester</label>
             <Select value={semesterId} onValueChange={setSemesterId}>
@@ -104,15 +128,31 @@ function SemesterUpload() {
           <div>
             <label className="text-xs font-medium">Weeks</label>
             <input type="number" min={1} max={20} value={weeks}
-              onChange={(e) => setWeeks(Number(e.target.value))}
+              onChange={(e) => { setWeeks(Number(e.target.value)); setValidated(false); }}
               className="mt-1 h-9 w-full rounded-md border bg-background px-3 text-sm" />
           </div>
-          <div className="flex items-end">
-            <Button onClick={() => mut.mutate()}
-              disabled={!semesterId || !me?.profile?.department_id || mut.isPending}
-              className="w-full">
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl">
+        <CardHeader><CardTitle className="text-base">Excel timetable</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-sm text-muted-foreground hover:bg-accent/40">
+            <FileSpreadsheet className="h-4 w-4" />
+            {fileName ? <span>{fileName} ({rows.length} rows)</span> : <span>Click to upload .xlsx (columns: {REQUIRED.join(", ")})</span>}
+            <input type="file" accept=".xlsx,.xls" className="hidden"
+              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => validateMut.mutate()}
+              disabled={!semesterId || rows.length === 0 || validateMut.isPending}>
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              {validateMut.isPending ? "Validating…" : "Validate (check conflicts)"}
+            </Button>
+            <Button onClick={() => saveDraftMut.mutate()}
+              disabled={!validated || saveDraftMut.isPending}>
               <Upload className="mr-2 h-4 w-4" />
-              {mut.isPending ? "Slicing…" : "Upload & Slice"}
+              {saveDraftMut.isPending ? "Saving…" : "Save as Draft"}
             </Button>
           </div>
         </CardContent>
@@ -120,12 +160,14 @@ function SemesterUpload() {
 
       {semesterId && (
         <div className="grid gap-4 lg:grid-cols-2">
-          <FeedbackChat semesterId={semesterId} title="Conversation with Admin" />
-          {isRejected && (
+          {(isFeedbackActive || selectedSem?.distribution_status === "PENDING_MA" || selectedSem?.distribution_status === "PUBLISHED") && (
+            <FeedbackChat semesterId={semesterId} title="Conversation with Admin" />
+          )}
+          {isFeedbackActive && (
             <Card className="rounded-2xl">
               <CardHeader><CardTitle className="text-base">Resubmit</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                <p className="text-sm text-muted-foreground">After applying the Admin's corrections, resubmit the semester for approval.</p>
+                <p className="text-sm text-muted-foreground">Feedback active. Make edits in Drafts, then resubmit.</p>
                 <Button onClick={() => resubmit.mutate()} disabled={resubmit.isPending} className="w-full">
                   <Send className="mr-2 h-4 w-4" /> {resubmit.isPending ? "Submitting…" : "Resubmit to Admin"}
                 </Button>
@@ -135,28 +177,32 @@ function SemesterUpload() {
         </div>
       )}
 
-      <Card className="rounded-2xl">
-        <CardHeader><CardTitle className="text-base">CSV Rows</CardTitle></CardHeader>
-        <CardContent>
-          <Textarea rows={12} value={csv} onChange={(e) => setCsv(e.target.value)}
-            className="font-mono text-xs" />
-        </CardContent>
-      </Card>
-
-      {mut.data && (
+      {lastResult && (
         <Card className="rounded-2xl">
-          <CardHeader><CardTitle className="text-base">Result</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Validation report</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald" />
-              <span>Created <b>{mut.data.created}</b> of {mut.data.total_rows * weeks} possible schedules</span>
+              {lastResult.ok ? <CheckCircle2 className="h-4 w-4 text-emerald" /> : <AlertTriangle className="h-4 w-4 text-amber" />}
+              <span>{lastResult.total_rows} rows × {weeks} weeks = {lastResult.total_rows * weeks} sessions. {lastResult.created ? <>Created <b>{lastResult.created}</b>.</> : null}</span>
             </div>
-            {mut.data.errors.length > 0 && (
+            {lastResult.errors.length > 0 && (
               <div className="space-y-1">
                 <p className="flex items-center gap-2 font-medium"><AlertTriangle className="h-4 w-4 text-amber" /> Errors</p>
-                {mut.data.errors.map((e, i) => (
+                {lastResult.errors.map((e: any, i: number) => (
                   <Badge key={i} variant="destructive" className="mr-1 text-[10px]">Row {e.row + 1}: {e.reason}</Badge>
                 ))}
+              </div>
+            )}
+            {lastResult.conflicts?.length > 0 && (
+              <div className="space-y-1">
+                <p className="flex items-center gap-2 font-medium"><AlertTriangle className="h-4 w-4 text-amber" /> Conflicts ({lastResult.conflicts.length})</p>
+                <div className="flex flex-wrap gap-1">
+                  {lastResult.conflicts.slice(0, 40).map((c: any, i: number) => (
+                    <Badge key={i} variant="destructive" className="text-[10px]">
+                      {c.kind} · {c.date} · row {c.row_a + 1}{c.row_b >= 0 ? ` vs ${c.row_b + 1}` : " vs existing"}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
