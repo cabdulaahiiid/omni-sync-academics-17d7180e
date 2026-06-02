@@ -106,6 +106,7 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
       department_id: z.string().uuid(),
       rows: z.array(SliceRowSchema).min(1).max(2000),
       weeks: z.number().int().min(1).max(20).default(16),
+      validate_only: z.boolean().optional().default(false),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -152,6 +153,7 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
         const date = new Date(startDate);
         date.setDate(date.getDate() + (w - 1) * 7 + DAY_OFFSET[row.day]);
         inserts.push({
+          _row: idx,
           section_id: sec.id,
           level_id: l.id,
           module_code: row.module_code,
@@ -173,16 +175,55 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
       }
     });
 
+    // Intra-batch conflicts
+    const conflicts: { row_a: number; row_b: number; date: string; kind: "trainer" | "venue" | "section" }[] = [];
+    const overlap = (a: any, b: any) => a.date === b.date && !(a.end_time <= b.start_time || b.end_time <= a.start_time);
+    for (let i = 0; i < inserts.length; i++) {
+      for (let j = i + 1; j < inserts.length; j++) {
+        const a = inserts[i]; const b = inserts[j];
+        if (!overlap(a, b)) continue;
+        if (a.trainer_registry_id === b.trainer_registry_id) conflicts.push({ row_a: a._row, row_b: b._row, date: a.date, kind: "trainer" });
+        if (a.venue_id === b.venue_id) conflicts.push({ row_a: a._row, row_b: b._row, date: a.date, kind: "venue" });
+        if (a.section_id === b.section_id) conflicts.push({ row_a: a._row, row_b: b._row, date: a.date, kind: "section" });
+      }
+    }
+
+    // DB conflicts: existing schedules on same dates that overlap (exclude this semester's own drafts)
+    if (inserts.length) {
+      const dates = Array.from(new Set(inserts.map((i) => i.date)));
+      const { data: existing } = await supabase
+        .from("schedules")
+        .select("id, date, start_time, end_time, trainer_registry_id, venue_id, section_id, semester_id, module_code")
+        .in("date", dates);
+      for (const a of inserts) {
+        for (const b of existing ?? []) {
+          if (b.semester_id === data.semester_id) continue;
+          if (!overlap(a, b)) continue;
+          if (a.trainer_registry_id === b.trainer_registry_id) conflicts.push({ row_a: a._row, row_b: -1, date: a.date, kind: "trainer" });
+          if (a.venue_id === b.venue_id) conflicts.push({ row_a: a._row, row_b: -1, date: a.date, kind: "venue" });
+          if (a.section_id === b.section_id) conflicts.push({ row_a: a._row, row_b: -1, date: a.date, kind: "section" });
+        }
+      }
+    }
+
+    if (errors.length || conflicts.length || data.validate_only) {
+      return { ok: errors.length === 0 && conflicts.length === 0, created: 0, errors, conflicts, total_rows: data.rows.length };
+    }
+
+    // Replace any previous drafts for this semester before re-inserting
+    await supabase.from("schedules").delete().eq("semester_id", data.semester_id).eq("status", "DRAFT");
+
     let created = 0;
     if (inserts.length) {
-      // chunk inserts to keep payloads under limits
       const chunk = 200;
       for (let i = 0; i < inserts.length; i += chunk) {
-        const slice = inserts.slice(i, i + chunk);
+        const slice = inserts.slice(i, i + chunk).map(({ _row, ...rest }) => rest);
         const { error } = await supabase.from("schedules").insert(slice);
         if (error) throw new Error(error.message);
         created += slice.length;
       }
     }
-    return { created, errors, total_rows: data.rows.length };
+    // Ensure semester is in DRAFT state (do NOT auto-submit for approval)
+    await supabase.from("semester_registry").update({ distribution_status: "DRAFT" }).eq("id", data.semester_id);
+    return { ok: true, created, errors, conflicts, total_rows: data.rows.length };
   });
