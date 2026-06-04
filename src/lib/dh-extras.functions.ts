@@ -44,7 +44,10 @@ export const overrideAttendance = createServerFn({ method: "POST" })
 export const getWeeklyMatrix = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ week_start: z.string() }).parse(d),
+    z.object({
+      week_start: z.string(),
+      semester_id: z.string().uuid().optional(),
+    }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const start = new Date(data.week_start);
@@ -52,13 +55,15 @@ export const getWeeklyMatrix = createServerFn({ method: "POST" })
     end.setDate(end.getDate() + 6);
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
-    const { data: rows, error } = await context.supabase
+    let q = context.supabase
       .from("schedules")
       .select("id, date, day, start_time, end_time, module_code, module_name, trainer_registry_id, trainer_name, venue_id, status")
       .gte("date", fmt(start))
       .lte("date", fmt(end))
       .order("date")
       .order("start_time");
+    if (data.semester_id) q = q.eq("semester_id", data.semester_id);
+    const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
 
     // Conflict detection: same trainer or same venue overlapping time on same date

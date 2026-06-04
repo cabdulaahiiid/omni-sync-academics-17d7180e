@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getWeeklyMatrix, swapTrainer } from "@/lib/dh-extras.functions";
 import { listTrainers } from "@/lib/dh.functions";
+import { listSemesters } from "@/lib/ma.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,17 +32,22 @@ const fmt = (d: Date) => d.toISOString().slice(0, 10);
 function WeeklyMatrix() {
   const qc = useQueryClient();
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date()));
+  const [semesterId, setSemesterId] = useState<string>("");
   const matrix = useServerFn(getWeeklyMatrix);
   const swap = useServerFn(swapTrainer);
   const trainersFn = useServerFn(listTrainers);
+  const semsFn = useServerFn(listSemesters);
 
   const { data } = useQuery({
-    queryKey: ["dh-matrix", fmt(weekStart)],
-    queryFn: () => matrix({ data: { week_start: fmt(weekStart) } }),
+    queryKey: ["dh-matrix", fmt(weekStart), semesterId],
+    queryFn: () => matrix({ data: { week_start: fmt(weekStart), semester_id: semesterId || undefined } }),
     staleTime: 15000,
   });
   const { data: trainers } = useQuery({
     queryKey: ["dh-trainers"], queryFn: () => trainersFn(), staleTime: 60000,
+  });
+  const { data: semesters } = useQuery({
+    queryKey: ["semesters"], queryFn: () => semsFn(), staleTime: 60000,
   });
 
   const [swapTarget, setSwapTarget] = useState<any | null>(null);
@@ -76,6 +82,15 @@ function WeeklyMatrix() {
           <p className="text-sm text-muted-foreground">Conflicts highlighted. Click a session to swap trainer.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Select value={semesterId || "all"} onValueChange={(v) => setSemesterId(v === "all" ? "" : v)}>
+            <SelectTrigger className="h-8 w-[200px]"><SelectValue placeholder="All semesters" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All semesters</SelectItem>
+              {(semesters ?? []).map((s: any) => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button size="sm" variant="outline" onClick={() => {
             const d = new Date(weekStart); d.setDate(d.getDate() - 7); setWeekStart(d);
           }}><ChevronLeft className="h-4 w-4" /></Button>
