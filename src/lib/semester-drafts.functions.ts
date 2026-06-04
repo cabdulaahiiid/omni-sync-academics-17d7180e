@@ -86,3 +86,24 @@ export const updateDraftSession = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const listSemesterSessions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ semester_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("schedules")
+      .select("id, date, week_num, day, start_time, end_time, module_code, module_name, trainer_name, trainer_registry_id, venue_id, status, is_published")
+      .eq("semester_id", data.semester_id)
+      .order("date")
+      .order("start_time");
+    if (error) throw new Error(error.message);
+    const { data: sem } = await context.supabase
+      .from("semester_registry")
+      .select("id, name, status, distribution_status")
+      .eq("id", data.semester_id)
+      .maybeSingle();
+    return { sessions: rows ?? [], semester: sem };
+  });

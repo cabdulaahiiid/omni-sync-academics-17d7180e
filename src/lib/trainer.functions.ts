@@ -61,13 +61,15 @@ export const getTrainerToday = createServerFn({ method: "GET" })
       .from("schedules")
       .select("id, date, day, module_code, module_name, start_time, end_time, venue_id, section_id, level_id, status")
       .eq("trainer_registry_id", trainerRegistryId)
+      .eq("is_published", true)
       .eq("date", dateStr)
       .order("start_time");
 
     const { count: total } = await supabase
       .from("schedules")
       .select("id", { count: "exact", head: true })
-      .eq("trainer_registry_id", trainerRegistryId);
+      .eq("trainer_registry_id", trainerRegistryId)
+      .eq("is_published", true);
 
     const { data: completedRows } = await supabase
       .from("session_logs")
