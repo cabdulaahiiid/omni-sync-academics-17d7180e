@@ -26,7 +26,7 @@ export type Database = {
           excessive_load: boolean
           id: string
           invalid_qualification: boolean
-          schedule_id: string
+          schedule_id: string | null
           submitted_by: string | null
           target_id: string | null
           type: Database["public"]["Enums"]["approval_type"]
@@ -42,7 +42,7 @@ export type Database = {
           excessive_load?: boolean
           id?: string
           invalid_qualification?: boolean
-          schedule_id: string
+          schedule_id?: string | null
           submitted_by?: string | null
           target_id?: string | null
           type?: Database["public"]["Enums"]["approval_type"]
@@ -58,7 +58,7 @@ export type Database = {
           excessive_load?: boolean
           id?: string
           invalid_qualification?: boolean
-          schedule_id?: string
+          schedule_id?: string | null
           submitted_by?: string | null
           target_id?: string | null
           type?: Database["public"]["Enums"]["approval_type"]
