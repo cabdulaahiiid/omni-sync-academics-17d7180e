@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { listApprovalQueue, decideApproval } from "@/lib/ma.functions";
 import { maRejectSemesterWithFeedback } from "@/lib/feedback.functions";
 import {
@@ -31,6 +32,19 @@ function ApprovalsPage() {
   const list = useServerFn(listApprovalQueue);
   const rejectSemFn = useServerFn(maRejectSemesterWithFeedback);
   const qc = useQueryClient();
+  useEffect(() => {
+    const ch = supabase.channel("ma-approvals")
+      .on("postgres_changes", { event: "*", schema: "public", table: "approval_queue" },
+        () => {
+          qc.invalidateQueries({ queryKey: ["approval-queue"] });
+          qc.invalidateQueries({ queryKey: ["approvals-depts"] });
+          qc.invalidateQueries({ queryKey: ["approvals-weeks"] });
+        })
+      .on("postgres_changes", { event: "*", schema: "public", table: "semester_registry" },
+        () => qc.invalidateQueries({ queryKey: ["approval-queue"] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
   const [chatSemesterId, setChatSemesterId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<{ id: string; semester_id: string; name: string } | null>(null);
   const [rejectMessage, setRejectMessage] = useState("");
