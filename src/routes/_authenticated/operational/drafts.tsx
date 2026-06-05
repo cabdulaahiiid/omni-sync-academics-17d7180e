@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { listSemesterDrafts, requestSemesterApproval } from "@/lib/semester-drafts.functions";
 import { useMe } from "@/hooks/use-me";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +29,16 @@ function DraftsPage() {
   const qc = useQueryClient();
 
   const deptId = me?.profile?.department_id;
+  useEffect(() => {
+    if (!deptId) return;
+    const ch = supabase.channel(`dh-drafts-${deptId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "semester_registry" },
+        () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "schedules", filter: `department_id=eq.${deptId}` },
+        () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [deptId, qc]);
   const { data, isLoading } = useQuery({
     queryKey: ["semester-drafts", deptId],
     queryFn: () => listFn({ data: { department_id: deptId! } }),
