@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { getTrainerToday, getMyProgress } from "@/lib/trainer.functions";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useMe } from "@/hooks/use-me";
@@ -18,6 +20,20 @@ function TrainerGround() {
   const canQuery = authReady && hasSession && !!userId && me?.userId === userId;
   const today = useServerFn(getTrainerToday);
   const progressFn = useServerFn(getMyProgress);
+  const qc = useQueryClient();
+  const trainerRegistryId = me?.profile?.trainer_registry_id;
+  useEffect(() => {
+    if (!canQuery || !trainerRegistryId) return;
+    const ch = supabase.channel(`trainer-schedules-${trainerRegistryId}`)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "schedules", filter: `trainer_registry_id=eq.${trainerRegistryId}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ["trainer-today", userId] });
+          qc.invalidateQueries({ queryKey: ["my-progress", userId] });
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [canQuery, trainerRegistryId, userId, qc]);
   const { data } = useQuery({
     queryKey: ["trainer-today", userId],
     queryFn: () => today(),
