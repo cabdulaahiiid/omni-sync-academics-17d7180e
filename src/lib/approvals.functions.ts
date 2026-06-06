@@ -125,31 +125,18 @@ export const decideWeek = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { data: scheds } = await supabase
-      .from("schedules")
-      .select("id")
-      .eq("department_id", data.department_id)
-      .eq("week_num", data.week_num);
-    const ids = (scheds ?? []).map((s) => s.id);
-    if (!ids.length) return { count: 0 };
-    const { data: aq } = await supabase
-      .from("approval_queue")
-      .select("id")
-      .eq("type", "session")
-      .eq("decision", "pending")
-      .in("schedule_id", ids);
-    let n = 0;
-    for (const row of aq ?? []) {
-      const { error } = await supabase.rpc("decide_approval", {
-        _id: row.id,
-        _decision: data.decision,
-        _comment: data.comment,
-      });
-      if (error) throw new Error(error.message);
-      n++;
+    if (data.decision === "rejected" && data.comment.trim().length < 3) {
+      throw new Error("Feedback message required to send back a week");
     }
-    return { count: n };
+    const { data: result, error } = await context.supabase.rpc("ma_decide_week", {
+      _department_id: data.department_id,
+      _week_num: data.week_num,
+      _decision: data.decision,
+      _message: data.comment,
+    });
+    if (error) throw new Error(error.message);
+    const r = (result ?? {}) as { count?: number; thread_id?: string };
+    return { count: r.count ?? 0, thread_id: r.thread_id ?? null };
   });
 
 /** Department overview: levels, sections per level, trainers, modules completed/ongoing. */
