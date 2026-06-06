@@ -4,12 +4,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { listSemesterDrafts, requestSemesterApproval } from "@/lib/semester-drafts.functions";
+import { listWeekThreadsForDept } from "@/lib/feedback.functions";
+import { FeedbackChat } from "@/components/feedback-chat";
 import { useMe } from "@/hooks/use-me";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Send, FileClock } from "lucide-react";
+import { Send, FileClock, MessageSquareWarning } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/operational/drafts")({
   component: DraftsPage,
@@ -26,7 +29,9 @@ function DraftsPage() {
   const { data: me } = useMe();
   const listFn = useServerFn(listSemesterDrafts);
   const reqFn = useServerFn(requestSemesterApproval);
+  const weekThreadsFn = useServerFn(listWeekThreadsForDept);
   const qc = useQueryClient();
+  const [openThread, setOpenThread] = useState<{ semester_id: string; week_num: number; title: string } | null>(null);
 
   const deptId = me?.profile?.department_id;
   useEffect(() => {
@@ -36,12 +41,21 @@ function DraftsPage() {
         () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
       .on("postgres_changes", { event: "*", schema: "public", table: "schedules", filter: `department_id=eq.${deptId}` },
         () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "schedule_feedback_threads", filter: `department_id=eq.${deptId}` },
+        () => qc.invalidateQueries({ queryKey: ["week-feedback-threads", deptId] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "schedule_feedback_messages" },
+        () => qc.invalidateQueries({ queryKey: ["week-feedback-threads", deptId] }))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [deptId, qc]);
   const { data, isLoading } = useQuery({
     queryKey: ["semester-drafts", deptId],
     queryFn: () => listFn({ data: { department_id: deptId! } }),
+    enabled: !!deptId,
+  });
+  const { data: weekThreads } = useQuery({
+    queryKey: ["week-feedback-threads", deptId],
+    queryFn: () => weekThreadsFn({ data: { department_id: deptId! } }),
     enabled: !!deptId,
   });
 
@@ -60,6 +74,29 @@ function DraftsPage() {
         <h1 className="text-xl font-semibold tracking-tight">Schedule Drafts</h1>
         <p className="text-sm text-muted-foreground">Review sliced weeks and request Admin approval for the whole semester.</p>
       </div>
+      {(weekThreads ?? []).length > 0 && (
+        <Card className="rounded-2xl border-destructive/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <MessageSquareWarning className="h-4 w-4 text-destructive" /> Week feedback from Admin
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {(weekThreads ?? []).map((t: any) => (
+              <div key={t.id} className="flex items-center justify-between rounded-md border p-2">
+                <div>
+                  <p className="text-sm font-medium">{t.semester_name} · Week {t.week_num}</p>
+                  <p className="text-[11px] text-muted-foreground">{new Date(t.created_at).toLocaleString()}</p>
+                </div>
+                <Button size="sm" variant="outline"
+                  onClick={() => setOpenThread({ semester_id: t.semester_id, week_num: t.week_num, title: `${t.semester_name} · Week ${t.week_num}` })}>
+                  Open chat
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
       {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
       {!isLoading && (data ?? []).length === 0 && (
         <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">
@@ -101,6 +138,16 @@ function DraftsPage() {
           </Card>
         );
       })}
+      {openThread && (
+        <div className="fixed inset-0 z-50 bg-black/40 p-4 flex items-end sm:items-center justify-center">
+          <div className="w-full max-w-lg">
+            <div className="mb-2 flex justify-end">
+              <Button size="sm" variant="secondary" onClick={() => setOpenThread(null)}>Close</Button>
+            </div>
+            <FeedbackChat semesterId={openThread.semester_id} weekNum={openThread.week_num} title={openThread.title} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

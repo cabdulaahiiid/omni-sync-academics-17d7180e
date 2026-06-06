@@ -581,6 +581,7 @@ export type Database = {
           dh_id: string | null
           id: string
           semester_id: string
+          week_num: number | null
         }
         Insert: {
           admin_id?: string | null
@@ -589,6 +590,7 @@ export type Database = {
           dh_id?: string | null
           id?: string
           semester_id: string
+          week_num?: number | null
         }
         Update: {
           admin_id?: string | null
@@ -597,6 +599,7 @@ export type Database = {
           dh_id?: string | null
           id?: string
           semester_id?: string
+          week_num?: number | null
         }
         Relationships: [
           {
@@ -623,7 +626,7 @@ export type Database = {
           {
             foreignKeyName: "schedule_feedback_threads_semester_id_fkey"
             columns: ["semester_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "semester_registry"
             referencedColumns: ["id"]
           },
@@ -1112,6 +1115,10 @@ export type Database = {
         Args: { _semester_id: string }
         Returns: undefined
       }
+      dh_resubmit_week: {
+        Args: { _semester_id: string; _week_num: number }
+        Returns: number
+      }
       dh_swap_trainer: {
         Args: { _new_trainer: string; _reason: string; _schedule_id: string }
         Returns: undefined
@@ -1122,6 +1129,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      ma_decide_week: {
+        Args: {
+          _decision: Database["public"]["Enums"]["approval_decision"]
+          _department_id: string
+          _message: string
+          _week_num: number
+        }
+        Returns: Json
       }
       ma_reject_semester_with_feedback: {
         Args: { _message: string; _semester_id: string }

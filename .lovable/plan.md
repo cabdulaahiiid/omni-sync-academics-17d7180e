@@ -1,54 +1,57 @@
-# Fix: Approval workflow is broken at the database level
+# Activate MA Weekly Approval + Feedback
 
-## Root cause
+The Admin → Approvals → Sessions tab already renders the Department → Week grid with **View**, **Approve**, **Send back** buttons, but the underlying flow is incomplete:
 
-Inspected the live data and schema:
+- `decideWeek` only calls `decide_approval` per row. Rejection silently sets sessions back to DRAFT — no feedback message, no chat thread, no DH notification with the reason, no audit comment.
+- DHs have no per-week feedback inbox to see why a week was sent back, edit, and resubmit. They only see semester-level feedback today.
 
-- `semester_registry`: 1 row, `distribution_status = DRAFT`
-- `schedules`: 60 rows, all `DRAFT` / `is_published=false`
-- `approval_queue`: **0 rows** — nothing has ever been successfully submitted
+This plan wires the week-level **Approve** and **Send back with feedback** end-to-end, mirroring the existing semester feedback pattern.
 
-The buttons render and the mutations fire, but the underlying RPC fails silently/with an error toast because of a schema mismatch:
+## What gets built
 
-```
-approval_queue.schedule_id  uuid  NOT NULL
-```
+### 1. New RPC: `ma_decide_week`
+Replaces the per-row loop in `decideWeek`.
 
-But `submit_for_approval('semester', …)` does:
+- Args: `_department_id uuid, _week_num int, _decision approval_decision, _message text`
+- MA-only guard.
+- **Approve**: loops pending `approval_queue` rows for that dept+week, calls existing `decide_approval` logic (status → LIVE, `is_published=true`, notifies DH + assigned trainers, audit `APPROVE_WEEK`).
+- **Reject (Send back)**:
+  - Requires non-empty `_message`.
+  - For each pending session: marks `approval_queue.decision='rejected'` with comment, sets `schedules.status='DRAFT'`.
+  - Upserts a feedback thread keyed on the **semester_id** of those schedules (reuse `schedule_feedback_threads`, add `week_num` column nullable so multiple per semester can coexist) and inserts the message prefixed `Week N feedback: …`.
+  - Notifies the DH (`Week N sent back for changes`).
+  - Audit `REJECT_WEEK_WITH_FEEDBACK` with `{week_num, message}`.
 
-```sql
-INSERT INTO approval_queue(type, target_id, schedule_id, …)
-VALUES ('semester', v_id, NULL, …)   -- ❌ NOT NULL violation
-```
+### 2. Migration
+- `ALTER TABLE schedule_feedback_threads ADD COLUMN week_num int NULL;`
+- Drop existing unique constraint on `(semester_id)` and replace with unique `(semester_id, COALESCE(week_num,-1))` so semester-level (NULL) and per-week threads can coexist.
+- Update RLS policies on `schedule_feedback_threads` / `messages` to keep current DH/MA visibility (no scope change).
+- Create the new `ma_decide_week` function above; `GRANT EXECUTE ... TO authenticated`.
 
-So:
+### 3. Server function changes
+- `src/lib/approvals.functions.ts → decideWeek`: replace per-row loop with a single `supabase.rpc('ma_decide_week', …)` call. Add required `message` field when decision is `rejected` (validated with Zod `min(3)`).
+- `src/lib/feedback.functions.ts`: add `listWeekThreadsForDept({ department_id })` and `getThreadForWeek({ semester_id, week_num })` for the DH inbox.
 
-1. **DH** clicks *Request Semester Approval* → `submit_for_approval` throws `null value in column "schedule_id"` → nothing reaches the queue.
-2. **MA Semesters tab** is therefore always empty → Approve/Reject buttons appear to "do nothing" because there's nothing to act on.
-3. **MA Sessions tab** weekly cards show `0 pending` for the same reason (no session-level submissions either, because the DH flow only ever submits at the semester level).
+### 4. Admin UI (`strategic/approvals.tsx`)
+- The existing "Decide-week dialog" already collects a comment. Keep it; just pass it through as `message`. Disable Approve button while pending. Reject already validates `>=3` chars — leave as is.
+- After success, toast already shows count; also invalidate `["approval-queue"]` so the Semesters tab stays fresh.
 
-A secondary issue: the DH RLS policy on `approval_queue` joins through `schedule_id`, so even if semester rows existed, a DH would never see them. MA sees all, so this is cosmetic for now but worth fixing.
+### 5. DH UI (`operational/drafts.tsx`)
+- Add a "Week feedback" section above the drafts list listing rows from `listWeekThreadsForDept`, each opening the existing `<FeedbackChat>` component (extended to accept `weekNum` and render that week's thread instead of the semester-level thread).
+- Existing "Re-submit for Approval" button in `FeedbackChat` already calls `dh_resubmit_semester`. Extend with a sibling `dh_resubmit_week` RPC that re-queues only that week's PENDING_MA rows; wire a "Resubmit Week N" button when `weekNum` is set.
 
-## Fix
+### 6. Realtime
+- `approvals.tsx` already subscribes to `approval_queue` + `semester_registry`. Add `schedule_feedback_messages` so the Admin chat updates live.
+- `drafts.tsx` already subscribes to `schedules` + `semester_registry`. Add `schedule_feedback_threads` filtered by `department_id` so new week-feedback rows appear instantly for DHs.
 
-Single migration:
+## Out of scope (unchanged)
+- Semester-level approval, rejection-with-feedback, and chat — already working from the previous turn.
+- Session-level single-row decisions (no current entry point uses them).
+- All trainer-side, attendance, and reporting flows.
 
-1. `ALTER TABLE public.approval_queue ALTER COLUMN schedule_id DROP NOT NULL;`
-2. Add a CHECK so session-type rows still require `schedule_id`:
-   `CHECK ((type = 'session' AND schedule_id IS NOT NULL) OR (type = 'semester'))`
-3. Update the DH SELECT policy on `approval_queue` so semester rows are visible to the DH of the owning department (join through `semester_registry → schedules.department_id`).
-4. Backfill no rows needed — queue is empty.
+## Acceptance test
 
-No frontend changes are required. The existing buttons, mutations, dialogs, and `decide_approval` RPC already handle both `session` and `semester` correctly once rows can be inserted.
-
-## Verification after migration
-
-1. As DH, open **Operational → Drafts**, click *Request Semester Approval* → toast "Semester sent to Admin for approval".
-2. As MA, open **Strategic → Approvals → Semesters** → the semester appears.
-3. Approve → schedules flip to `LIVE`, `is_published=true`; trainer dashboard now shows sessions.
-4. Reject (with feedback) → status returns to `FEEDBACK_ACTIVE`, chat thread opens.
-
-## Files touched
-
-- New migration under `supabase/migrations/` (schema + policy only).
-- No application code changes.
+1. DH submits Week 3 of Semester X for approval.
+2. MA → Approvals → Sessions → picks dept → **Send back** on Week 3 with message "Move Tuesday class to Wed".
+3. DH gets notification + sees a "Week 3 feedback" card on Drafts, opens chat, sees message, edits sessions, clicks **Resubmit Week 3**.
+4. Row re-appears in MA queue as pending; MA clicks **Approve all** → sessions flip to LIVE, `is_published=true`, DH + assigned trainers receive notifications, audit entries written.
