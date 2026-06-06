@@ -10,6 +10,7 @@ import {
   listPendingWeeksForDept,
   getWeekTimetable,
   decideWeek,
+  splitSemesterToWeeks,
 } from "@/lib/approvals.functions";
 import { FeedbackChat } from "@/components/feedback-chat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Eye, Check, MessageSquareWarning } from "lucide-react";
+import { Eye, Check, MessageSquareWarning, Split } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/strategic/approvals")({
@@ -31,6 +32,7 @@ function ApprovalsPage() {
   const [tab, setTab] = useState<"session" | "semester">("session");
   const list = useServerFn(listApprovalQueue);
   const rejectSemFn = useServerFn(maRejectSemesterWithFeedback);
+  const splitFn = useServerFn(splitSemesterToWeeks);
   const qc = useQueryClient();
   useEffect(() => {
     const ch = supabase.channel("ma-approvals")
@@ -72,6 +74,18 @@ function ApprovalsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const splitMut = useMutation({
+    mutationFn: (approval_id: string) => splitFn({ data: { approval_id } }),
+    onSuccess: (r) => {
+      toast.success(`Split into ${r.created} weekly session approval(s)`);
+      qc.invalidateQueries({ queryKey: ["approval-queue"] });
+      qc.invalidateQueries({ queryKey: ["approvals-depts"] });
+      qc.invalidateQueries({ queryKey: ["approvals-weeks"] });
+      setTab("session");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div className="container mx-auto p-6 space-y-4">
       <h1 className="text-2xl font-semibold">Approval Queue</h1>
@@ -101,6 +115,8 @@ function ApprovalsPage() {
                 decideSemMut.mutate({ id: row.id, decision, comment });
               }}
               onOpenChat={() => setChatSemesterId(row.target_id)}
+              onSplit={() => splitMut.mutate(row.id)}
+              splitting={splitMut.isPending}
             />
           ))}
         </TabsContent>
@@ -140,7 +156,7 @@ function ApprovalsPage() {
   );
 }
 
-function ApprovalRow({ row, onDecide, onOpenChat }: { row: any; onDecide: (d: "approved" | "rejected", c: string) => void; onOpenChat?: () => void }) {
+function ApprovalRow({ row, onDecide, onOpenChat, onSplit, splitting }: { row: any; onDecide: (d: "approved" | "rejected", c: string) => void; onOpenChat?: () => void; onSplit?: () => void; splitting?: boolean }) {
   const [comment, setComment] = useState("");
   const target = row.schedule ?? row.semester;
   return (
@@ -174,6 +190,11 @@ function ApprovalRow({ row, onDecide, onOpenChat }: { row: any; onDecide: (d: "a
           <Button onClick={() => onDecide("approved", comment)}>Approve</Button>
           <Button variant="destructive" onClick={() => onDecide("rejected", comment)}>Reject</Button>
           {onOpenChat && <Button variant="outline" onClick={onOpenChat}>Open chat</Button>}
+          {row.type === "semester" && onSplit && (
+            <Button variant="secondary" onClick={onSplit} disabled={splitting}>
+              <Split className="mr-1 h-3 w-3" /> {splitting ? "Splitting…" : "Split into weeks"}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
