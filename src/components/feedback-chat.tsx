@@ -63,10 +63,10 @@ export function FeedbackChat({ semesterId, weekNum = null, title = "Feedback cha
   const isDH = me?.roles?.includes?.("DH");
 
   const resubmit = useMutation({
-    mutationFn: () =>
-      weekNum == null
-        ? resubmitFn({ data: { semester_id: semesterId } })
-        : resubmitWeekFn({ data: { semester_id: semesterId, week_num: weekNum } }),
+    mutationFn: async () => {
+      if (weekNum == null) await resubmitFn({ data: { semester_id: semesterId } });
+      else await resubmitWeekFn({ data: { semester_id: semesterId, week_num: weekNum } });
+    },
     onSuccess: () => { toast.success("Resubmitted to Admin"); refetchSem(); qc.invalidateQueries({ queryKey: ["semester-sessions", semesterId] }); },
     onError: (e: Error) => toast.error(e.message),
   });
