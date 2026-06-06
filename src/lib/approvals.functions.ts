@@ -204,3 +204,18 @@ export const getDepartmentOverview = createServerFn({ method: "POST" })
       moduleStats: { completed, ongoing, total: (modules ?? []).length },
     };
   });
+
+/** Split a pending semester-level approval into per-session approvals (grouped by week). */
+export const splitSemesterToWeeks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ approval_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: result, error } = await context.supabase.rpc("ma_split_semester_to_weeks", {
+      _approval_id: data.approval_id,
+    });
+    if (error) throw new Error(error.message);
+    const r = (result ?? {}) as { semester_id?: string; created?: number };
+    return { semester_id: r.semester_id ?? null, created: r.created ?? 0 };
+  });
