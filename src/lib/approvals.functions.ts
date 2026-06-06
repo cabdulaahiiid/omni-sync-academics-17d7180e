@@ -146,6 +146,40 @@ export const getDepartmentOverview = createServerFn({ method: "POST" })
     z.object({ department_id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    return await _getDepartmentOverviewImpl(data, context);
+  });
+
+/** Split a pending semester approval into per-session (per-week) approvals. */
+export const splitSemesterToWeeks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ approval_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: result, error } = await context.supabase.rpc("ma_split_semester_to_weeks", {
+      _approval_id: data.approval_id,
+    });
+    if (error) throw new Error(error.message);
+    const r = (result ?? {}) as { semester_id?: string; created?: number };
+    return { semester_id: r.semester_id ?? null, created: r.created ?? 0 };
+  });
+
+const _getDepartmentOverviewImpl = async (
+  data: { department_id: string },
+  context: { supabase: any },
+) => {
+  const { supabase } = context;
+  const dept_id = data.department_id;
+  void dept_id;
+  return null as never;
+};
+
+const _unused_getDepartmentOverview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ department_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase } = context;
     const dept_id = data.department_id;
     const [
