@@ -1143,6 +1143,10 @@ export type Database = {
         Args: { _message: string; _semester_id: string }
         Returns: string
       }
+      ma_split_semester_to_weeks: {
+        Args: { _approval_id: string }
+        Returns: Json
+      }
       set_session_mode: {
         Args: {
           _mode: Database["public"]["Enums"]["session_mode"]
