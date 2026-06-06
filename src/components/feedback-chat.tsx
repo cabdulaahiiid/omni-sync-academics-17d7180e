@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getThreadForSemester, replyFeedback } from "@/lib/feedback.functions";
-import { dhResubmitSemester } from "@/lib/feedback.functions";
+import { getThreadForSemester, replyFeedback, dhResubmitSemester, dhResubmitWeek } from "@/lib/feedback.functions";
 import { listSemesterSessions, updateDraftSession } from "@/lib/semester-drafts.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/hooks/use-me";
@@ -16,7 +15,7 @@ import { toast } from "sonner";
 
 type Msg = { id: string; thread_id: string; sender_id: string | null; message: string; created_at: string };
 
-export function FeedbackChat({ semesterId, title = "Feedback chat" }: { semesterId: string; title?: string }) {
+export function FeedbackChat({ semesterId, weekNum = null, title = "Feedback chat" }: { semesterId: string; weekNum?: number | null; title?: string }) {
   const { data: me } = useMe();
   const qc = useQueryClient();
   const fetchFn = useServerFn(getThreadForSemester);
@@ -24,12 +23,13 @@ export function FeedbackChat({ semesterId, title = "Feedback chat" }: { semester
   const sessionsFn = useServerFn(listSemesterSessions);
   const updateFn = useServerFn(updateDraftSession);
   const resubmitFn = useServerFn(dhResubmitSemester);
+  const resubmitWeekFn = useServerFn(dhResubmitWeek);
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data, refetch } = useQuery({
-    queryKey: ["feedback-thread", semesterId],
-    queryFn: () => fetchFn({ data: { semester_id: semesterId } }),
+    queryKey: ["feedback-thread", semesterId, weekNum],
+    queryFn: () => fetchFn({ data: { semester_id: semesterId, week_num: weekNum } }),
     staleTime: 10000,
   });
 
@@ -38,11 +38,11 @@ export function FeedbackChat({ semesterId, title = "Feedback chat" }: { semester
     const ch = supabase
       .channel(`fb-${data.thread.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "schedule_feedback_messages", filter: `thread_id=eq.${data.thread.id}` }, () => {
-        qc.invalidateQueries({ queryKey: ["feedback-thread", semesterId] });
+        qc.invalidateQueries({ queryKey: ["feedback-thread", semesterId, weekNum] });
       })
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
-  }, [data?.thread?.id, qc, semesterId]);
+  }, [data?.thread?.id, qc, semesterId, weekNum]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -63,7 +63,10 @@ export function FeedbackChat({ semesterId, title = "Feedback chat" }: { semester
   const isDH = me?.roles?.includes?.("DH");
 
   const resubmit = useMutation({
-    mutationFn: () => resubmitFn({ data: { semester_id: semesterId } }),
+    mutationFn: () =>
+      weekNum == null
+        ? resubmitFn({ data: { semester_id: semesterId } })
+        : resubmitWeekFn({ data: { semester_id: semesterId, week_num: weekNum } }),
     onSuccess: () => { toast.success("Resubmitted to Admin"); refetchSem(); qc.invalidateQueries({ queryKey: ["semester-sessions", semesterId] }); },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -118,15 +121,15 @@ export function FeedbackChat({ semesterId, title = "Feedback chat" }: { semester
       </div>
     </Card>
 
-    {isFeedbackActive && isDH && (
+    {((weekNum != null && isDH) || (isFeedbackActive && isDH)) && (
       <Card className="rounded-2xl">
         <CardHeader className="pb-2 border-b">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Pencil className="h-4 w-4" /> Edit sessions ({semData?.sessions?.length ?? 0})
+            <Pencil className="h-4 w-4" /> Edit sessions{weekNum != null ? ` — Week ${weekNum}` : ""} ({(semData?.sessions ?? []).filter((s: any) => weekNum == null || s.week_num === weekNum).length})
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 p-3 max-h-[360px] overflow-y-auto">
-          {(semData?.sessions ?? []).map((s: any) => (
+          {(semData?.sessions ?? []).filter((s: any) => weekNum == null || s.week_num === weekNum).map((s: any) => (
             <SessionEditRow key={s.id} session={s}
               onSave={async (patch) => {
                 await updateFn({ data: { schedule_id: s.id, patch } });
@@ -134,13 +137,13 @@ export function FeedbackChat({ semesterId, title = "Feedback chat" }: { semester
                 refetchSem();
               }} />
           ))}
-          {(semData?.sessions ?? []).length === 0 && (
+          {(semData?.sessions ?? []).filter((s: any) => weekNum == null || s.week_num === weekNum).length === 0 && (
             <p className="text-xs text-muted-foreground">No sessions in this semester.</p>
           )}
         </CardContent>
         <div className="border-t p-3">
           <Button className="w-full" disabled={resubmit.isPending} onClick={() => resubmit.mutate()}>
-            <Send className="mr-2 h-4 w-4" /> {resubmit.isPending ? "Submitting…" : "Re-submit for Approval"}
+            <Send className="mr-2 h-4 w-4" /> {resubmit.isPending ? "Submitting…" : weekNum != null ? `Re-submit Week ${weekNum}` : "Re-submit for Approval"}
           </Button>
         </div>
       </Card>
