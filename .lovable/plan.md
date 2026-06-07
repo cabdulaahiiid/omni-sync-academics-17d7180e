@@ -1,57 +1,80 @@
-# Activate MA Weekly Approval + Feedback
+# Clickable session/week drilldowns + post-upload approval choice
 
-The Admin → Approvals → Sessions tab already renders the Department → Week grid with **View**, **Approve**, **Send back** buttons, but the underlying flow is incomplete:
+Adds the missing UI pathways requested without touching working features. Reuses existing server fns and RPCs (`getWeekTimetable`, `ma_decide_week`, `ma_reject_semester_with_feedback`, `ma_split_semester_to_weeks`, `requestSemesterApproval`).
 
-- `decideWeek` only calls `decide_approval` per row. Rejection silently sets sessions back to DRAFT — no feedback message, no chat thread, no DH notification with the reason, no audit comment.
-- DHs have no per-week feedback inbox to see why a week was sent back, edit, and resubmit. They only see semester-level feedback today.
+## 1. Trainer dashboard — clickable session cards (`src/routes/_authenticated/ground/index.tsx`)
 
-This plan wires the week-level **Approve** and **Send back with feedback** end-to-end, mirroring the existing semester feedback pattern.
+- Keep current cards & links to per-schedule check-in.
+- Add **two new clickable stat cards** ("Today's Sessions" and "Upcoming") above the existing list. Click → open a `Dialog` with a `<Table>` of: Module code, Module name, Section, Venue, Date, Start–End.
+- New server fn `getTrainerSessionsDetailed({ scope: 'today'|'upcoming' })` in `src/lib/trainer.functions.ts` — wraps existing schedule query joined with `venues.name`, `sections.name`. Uses `requireSupabaseAuth`.
+- No removal of existing `Stat` cards; promotes them to `<button>` triggers.
 
-## What gets built
+## 2. DH Schedule Builder — clickable weeks (`src/routes/_authenticated/operational/drafts.tsx`)
 
-### 1. New RPC: `ma_decide_week`
-Replaces the per-row loop in `decideWeek`.
+- Wrap each Week tile in a button → opens `Dialog` showing that week's full timetable.
+- New shared component `<WeekTimetableDialog semesterId weekNum/>` that calls a new server fn `getSemesterWeekTimetable({ semester_id, week_num })` (joins schedules + venues + sections + trainer_registry).
+- "Recent Week Activity" list (rendered from the existing week thread inbox) gets the same click → opens the same dialog (semester_id + week_num are already on each thread row).
 
-- Args: `_department_id uuid, _week_num int, _decision approval_decision, _message text`
-- MA-only guard.
-- **Approve**: loops pending `approval_queue` rows for that dept+week, calls existing `decide_approval` logic (status → LIVE, `is_published=true`, notifies DH + assigned trainers, audit `APPROVE_WEEK`).
-- **Reject (Send back)**:
-  - Requires non-empty `_message`.
-  - For each pending session: marks `approval_queue.decision='rejected'` with comment, sets `schedules.status='DRAFT'`.
-  - Upserts a feedback thread keyed on the **semester_id** of those schedules (reuse `schedule_feedback_threads`, add `week_num` column nullable so multiple per semester can coexist) and inserts the message prefixed `Week N feedback: …`.
-  - Notifies the DH (`Week N sent back for changes`).
-  - Audit `REJECT_WEEK_WITH_FEEDBACK` with `{week_num, message}`.
+## 3. Post-upload workflow modal (`src/routes/_authenticated/operational/semester-upload.tsx`)
 
-### 2. Migration
-- `ALTER TABLE schedule_feedback_threads ADD COLUMN week_num int NULL;`
-- Drop existing unique constraint on `(semester_id)` and replace with unique `(semester_id, COALESCE(week_num,-1))` so semester-level (NULL) and per-week threads can coexist.
-- Update RLS policies on `schedule_feedback_threads` / `messages` to keep current DH/MA visibility (no scope change).
-- Create the new `ma_decide_week` function above; `GRANT EXECUTE ... TO authenticated`.
+- After `saveDraftMut` succeeds, open a `Dialog` with two buttons:
+  - **Request Approval for Full Semester** → calls existing `requestSemesterApproval({ semester_id })`.
+  - **Request Approval by Week** → calls existing `requestSemesterApproval` then immediately a new helper `dhRequestApprovalPerWeek({ semester_id })` server fn that wraps a new RPC `dh_submit_semester_per_week` (creates `approval_queue` rows of type `session` for every schedule and sets them `PENDING_MA`, skipping if a pending row exists). Same UX as MA's `ma_split_semester_to_weeks` but originated by DH at submit time.
+- Both routes navigate to `/operational/drafts` on success.
 
-### 3. Server function changes
-- `src/lib/approvals.functions.ts → decideWeek`: replace per-row loop with a single `supabase.rpc('ma_decide_week', …)` call. Add required `message` field when decision is `rejected` (validated with Zod `min(3)`).
-- `src/lib/feedback.functions.ts`: add `listWeekThreadsForDept({ department_id })` and `getThreadForWeek({ semester_id, week_num })` for the DH inbox.
+## 4. Admin approvals — granular weekly view per dept card (`src/routes/_authenticated/strategic/approvals.tsx`)
 
-### 4. Admin UI (`strategic/approvals.tsx`)
-- The existing "Decide-week dialog" already collects a comment. Keep it; just pass it through as `message`. Disable Approve button while pending. Reject already validates `>=3` chars — leave as is.
-- After success, toast already shows count; also invalidate `["approval-queue"]` so the Semesters tab stays fresh.
+The Sessions tab already has the per-dept/per-week interface. Extend the **Semester tab** so each department's pending semester card includes:
 
-### 5. DH UI (`operational/drafts.tsx`)
-- Add a "Week feedback" section above the drafts list listing rows from `listWeekThreadsForDept`, each opening the existing `<FeedbackChat>` component (extended to accept `weekNum` and render that week's thread instead of the semester-level thread).
-- Existing "Re-submit for Approval" button in `FeedbackChat` already calls `dh_resubmit_semester`. Extend with a sibling `dh_resubmit_week` RPC that re-queues only that week's PENDING_MA rows; wire a "Resubmit Week N" button when `weekNum` is set.
+- **View Weekly Timetable** toggle: expands into the same week grid used in the Sessions tab (reuse `listPendingWeeksForDept` + `getWeekTimetable`, filtered by that semester's department_id).
+- **Approve Full Semester** button (existing `decide_approval` flow).
+- **Approve by Week** button → calls existing `ma_split_semester_to_weeks` then opens the weekly grid for that dept.
+- Within each expanded week row: existing **Approve** / **Send back (with feedback)** buttons from `SessionApprovalsByDeptWeek` already cover "Reject" + "Provide Feedback" requirements; ensure they're reachable in the new expanded layout.
 
-### 6. Realtime
-- `approvals.tsx` already subscribes to `approval_queue` + `semester_registry`. Add `schedule_feedback_messages` so the Admin chat updates live.
-- `drafts.tsx` already subscribes to `schedules` + `semester_registry`. Add `schedule_feedback_threads` filtered by `department_id` so new week-feedback rows appear instantly for DHs.
+## 5. Backend additions (one migration)
 
-## Out of scope (unchanged)
-- Semester-level approval, rejection-with-feedback, and chat — already working from the previous turn.
-- Session-level single-row decisions (no current entry point uses them).
-- All trainer-side, attendance, and reporting flows.
+```sql
+-- dh_submit_semester_per_week: DH-initiated per-session approval queue
+CREATE OR REPLACE FUNCTION public.dh_submit_semester_per_week(_semester_id uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE v_dept uuid; v_created int := 0; v_sched record;
+BEGIN
+  IF NOT public.has_role(auth.uid(),'DH'::app_role) THEN RAISE EXCEPTION 'DH only'; END IF;
+  SELECT department_id INTO v_dept FROM public.schedules WHERE semester_id=_semester_id LIMIT 1;
+  IF v_dept <> public.current_department_id() THEN RAISE EXCEPTION 'Out of department'; END IF;
+  FOR v_sched IN SELECT id FROM public.schedules
+    WHERE semester_id=_semester_id AND status IN ('DRAFT','PENDING_MA')
+      AND NOT EXISTS (SELECT 1 FROM public.approval_queue aq
+        WHERE aq.type='session' AND aq.schedule_id=schedules.id AND aq.decision='pending')
+  LOOP
+    INSERT INTO public.approval_queue(type,target_id,schedule_id,submitted_by,decision)
+    VALUES ('session', v_sched.id, v_sched.id, auth.uid(), 'pending');
+    v_created := v_created+1;
+  END LOOP;
+  UPDATE public.schedules SET status='PENDING_MA'
+    WHERE semester_id=_semester_id AND status='DRAFT';
+  -- Notify all MAs
+  INSERT INTO public.notifications(recipient_id,title,body)
+  SELECT ur.user_id,'Per-week approval submitted',
+         'DH submitted '||v_created||' weekly session(s) for review.'
+    FROM public.user_roles ur WHERE ur.role='MA';
+  RETURN jsonb_build_object('created', v_created);
+END $$;
+```
 
-## Acceptance test
+No table or RLS changes.
 
-1. DH submits Week 3 of Semester X for approval.
-2. MA → Approvals → Sessions → picks dept → **Send back** on Week 3 with message "Move Tuesday class to Wed".
-3. DH gets notification + sees a "Week 3 feedback" card on Drafts, opens chat, sees message, edits sessions, clicks **Resubmit Week 3**.
-4. Row re-appears in MA queue as pending; MA clicks **Approve all** → sessions flip to LIVE, `is_published=true`, DH + assigned trainers receive notifications, audit entries written.
+## 6. New / edited files
+
+- **NEW** `supabase/migrations/<ts>_dh_submit_per_week.sql`
+- **NEW** `src/components/week-timetable-dialog.tsx`
+- **EDIT** `src/lib/trainer.functions.ts` — add `getTrainerSessionsDetailed`
+- **EDIT** `src/lib/dh-extras.functions.ts` (or new `dh-submit.functions.ts`) — add `getSemesterWeekTimetable`, `dhRequestApprovalPerWeek`
+- **EDIT** `src/routes/_authenticated/ground/index.tsx` — clickable stat cards + dialog
+- **EDIT** `src/routes/_authenticated/operational/drafts.tsx` — clickable week tiles + clickable thread rows use new dialog
+- **EDIT** `src/routes/_authenticated/operational/semester-upload.tsx` — post-save workflow modal
+- **EDIT** `src/routes/_authenticated/strategic/approvals.tsx` — Semester tab cards gain "View Weekly Timetable" toggle, "Approve by Week" button reusing existing splitMut + weekly grid
+
+## Out of scope (preserved as-is)
+
+- Existing trainer check-in flow, schedule transitions, RLS, attendance logic, sessions tab weekly grid, FeedbackChat behavior, all other working features.

@@ -1,14 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { uploadSemesterSchedule } from "@/lib/dh-extras.functions";
 import { listSemesters } from "@/lib/ma.functions";
+import { requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
 import { useMe } from "@/hooks/use-me";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Upload, CheckCircle2, AlertTriangle, Send, FileSpreadsheet, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation as useMutationCore } from "@tanstack/react-query";
@@ -39,15 +41,19 @@ function normalizeRow(r: any) {
 
 function SemesterUpload() {
   const { data: me } = useMe();
+  const navigate = useNavigate();
   const [rows, setRows] = useState<ReturnType<typeof normalizeRow>[]>([]);
   const [fileName, setFileName] = useState<string>("");
   const [semesterId, setSemesterId] = useState("");
   const [weeks, setWeeks] = useState(16);
   const [validated, setValidated] = useState(false);
+  const [workflowOpen, setWorkflowOpen] = useState(false);
 
   const semestersFn = useServerFn(listSemesters);
   const uploadFn = useServerFn(uploadSemesterSchedule);
   const resubmitFn = useServerFn(dhResubmitSemester);
+  const reqFullFn = useServerFn(requestSemesterApproval);
+  const reqWeekFn = useServerFn(dhRequestApprovalPerWeek);
   const { data: semesters } = useQuery({ queryKey: ["semesters"], queryFn: () => semestersFn(), staleTime: 60000 });
 
   const selectedSem = (semesters ?? []).find((s: any) => s.id === semesterId);
@@ -83,8 +89,29 @@ function SemesterUpload() {
         validate_only: false,
       }}),
     onSuccess: (r) => {
-      if (r.ok) toast.success(`Saved ${r.created} draft sessions. Open Drafts to request approval.`);
-      else toast.error("Save blocked by conflicts. Re-validate.");
+      if (r.ok) {
+        toast.success(`Saved ${r.created} draft sessions.`);
+        setWorkflowOpen(true);
+      } else toast.error("Save blocked by conflicts. Re-validate.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const submitFullMut = useMutation({
+    mutationFn: () => reqFullFn({ data: { semester_id: semesterId } }),
+    onSuccess: () => {
+      toast.success("Semester sent to Admin for approval");
+      setWorkflowOpen(false);
+      navigate({ to: "/operational/drafts" });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const submitWeekMut = useMutation({
+    mutationFn: () => reqWeekFn({ data: { semester_id: semesterId } }),
+    onSuccess: (r) => {
+      toast.success(`Submitted ${r.created} weekly session(s) to Admin`);
+      setWorkflowOpen(false);
+      navigate({ to: "/operational/drafts" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -208,6 +235,29 @@ function SemesterUpload() {
           </CardContent>
         </Card>
       )}
+      <Dialog open={workflowOpen} onOpenChange={setWorkflowOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>How would you like Admin to review this semester?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>Drafts are saved. Choose a submission path:</p>
+            <ul className="list-disc pl-5">
+              <li><b>By Week</b> — Admin can approve/reject each week independently.</li>
+              <li><b>Full Semester</b> — Admin reviews and decides on the whole semester at once.</li>
+            </ul>
+          </div>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={() => setWorkflowOpen(false)}>Not now</Button>
+            <Button variant="secondary" onClick={() => submitWeekMut.mutate()} disabled={submitWeekMut.isPending}>
+              {submitWeekMut.isPending ? "Submitting…" : "Request Approval by Week"}
+            </Button>
+            <Button onClick={() => submitFullMut.mutate()} disabled={submitFullMut.isPending}>
+              {submitFullMut.isPending ? "Submitting…" : "Request Approval for Full Semester"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

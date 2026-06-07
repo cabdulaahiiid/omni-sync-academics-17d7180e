@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Eye, Check, MessageSquareWarning, Split } from "lucide-react";
+import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/strategic/approvals")({
@@ -158,6 +158,20 @@ function ApprovalsPage() {
 
 function ApprovalRow({ row, onDecide, onOpenChat, onSplit, splitting }: { row: any; onDecide: (d: "approved" | "rejected", c: string) => void; onOpenChat?: () => void; onSplit?: () => void; splitting?: boolean }) {
   const [comment, setComment] = useState("");
+  const [showWeekly, setShowWeekly] = useState(false);
+  const [deptId, setDeptId] = useState<string | null>(null);
+  useEffect(() => {
+    if (row.type !== "semester" || deptId) return;
+    let cancelled = false;
+    supabase
+      .from("schedules")
+      .select("department_id")
+      .eq("semester_id", row.target_id)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (!cancelled && data?.department_id) setDeptId(data.department_id); });
+    return () => { cancelled = true; };
+  }, [row.type, row.target_id, deptId]);
   const target = row.schedule ?? row.semester;
   return (
     <Card>
@@ -186,31 +200,48 @@ function ApprovalRow({ row, onDecide, onOpenChat, onSplit, splitting }: { row: a
           </p>
         )}
         <Textarea placeholder="Decision comment (optional)" value={comment} onChange={(e) => setComment(e.target.value)} />
-        <div className="flex gap-2">
-          <Button onClick={() => onDecide("approved", comment)}>Approve</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => onDecide("approved", comment)}>
+            {row.type === "semester" ? "Approve Full Semester" : "Approve"}
+          </Button>
           <Button variant="destructive" onClick={() => onDecide("rejected", comment)}>Reject</Button>
           {onOpenChat && <Button variant="outline" onClick={onOpenChat}>Open chat</Button>}
           {row.type === "semester" && onSplit && (
             <Button variant="secondary" onClick={onSplit} disabled={splitting}>
-              <Split className="mr-1 h-3 w-3" /> {splitting ? "Splitting…" : "Split into weeks"}
+              <Split className="mr-1 h-3 w-3" /> {splitting ? "Splitting…" : "Approve by Week (split)"}
+            </Button>
+          )}
+          {row.type === "semester" && (
+            <Button variant="outline" onClick={() => setShowWeekly((v) => !v)} disabled={!deptId}>
+              {showWeekly ? <ChevronUp className="mr-1 h-3 w-3" /> : <ChevronDown className="mr-1 h-3 w-3" />}
+              {showWeekly ? "Hide Weekly Timetable" : "View Weekly Timetable"}
             </Button>
           )}
         </div>
+        {row.type === "semester" && showWeekly && deptId && (
+          <div className="rounded-lg border bg-muted/20 p-3">
+            <SessionApprovalsByDeptWeek fixedDeptId={deptId} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-function SessionApprovalsByDeptWeek() {
+function SessionApprovalsByDeptWeek({ fixedDeptId }: { fixedDeptId?: string } = {}) {
   const qc = useQueryClient();
   const listDeptsFn = useServerFn(listDeptsWithPendingSessions);
   const listWeeksFn = useServerFn(listPendingWeeksForDept);
   const getWeekFn = useServerFn(getWeekTimetable);
   const decideWeekFn = useServerFn(decideWeek);
 
-  const [deptId, setDeptId] = useState<string | null>(() =>
+  const [storedDeptId, setStoredDeptId] = useState<string | null>(() =>
     typeof window !== "undefined" ? localStorage.getItem("approvals.deptId") : null,
   );
+  const deptId = fixedDeptId ?? storedDeptId;
+  const setDeptId = (v: string | null) => {
+    if (!fixedDeptId) setStoredDeptId(v);
+  };
   const [viewWeek, setViewWeek] = useState<number | null>(null);
   const [pendingDecision, setPendingDecision] = useState<{
     week: number; decision: "approved" | "rejected";
@@ -218,12 +249,13 @@ function SessionApprovalsByDeptWeek() {
   const [comment, setComment] = useState("");
 
   useEffect(() => {
-    if (deptId) localStorage.setItem("approvals.deptId", deptId);
-  }, [deptId]);
+    if (!fixedDeptId && storedDeptId) localStorage.setItem("approvals.deptId", storedDeptId);
+  }, [fixedDeptId, storedDeptId]);
 
   const { data: depts, isLoading: deptsLoading } = useQuery({
     queryKey: ["approvals-depts"],
     queryFn: () => listDeptsFn(),
+    enabled: !fixedDeptId,
   });
   const { data: weeks, isLoading: weeksLoading } = useQuery({
     queryKey: ["approvals-weeks", deptId],
@@ -259,7 +291,7 @@ function SessionApprovalsByDeptWeek() {
 
   return (
     <div className="space-y-4">
-      <Card>
+      {!fixedDeptId && <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Filter by Department</CardTitle>
         </CardHeader>
@@ -280,9 +312,9 @@ function SessionApprovalsByDeptWeek() {
             </Select>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
-      {!deptId && (
+      {!deptId && !fixedDeptId && (
         <p className="text-sm text-muted-foreground">Select a department to view weekly schedules.</p>
       )}
 

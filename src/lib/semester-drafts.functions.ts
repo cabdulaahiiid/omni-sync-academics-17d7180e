@@ -107,3 +107,56 @@ export const listSemesterSessions = createServerFn({ method: "POST" })
       .maybeSingle();
     return { sessions: rows ?? [], semester: sem };
   });
+
+export const getSemesterWeekTimetable = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      semester_id: z.string().uuid(),
+      week_num: z.number().int(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: rows, error } = await supabase
+      .from("schedules")
+      .select(
+        "id, date, day, week_num, start_time, end_time, module_code, module_name, trainer_name, status, is_published, venue_id, section_id",
+      )
+      .eq("semester_id", data.semester_id)
+      .eq("week_num", data.week_num)
+      .order("date")
+      .order("start_time");
+    if (error) throw new Error(error.message);
+    const venueIds = Array.from(new Set((rows ?? []).map((r) => r.venue_id).filter(Boolean))) as string[];
+    const sectionIds = Array.from(new Set((rows ?? []).map((r) => r.section_id).filter(Boolean))) as string[];
+    const [{ data: venues }, { data: sections }] = await Promise.all([
+      venueIds.length
+        ? supabase.from("venues").select("id, name").in("id", venueIds)
+        : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+      sectionIds.length
+        ? supabase.from("sections").select("id, name").in("id", sectionIds)
+        : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    ]);
+    const vMap = new Map((venues ?? []).map((v) => [v.id, v.name]));
+    const sMap = new Map((sections ?? []).map((s) => [s.id, s.name]));
+    return (rows ?? []).map((r) => ({
+      ...r,
+      venue_name: r.venue_id ? vMap.get(r.venue_id) ?? "" : "",
+      section_name: r.section_id ? sMap.get(r.section_id) ?? "" : "",
+    }));
+  });
+
+export const dhRequestApprovalPerWeek = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ semester_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: result, error } = await context.supabase.rpc("dh_submit_semester_per_week", {
+      _semester_id: data.semester_id,
+    });
+    if (error) throw new Error(error.message);
+    const r = (result ?? {}) as { created?: number };
+    return { created: r.created ?? 0 };
+  });
