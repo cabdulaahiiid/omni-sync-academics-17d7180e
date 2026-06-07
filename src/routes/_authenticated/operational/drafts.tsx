@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { listSemesterDrafts, requestSemesterApproval } from "@/lib/semester-drafts.functions";
 import { listWeekThreadsForDept } from "@/lib/feedback.functions";
 import { FeedbackChat } from "@/components/feedback-chat";
+import { WeekTimetableDialog } from "@/components/week-timetable-dialog";
 import { useMe } from "@/hooks/use-me";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ function DraftsPage() {
   const weekThreadsFn = useServerFn(listWeekThreadsForDept);
   const qc = useQueryClient();
   const [openThread, setOpenThread] = useState<{ semester_id: string; week_num: number; title: string } | null>(null);
+  const [openWeek, setOpenWeek] = useState<{ semester_id: string; week_num: number; title: string } | null>(null);
 
   const deptId = me?.profile?.department_id;
   useEffect(() => {
@@ -84,10 +86,11 @@ function DraftsPage() {
           <CardContent className="space-y-2">
             {(weekThreads ?? []).map((t: any) => (
               <div key={t.id} className="flex items-center justify-between rounded-md border p-2">
-                <div>
+                <button type="button" className="text-left"
+                  onClick={() => setOpenWeek({ semester_id: t.semester_id, week_num: t.week_num, title: `${t.semester_name} · Week ${t.week_num}` })}>
                   <p className="text-sm font-medium">{t.semester_name} · Week {t.week_num}</p>
                   <p className="text-[11px] text-muted-foreground">{new Date(t.created_at).toLocaleString()}</p>
-                </div>
+                </button>
                 <Button size="sm" variant="outline"
                   onClick={() => setOpenThread({ semester_id: t.semester_id, week_num: t.week_num, title: `${t.semester_name} · Week ${t.week_num}` })}>
                   Open chat
@@ -126,12 +129,14 @@ function DraftsPage() {
             <CardContent>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
                 {s.weeks.map((w: any) => (
-                  <div key={w.week_num} className="rounded-lg border p-2 text-center">
+                  <button key={w.week_num} type="button"
+                    onClick={() => setOpenWeek({ semester_id: s.id, week_num: w.week_num, title: `${s.name} · Week ${w.week_num}` })}
+                    className="rounded-lg border p-2 text-center transition-colors hover:bg-accent/40">
                     <p className="text-xs font-semibold">Week {w.week_num}</p>
                     <p className="text-[11px] text-muted-foreground">{w.total} sessions</p>
                     {w.published > 0 && <Badge variant="default" className="mt-1 text-[10px]">{w.published} live</Badge>}
                     {w.pending > 0 && <Badge variant="destructive" className="mt-1 text-[10px]">{w.pending} pending</Badge>}
-                  </div>
+                  </button>
                 ))}
               </div>
             </CardContent>
@@ -147,6 +152,15 @@ function DraftsPage() {
             <FeedbackChat semesterId={openThread.semester_id} weekNum={openThread.week_num} title={openThread.title} />
           </div>
         </div>
+      )}
+      {openWeek && (
+        <WeekTimetableDialog
+          open={!!openWeek}
+          onOpenChange={(o) => !o && setOpenWeek(null)}
+          semesterId={openWeek.semester_id}
+          weekNum={openWeek.week_num}
+          title={openWeek.title}
+        />
       )}
     </div>
   );
