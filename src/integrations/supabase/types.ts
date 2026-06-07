@@ -1119,6 +1119,10 @@ export type Database = {
         Args: { _semester_id: string; _week_num: number }
         Returns: number
       }
+      dh_submit_semester_per_week: {
+        Args: { _semester_id: string }
+        Returns: Json
+      }
       dh_swap_trainer: {
         Args: { _new_trainer: string; _reason: string; _schedule_id: string }
         Returns: undefined
