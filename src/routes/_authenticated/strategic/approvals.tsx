@@ -158,6 +158,20 @@ function ApprovalsPage() {
 
 function ApprovalRow({ row, onDecide, onOpenChat, onSplit, splitting }: { row: any; onDecide: (d: "approved" | "rejected", c: string) => void; onOpenChat?: () => void; onSplit?: () => void; splitting?: boolean }) {
   const [comment, setComment] = useState("");
+  const [showWeekly, setShowWeekly] = useState(false);
+  const [deptId, setDeptId] = useState<string | null>(null);
+  useEffect(() => {
+    if (row.type !== "semester" || deptId) return;
+    let cancelled = false;
+    supabase
+      .from("schedules")
+      .select("department_id")
+      .eq("semester_id", row.target_id)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (!cancelled && data?.department_id) setDeptId(data.department_id); });
+    return () => { cancelled = true; };
+  }, [row.type, row.target_id, deptId]);
   const target = row.schedule ?? row.semester;
   return (
     <Card>
@@ -186,16 +200,29 @@ function ApprovalRow({ row, onDecide, onOpenChat, onSplit, splitting }: { row: a
           </p>
         )}
         <Textarea placeholder="Decision comment (optional)" value={comment} onChange={(e) => setComment(e.target.value)} />
-        <div className="flex gap-2">
-          <Button onClick={() => onDecide("approved", comment)}>Approve</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => onDecide("approved", comment)}>
+            {row.type === "semester" ? "Approve Full Semester" : "Approve"}
+          </Button>
           <Button variant="destructive" onClick={() => onDecide("rejected", comment)}>Reject</Button>
           {onOpenChat && <Button variant="outline" onClick={onOpenChat}>Open chat</Button>}
           {row.type === "semester" && onSplit && (
             <Button variant="secondary" onClick={onSplit} disabled={splitting}>
-              <Split className="mr-1 h-3 w-3" /> {splitting ? "Splitting…" : "Split into weeks"}
+              <Split className="mr-1 h-3 w-3" /> {splitting ? "Splitting…" : "Approve by Week (split)"}
+            </Button>
+          )}
+          {row.type === "semester" && (
+            <Button variant="outline" onClick={() => setShowWeekly((v) => !v)} disabled={!deptId}>
+              {showWeekly ? <ChevronUp className="mr-1 h-3 w-3" /> : <ChevronDown className="mr-1 h-3 w-3" />}
+              {showWeekly ? "Hide Weekly Timetable" : "View Weekly Timetable"}
             </Button>
           )}
         </div>
+        {row.type === "semester" && showWeekly && deptId && (
+          <div className="rounded-lg border bg-muted/20 p-3">
+            <SessionApprovalsByDeptWeek fixedDeptId={deptId} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
