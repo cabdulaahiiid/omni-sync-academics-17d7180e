@@ -201,16 +201,20 @@ function ApprovalRow({ row, onDecide, onOpenChat, onSplit, splitting }: { row: a
   );
 }
 
-function SessionApprovalsByDeptWeek() {
+function SessionApprovalsByDeptWeek({ fixedDeptId }: { fixedDeptId?: string } = {}) {
   const qc = useQueryClient();
   const listDeptsFn = useServerFn(listDeptsWithPendingSessions);
   const listWeeksFn = useServerFn(listPendingWeeksForDept);
   const getWeekFn = useServerFn(getWeekTimetable);
   const decideWeekFn = useServerFn(decideWeek);
 
-  const [deptId, setDeptId] = useState<string | null>(() =>
+  const [storedDeptId, setStoredDeptId] = useState<string | null>(() =>
     typeof window !== "undefined" ? localStorage.getItem("approvals.deptId") : null,
   );
+  const deptId = fixedDeptId ?? storedDeptId;
+  const setDeptId = (v: string | null) => {
+    if (!fixedDeptId) setStoredDeptId(v);
+  };
   const [viewWeek, setViewWeek] = useState<number | null>(null);
   const [pendingDecision, setPendingDecision] = useState<{
     week: number; decision: "approved" | "rejected";
@@ -218,12 +222,13 @@ function SessionApprovalsByDeptWeek() {
   const [comment, setComment] = useState("");
 
   useEffect(() => {
-    if (deptId) localStorage.setItem("approvals.deptId", deptId);
-  }, [deptId]);
+    if (!fixedDeptId && storedDeptId) localStorage.setItem("approvals.deptId", storedDeptId);
+  }, [fixedDeptId, storedDeptId]);
 
   const { data: depts, isLoading: deptsLoading } = useQuery({
     queryKey: ["approvals-depts"],
     queryFn: () => listDeptsFn(),
+    enabled: !fixedDeptId,
   });
   const { data: weeks, isLoading: weeksLoading } = useQuery({
     queryKey: ["approvals-weeks", deptId],
@@ -259,7 +264,7 @@ function SessionApprovalsByDeptWeek() {
 
   return (
     <div className="space-y-4">
-      <Card>
+      {!fixedDeptId && <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Filter by Department</CardTitle>
         </CardHeader>
@@ -280,9 +285,9 @@ function SessionApprovalsByDeptWeek() {
             </Select>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
-      {!deptId && (
+      {!deptId && !fixedDeptId && (
         <p className="text-sm text-muted-foreground">Select a department to view weekly schedules.</p>
       )}
 
