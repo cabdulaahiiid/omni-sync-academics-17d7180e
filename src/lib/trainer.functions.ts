@@ -189,3 +189,44 @@ export const getMyProgress = createServerFn({ method: "GET" })
       target: tr?.sessions_target ?? 15,
     };
   });
+
+export const getTrainerSessionsDetailed = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ scope: z.enum(["today", "upcoming"]) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: profile } = await supabase
+      .from("profiles").select("trainer_registry_id").maybeSingle();
+    const trainerId = profile?.trainer_registry_id;
+    if (!trainerId) return [];
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    let q = supabase
+      .from("schedules")
+      .select("id, date, day, start_time, end_time, module_code, module_name, status, venue_id, section_id")
+      .eq("trainer_registry_id", trainerId)
+      .eq("is_published", true);
+    if (data.scope === "today") q = q.eq("date", dateStr);
+    else q = q.gt("date", dateStr);
+    const { data: rows, error } = await q.order("date").order("start_time").limit(200);
+    if (error) throw new Error(error.message);
+    const venueIds = Array.from(new Set((rows ?? []).map((r) => r.venue_id).filter(Boolean))) as string[];
+    const sectionIds = Array.from(new Set((rows ?? []).map((r) => r.section_id).filter(Boolean))) as string[];
+    const [{ data: venues }, { data: sections }] = await Promise.all([
+      venueIds.length
+        ? supabase.from("venues").select("id, name").in("id", venueIds)
+        : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+      sectionIds.length
+        ? supabase.from("sections").select("id, name").in("id", sectionIds)
+        : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    ]);
+    const vMap = new Map((venues ?? []).map((v) => [v.id, v.name]));
+    const sMap = new Map((sections ?? []).map((s) => [s.id, s.name]));
+    return (rows ?? []).map((r) => ({
+      ...r,
+      venue_name: r.venue_id ? vMap.get(r.venue_id) ?? "" : "",
+      section_name: r.section_id ? sMap.get(r.section_id) ?? "" : "",
+    }));
+  });
