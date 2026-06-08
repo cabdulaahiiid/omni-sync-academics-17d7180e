@@ -8,10 +8,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, Download, FileSpreadsheet } from "lucide-react";
+import { Upload, FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { DownloadTemplateButton } from "@/components/download-template-button";
+import { MODULES_TEMPLATE } from "@/lib/xlsx-templates";
 
 export const Route = createFileRoute("/_authenticated/strategic/modules")({
   component: ModulesPage,
@@ -62,15 +64,6 @@ function ModulesPage() {
     reader.readAsArrayBuffer(file);
   }
 
-  function downloadTemplate() {
-    const ws = XLSX.utils.json_to_sheet([
-      { code: "ICT-101", name: "Intro to Computing", department_name: "ICT", level_name: "Level 1", type: "Both", qualifications: "ICT-101,ICT-100", total_hours: 60, total_sessions: 30 },
-    ]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Modules");
-    XLSX.writeFile(wb, "modules-template.xlsx");
-  }
-
   const uploadMut = useMutation({
     mutationFn: () => bulk({ data: { rows: parsed } }),
     onSuccess: (r) => {
@@ -92,7 +85,7 @@ function ModulesPage() {
           <p className="text-sm text-muted-foreground">Module registry across departments and levels.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={downloadTemplate}><Download className="mr-2 h-4 w-4" /> Template</Button>
+          <DownloadTemplateButton spec={MODULES_TEMPLATE} label="Template" size="default" />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild><Button><Upload className="mr-2 h-4 w-4" /> Bulk upload</Button></DialogTrigger>
             <DialogContent className="max-w-3xl">
