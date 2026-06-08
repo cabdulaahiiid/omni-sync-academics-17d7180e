@@ -52,6 +52,20 @@ export const requestSemesterApproval = createServerFn({ method: "POST" })
     z.object({ semester_id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    // If semester is in FEEDBACK_ACTIVE, route through dh_resubmit_semester
+    // (otherwise submit_for_approval silently no-ops because nothing is in DRAFT).
+    const { data: sem } = await context.supabase
+      .from("semester_registry")
+      .select("distribution_status")
+      .eq("id", data.semester_id)
+      .maybeSingle();
+    if (sem?.distribution_status === "FEEDBACK_ACTIVE") {
+      const { error } = await context.supabase.rpc("dh_resubmit_semester", {
+        _semester_id: data.semester_id,
+      });
+      if (error) throw new Error(error.message);
+      return { count: 1, resubmitted: true };
+    }
     const { data: count, error } = await context.supabase.rpc("submit_for_approval", {
       _type: "semester",
       _target_ids: [data.semester_id],
@@ -61,7 +75,20 @@ export const requestSemesterApproval = createServerFn({ method: "POST" })
       .from("semester_registry")
       .update({ distribution_status: "PENDING_MA" })
       .eq("id", data.semester_id);
-    return { count };
+    return { count, resubmitted: false };
+  });
+
+export const dhDeleteDraftSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ schedule_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("dh_delete_draft_session", {
+      _schedule_id: data.schedule_id,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const updateDraftSession = createServerFn({ method: "POST" })
