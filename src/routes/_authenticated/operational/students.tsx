@@ -12,8 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Download } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { DownloadTemplateButton } from "@/components/download-template-button";
+import { STUDENTS_ROSTER_TEMPLATE } from "@/lib/xlsx-templates";
 
 export const Route = createFileRoute("/_authenticated/operational/students")({
   component: StudentsHub,
@@ -39,20 +41,6 @@ function StudentsHub() {
   const sections = (ls?.sections ?? []).filter((s) => !bulkLevelId || s.level_id === bulkLevelId);
   const bulkLevelName = levels.find((l) => l.id === bulkLevelId)?.name ?? "";
   const bulkSectionName = sections.find((s) => s.id === bulkSectionId)?.name ?? "";
-
-  function downloadSample() {
-    const csv = [
-      "student_id_code,full_name,gender",
-      "TVET-2026-0001,Jane Doe,F",
-      "TVET-2026-0002,John Smith,M",
-      "TVET-2026-0003,Alex Mwangi,",
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "tvet-omni-sync-students-sample.csv";
-    a.click(); URL.revokeObjectURL(url);
-  }
 
   const create = useMutation({
     mutationFn: () => createFn({ data: { ...form, gender: form.gender || null } }),
@@ -120,9 +108,7 @@ function StudentsHub() {
       <Card className="rounded-2xl">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Bulk roster upload</CardTitle>
-          <Button variant="outline" size="sm" onClick={downloadSample}>
-            <Download className="mr-2 h-4 w-4" /> Sample CSV
-          </Button>
+          <DownloadTemplateButton spec={STUDENTS_ROSTER_TEMPLATE} label="Sample template" />
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

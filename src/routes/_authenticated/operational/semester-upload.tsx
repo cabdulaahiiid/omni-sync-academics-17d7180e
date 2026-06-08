@@ -17,6 +17,8 @@ import { useMutation as useMutationCore } from "@tanstack/react-query";
 import { dhResubmitSemester } from "@/lib/feedback.functions";
 import { FeedbackChat } from "@/components/feedback-chat";
 import * as XLSX from "xlsx";
+import { DownloadTemplateButton } from "@/components/download-template-button";
+import { SEMESTER_TIMETABLE_TEMPLATE } from "@/lib/xlsx-templates";
 
 export const Route = createFileRoute("/_authenticated/operational/semester-upload")({
   component: SemesterUpload,
@@ -162,7 +164,10 @@ function SemesterUpload() {
       </Card>
 
       <Card className="rounded-2xl">
-        <CardHeader><CardTitle className="text-base">Excel timetable</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base">Excel timetable</CardTitle>
+          <DownloadTemplateButton spec={SEMESTER_TIMETABLE_TEMPLATE} />
+        </CardHeader>
         <CardContent className="space-y-3">
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-sm text-muted-foreground hover:bg-accent/40">
             <FileSpreadsheet className="h-4 w-4" />

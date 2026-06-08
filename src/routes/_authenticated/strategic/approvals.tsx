@@ -21,7 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp } from "lucide-react";
+import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/strategic/approvals")({
@@ -30,6 +31,12 @@ export const Route = createFileRoute("/_authenticated/strategic/approvals")({
 
 function ApprovalsPage() {
   const [tab, setTab] = useState<"session" | "semester">("session");
+  const [decisionFilter, setDecisionFilter] = useState<"pending" | "approved" | "rejected">("pending");
+  const [search, setSearch] = useState("");
+  const [conflictFilter, setConflictFilter] = useState<"any" | "trainer" | "venue" | "qualification" | "load">("any");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name">("newest");
+  const [pageSize, setPageSize] = useState<number>(25);
+  const [page, setPage] = useState<number>(1);
   const list = useServerFn(listApprovalQueue);
   const rejectSemFn = useServerFn(maRejectSemesterWithFeedback);
   const splitFn = useServerFn(splitSemesterToWeeks);
@@ -51,8 +58,8 @@ function ApprovalsPage() {
   const [rejectTarget, setRejectTarget] = useState<{ id: string; semester_id: string; name: string } | null>(null);
   const [rejectMessage, setRejectMessage] = useState("");
   const { data: semData, isLoading: semLoading } = useQuery({
-    queryKey: ["approval-queue", "semester"],
-    queryFn: () => list({ data: { type: "semester", decision: "pending" } }),
+    queryKey: ["approval-queue", "semester", decisionFilter],
+    queryFn: () => list({ data: { type: "semester", decision: decisionFilter } }),
     enabled: tab === "semester",
   });
   const decide = useServerFn(decideApproval);
@@ -86,9 +93,95 @@ function ApprovalsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Client-side filter/sort/paginate semester rows
+  const filteredSem = (() => {
+    const q = search.trim().toLowerCase();
+    let rows = (semData ?? []) as any[];
+    if (q) {
+      rows = rows.filter((r) => {
+        const name = (r.semester?.name ?? "").toLowerCase();
+        return name.includes(q);
+      });
+    }
+    if (conflictFilter !== "any") {
+      rows = rows.filter((r) =>
+        conflictFilter === "trainer" ? r.conflict_trainer :
+        conflictFilter === "venue" ? r.conflict_venue :
+        conflictFilter === "qualification" ? r.invalid_qualification :
+        conflictFilter === "load" ? r.excessive_load : true,
+      );
+    }
+    rows = [...rows].sort((a, b) => {
+      if (sortBy === "name") {
+        return (a.semester?.name ?? "").localeCompare(b.semester?.name ?? "");
+      }
+      const da = new Date(a.created_at).getTime();
+      const db = new Date(b.created_at).getTime();
+      return sortBy === "newest" ? db - da : da - db;
+    });
+    return rows;
+  })();
+  const total = filteredSem.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pageRows = filteredSem.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  useEffect(() => { setPage(1); }, [search, conflictFilter, sortBy, pageSize, decisionFilter]);
+
   return (
     <div className="container mx-auto p-6 space-y-4">
       <h1 className="text-2xl font-semibold">Approval Queue</h1>
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-2 p-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search semester or module…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-7"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2">
+                <X className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+          <Select value={decisionFilter} onValueChange={(v) => setDecisionFilter(v as any)}>
+            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={conflictFilter} onValueChange={(v) => setConflictFilter(v as any)}>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Any conflict" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any conflict</SelectItem>
+              <SelectItem value="trainer">Trainer conflict</SelectItem>
+              <SelectItem value="venue">Venue conflict</SelectItem>
+              <SelectItem value="qualification">Qualification</SelectItem>
+              <SelectItem value="load">Excessive load</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest first</SelectItem>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+              <SelectItem value="name">Name (A→Z)</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+            <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10 / page</SelectItem>
+              <SelectItem value="25">25 / page</SelectItem>
+              <SelectItem value="50">50 / page</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
       <Tabs value={tab} onValueChange={(v) => setTab(v as "session" | "semester")}>
         <TabsList>
           <TabsTrigger value="session">Sessions</TabsTrigger>
@@ -99,10 +192,15 @@ function ApprovalsPage() {
         </TabsContent>
         <TabsContent value="semester" className="space-y-3 mt-4">
           {semLoading && <p className="text-muted-foreground">Loading…</p>}
-          {!semLoading && (semData ?? []).length === 0 && (
-            <p className="text-muted-foreground">No pending semester requests.</p>
+          {!semLoading && total === 0 && (
+            <p className="text-muted-foreground">No {decisionFilter} semester requests.</p>
           )}
-          {(semData ?? []).map((row: any) => (
+          {!semLoading && total > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, total)} of {total}
+            </p>
+          )}
+          {pageRows.map((row: any) => (
             <ApprovalRow
               key={row.id}
               row={row}
@@ -119,6 +217,15 @@ function ApprovalsPage() {
               splitting={splitMut.isPending}
             />
           ))}
+          {pageCount > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <Button size="sm" variant="outline" disabled={currentPage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}>Previous</Button>
+              <span className="text-xs text-muted-foreground">Page {currentPage} of {pageCount}</span>
+              <Button size="sm" variant="outline" disabled={currentPage >= pageCount}
+                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}>Next</Button>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

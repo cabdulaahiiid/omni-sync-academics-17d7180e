@@ -1099,6 +1099,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      dh_delete_draft_session: {
+        Args: { _schedule_id: string }
+        Returns: undefined
+      }
       dh_override_attendance: {
         Args: {
           _attendance_log_id: string
