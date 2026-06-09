@@ -39,6 +39,8 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { OfflineBanner } from "@/components/offline-banner";
+import { COLLEGE_SHORT_NAME, COLLEGE_FULL_NAME } from "@/components/erp/brand";
+import { Breadcrumbs } from "@/components/erp/breadcrumbs";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean };
 type NavGroup = { id: string; label: string; items: NavItem[] };
@@ -135,8 +137,8 @@ export function StrategicShell() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10">
             <ShieldCheck className="h-5 w-5 text-white" />
           </div>
-          <div className="flex flex-col leading-tight">
-            <span className="text-[13px] font-semibold tracking-wider text-white">TVET OMNI-SYNC</span>
+          <div className="flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-[12px] font-semibold tracking-wide text-white">{COLLEGE_SHORT_NAME}</span>
             <span className="text-[10px] uppercase tracking-widest text-white/50">Master Admin</span>
           </div>
         </div>
@@ -223,10 +225,14 @@ export function StrategicShell() {
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(!open)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="relative max-w-2xl flex-1">
+          <div className="hidden min-w-0 flex-col leading-tight lg:flex">
+            <span className="truncate text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{COLLEGE_FULL_NAME}</span>
+            <Breadcrumbs />
+          </div>
+          <div className="relative ml-auto max-w-md flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search wide search..."
+              placeholder="Search modules, trainers, semesters…"
               className="h-10 rounded-lg border-border/70 bg-muted/40 pl-9 text-sm shadow-none focus-visible:bg-card"
             />
           </div>

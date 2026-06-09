@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ShieldCheck } from "lucide-react";
+import { COLLEGE_FULL_NAME } from "@/components/erp/brand";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -62,8 +63,8 @@ function LoginPage() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <ShieldCheck className="h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl">TVET OMNI-SYNC ERP</CardTitle>
-          <CardDescription>Institutional Secure Portal</CardDescription>
+          <CardTitle className="text-xl leading-tight">{COLLEGE_FULL_NAME}</CardTitle>
+          <CardDescription>Academic ERP — Secure Sign In</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
