@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { OfflineBanner } from "@/components/offline-banner";
+import { COLLEGE_SHORT_NAME } from "@/components/erp/brand";
 
 export const Route = createFileRoute("/_authenticated/ground")({
   component: GroundShell,
@@ -19,9 +20,9 @@ function GroundShell() {
   return (
     <div className="min-h-screen bg-muted/20">
       <header className="flex h-14 items-center justify-between border-b bg-background px-4">
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Trainer</p>
-          <p className="text-sm font-medium">{me?.profile?.full_name || me?.profile?.email}</p>
+        <div className="min-w-0">
+          <p className="truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{COLLEGE_SHORT_NAME}</p>
+          <p className="truncate text-sm font-medium">{me?.profile?.full_name || me?.profile?.email} · <span className="text-muted-foreground">Trainer</span></p>
         </div>
         <div className="flex items-center gap-1">
           <NotificationsBell />
