@@ -209,7 +209,6 @@ function ApprovalsPage() {
               onDecide={(decision, comment) => {
                 if (decision === "rejected") {
                   setRejectTarget({ id: row.id, semester_id: row.target_id, name: row.semester?.name ?? "Semester" });
-                  setRejectMessage(comment);
                   return;
                 }
                 decideSemMut.mutate({ id: row.id, decision, comment });
@@ -242,25 +241,15 @@ function ApprovalsPage() {
         </div>
       )}
 
-      <Dialog open={!!rejectTarget} onOpenChange={(o) => { if (!o) { setRejectTarget(null); setRejectMessage(""); } }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Reject semester: {rejectTarget?.name}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              The DH will receive your feedback and the timetable will unlock for edits. A chat thread opens for follow-up.
-            </p>
-            <Textarea rows={5} value={rejectMessage} onChange={(e) => setRejectMessage(e.target.value)}
-              placeholder="Required feedback message (what needs to change?)" />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectTarget(null)}>Cancel</Button>
-            <Button variant="destructive" disabled={rejectMessage.trim().length < 3 || rejectSem.isPending}
-              onClick={() => rejectSem.mutate()}>
-              {rejectSem.isPending ? "Sending…" : "Send feedback & reject"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RejectFeedbackDialog
+        open={!!rejectTarget}
+        onOpenChange={(o) => { if (!o) setRejectTarget(null); }}
+        entityName={rejectTarget?.name}
+        title={rejectTarget ? `Reject semester: ${rejectTarget.name}` : undefined}
+        description="The DH will receive your feedback and the timetable will unlock for edits. A chat thread opens for follow-up."
+        isPending={rejectSem.isPending}
+        onSubmit={(message) => rejectSem.mutate(message)}
+      />
     </div>
   );
 }
