@@ -13,6 +13,9 @@ import {
   splitSemesterToWeeks,
 } from "@/lib/approvals.functions";
 import { FeedbackChat } from "@/components/feedback-chat";
+import { ApprovalActions } from "@/components/erp/approval-actions";
+import { RejectFeedbackDialog } from "@/components/erp/reject-feedback-dialog";
+import { ConflictBadges } from "@/components/erp/conflict-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -56,7 +59,6 @@ function ApprovalsPage() {
   }, [qc]);
   const [chatSemesterId, setChatSemesterId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<{ id: string; semester_id: string; name: string } | null>(null);
-  const [rejectMessage, setRejectMessage] = useState("");
   const { data: semData, isLoading: semLoading } = useQuery({
     queryKey: ["approval-queue", "semester", decisionFilter],
     queryFn: () => list({ data: { type: "semester", decision: decisionFilter } }),
@@ -71,12 +73,12 @@ function ApprovalsPage() {
   });
 
   const rejectSem = useMutation({
-    mutationFn: () => rejectSemFn({ data: { semester_id: rejectTarget!.semester_id, message: rejectMessage.trim() } }),
+    mutationFn: (message: string) =>
+      rejectSemFn({ data: { semester_id: rejectTarget!.semester_id, message } }),
     onSuccess: () => {
       toast.success("Semester returned to DH with feedback");
       qc.invalidateQueries({ queryKey: ["approval-queue"] });
       setRejectTarget(null);
-      setRejectMessage("");
     },
     onError: (e: Error) => toast.error(e.message),
   });
