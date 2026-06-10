@@ -10,8 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ApprovalActions } from "@/components/erp/approval-actions";
 import { Activity, Globe2, Clock, CheckSquare, AlertCircle, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -91,17 +90,14 @@ function StrategicDashboard() {
     return () => { supabase.removeChannel(ch); };
   }, [canQuery, qc]);
 
-  const [feedbackTarget, setFeedbackTarget] = useState<string | null>(null);
-  const [feedbackText, setFeedbackText] = useState("");
-
   const approveMut = useMutation({
     mutationFn: (id: string) => approve({ data: { schedule_id: id } }),
     onSuccess: () => { toast.success("Approved"); qc.invalidateQueries({ queryKey: ["approval-queue"] }); qc.invalidateQueries({ queryKey: ["strategic-stats"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
   const sendBackMut = useMutation({
-    mutationFn: () => sendBack({ data: { schedule_id: feedbackTarget!, feedback: feedbackText } }),
-    onSuccess: () => { toast.success("Sent back for correction"); setFeedbackTarget(null); setFeedbackText(""); qc.invalidateQueries({ queryKey: ["approval-queue"] }); },
+    mutationFn: (vars: { schedule_id: string; feedback: string }) => sendBack({ data: vars }),
+    onSuccess: () => { toast.success("Sent back for correction"); qc.invalidateQueries({ queryKey: ["approval-queue"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
