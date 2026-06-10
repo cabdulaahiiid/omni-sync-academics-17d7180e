@@ -373,17 +373,6 @@ function StrategicDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={!!feedbackTarget} onOpenChange={(v) => !v && setFeedbackTarget(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Send back for correction</DialogTitle></DialogHeader>
-          <Textarea value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} placeholder="What needs to be fixed?" rows={4} />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFeedbackTarget(null)}>Cancel</Button>
-            <Button onClick={() => sendBackMut.mutate()} disabled={!feedbackText || sendBackMut.isPending}>Send back</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
