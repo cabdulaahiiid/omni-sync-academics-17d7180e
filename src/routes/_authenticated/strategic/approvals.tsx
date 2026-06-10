@@ -19,7 +19,6 @@ import { ConflictBadges } from "@/components/erp/conflict-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -58,7 +57,6 @@ function ApprovalsPage() {
     return () => { supabase.removeChannel(ch); };
   }, [qc]);
   const [chatSemesterId, setChatSemesterId] = useState<string | null>(null);
-  const [rejectTarget, setRejectTarget] = useState<{ id: string; semester_id: string; name: string } | null>(null);
   const { data: semData, isLoading: semLoading } = useQuery({
     queryKey: ["approval-queue", "semester", decisionFilter],
     queryFn: () => list({ data: { type: "semester", decision: decisionFilter } }),
@@ -73,12 +71,11 @@ function ApprovalsPage() {
   });
 
   const rejectSem = useMutation({
-    mutationFn: (message: string) =>
-      rejectSemFn({ data: { semester_id: rejectTarget!.semester_id, message } }),
+    mutationFn: (vars: { semester_id: string; message: string }) =>
+      rejectSemFn({ data: vars }),
     onSuccess: () => {
       toast.success("Semester returned to DH with feedback");
       qc.invalidateQueries({ queryKey: ["approval-queue"] });
-      setRejectTarget(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -206,13 +203,9 @@ function ApprovalsPage() {
             <ApprovalRow
               key={row.id}
               row={row}
-              onDecide={(decision, comment) => {
-                if (decision === "rejected") {
-                  setRejectTarget({ id: row.id, semester_id: row.target_id, name: row.semester?.name ?? "Semester" });
-                  return;
-                }
-                decideSemMut.mutate({ id: row.id, decision, comment });
-              }}
+              onApprove={(comment) => decideSemMut.mutate({ id: row.id, decision: "approved", comment })}
+              onReject={(message) => rejectSem.mutate({ semester_id: row.target_id, message })}
+              rejecting={rejectSem.isPending}
               onOpenChat={() => setChatSemesterId(row.target_id)}
               onSplit={() => splitMut.mutate(row.id)}
               splitting={splitMut.isPending}
@@ -241,20 +234,11 @@ function ApprovalsPage() {
         </div>
       )}
 
-      <RejectFeedbackDialog
-        open={!!rejectTarget}
-        onOpenChange={(o) => { if (!o) setRejectTarget(null); }}
-        entityName={rejectTarget?.name}
-        title={rejectTarget ? `Reject semester: ${rejectTarget.name}` : undefined}
-        description="The DH will receive your feedback and the timetable will unlock for edits. A chat thread opens for follow-up."
-        isPending={rejectSem.isPending}
-        onSubmit={(message) => rejectSem.mutate(message)}
-      />
     </div>
   );
 }
 
-function ApprovalRow({ row, onDecide, onOpenChat, onSplit, splitting }: { row: any; onDecide: (d: "approved" | "rejected", c: string) => void; onOpenChat?: () => void; onSplit?: () => void; splitting?: boolean }) {
+function ApprovalRow({ row, onApprove, onReject, rejecting, onOpenChat, onSplit, splitting }: { row: any; onApprove: (comment: string) => void; onReject: (message: string) => void; rejecting?: boolean; onOpenChat?: () => void; onSplit?: () => void; splitting?: boolean }) {
   const [comment, setComment] = useState("");
   const [showWeekly, setShowWeekly] = useState(false);
   const [deptId, setDeptId] = useState<string | null>(null);
@@ -271,20 +255,21 @@ function ApprovalRow({ row, onDecide, onOpenChat, onSplit, splitting }: { row: a
     return () => { cancelled = true; };
   }, [row.type, row.target_id, deptId]);
   const target = row.schedule ?? row.semester;
+  const entityName = row.type === "session"
+    ? `${target?.module_code ?? "?"} • ${target?.module_name ?? ""}`
+    : target?.name ?? "Semester";
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">
-          {row.type === "session"
-            ? `${target?.module_code ?? "?"} • ${target?.module_name ?? ""}`
-            : target?.name ?? "Semester"}
+          {entityName}
         </CardTitle>
-        <div className="flex gap-2">
-          {row.conflict_trainer && <Badge variant="destructive">Trainer conflict</Badge>}
-          {row.conflict_venue && <Badge variant="destructive">Venue conflict</Badge>}
-          {row.invalid_qualification && <Badge variant="destructive">Qualification</Badge>}
-          {row.excessive_load && <Badge variant="destructive">Load</Badge>}
-        </div>
+        <ConflictBadges
+          trainer={row.conflict_trainer}
+          venue={row.conflict_venue}
+          qualification={row.invalid_qualification}
+          load={row.excessive_load}
+        />
       </CardHeader>
       <CardContent className="space-y-3">
         {row.type === "session" && target && (
@@ -298,24 +283,35 @@ function ApprovalRow({ row, onDecide, onOpenChat, onSplit, splitting }: { row: a
           </p>
         )}
         <Textarea placeholder="Decision comment (optional)" value={comment} onChange={(e) => setComment(e.target.value)} />
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => onDecide("approved", comment)}>
-            {row.type === "semester" ? "Approve Full Semester" : "Approve"}
-          </Button>
-          <Button variant="destructive" onClick={() => onDecide("rejected", comment)}>Reject</Button>
-          {onOpenChat && <Button variant="outline" onClick={onOpenChat}>Open chat</Button>}
-          {row.type === "semester" && onSplit && (
-            <Button variant="secondary" onClick={onSplit} disabled={splitting}>
-              <Split className="mr-1 h-3 w-3" /> {splitting ? "Splitting…" : "Approve by Week (split)"}
-            </Button>
-          )}
-          {row.type === "semester" && (
-            <Button variant="outline" onClick={() => setShowWeekly((v) => !v)} disabled={!deptId}>
-              {showWeekly ? <ChevronUp className="mr-1 h-3 w-3" /> : <ChevronDown className="mr-1 h-3 w-3" />}
-              {showWeekly ? "Hide Weekly Timetable" : "View Weekly Timetable"}
-            </Button>
-          )}
-        </div>
+        <ApprovalActions
+          approveLabel={row.type === "semester" ? "Approve Full Semester" : "Approve"}
+          entityName={entityName}
+          rejectTitle={row.type === "semester" ? `Reject semester: ${entityName}` : `Reject: ${entityName}`}
+          rejectDescription={
+            row.type === "semester"
+              ? "The DH will receive your feedback and the timetable will unlock for edits. A chat thread opens for follow-up."
+              : undefined
+          }
+          isPending={rejecting}
+          onApprove={() => onApprove(comment)}
+          onReject={(msg) => onReject(msg)}
+          extraActions={
+            <>
+              {onOpenChat && <Button variant="outline" onClick={onOpenChat}>Open chat</Button>}
+              {row.type === "semester" && onSplit && (
+                <Button variant="secondary" onClick={onSplit} disabled={splitting}>
+                  <Split className="mr-1 h-3 w-3" /> {splitting ? "Splitting…" : "Approve by Week (split)"}
+                </Button>
+              )}
+              {row.type === "semester" && (
+                <Button variant="outline" onClick={() => setShowWeekly((v) => !v)} disabled={!deptId}>
+                  {showWeekly ? <ChevronUp className="mr-1 h-3 w-3" /> : <ChevronDown className="mr-1 h-3 w-3" />}
+                  {showWeekly ? "Hide Weekly Timetable" : "View Weekly Timetable"}
+                </Button>
+              )}
+            </>
+          }
+        />
         {row.type === "semester" && showWeekly && deptId && (
           <div className="rounded-lg border bg-muted/20 p-3">
             <SessionApprovalsByDeptWeek fixedDeptId={deptId} />
