@@ -226,10 +226,17 @@ function StrategicDashboard() {
                         </div>
                       </TableCell>
                       <TableCell className="align-top text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button size="sm" className="h-7 px-2 text-xs" onClick={() => approveMut.mutate(s.id)} disabled={approveMut.isPending}>Approve</Button>
-                          <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setFeedbackTarget(s.id)}>Send back</Button>
-                        </div>
+                        <ApprovalActions
+                          size="sm"
+                          className="justify-end"
+                          entityName={`${s.module_code} • ${s.module_name}`}
+                          rejectLabel="Send back"
+                          rejectTitle={`Send back: ${s.module_code}`}
+                          rejectDescription="The trainer/DH will receive this feedback and the session will unlock for correction."
+                          isPending={approveMut.isPending || sendBackMut.isPending}
+                          onApprove={() => approveMut.mutate(s.id)}
+                          onReject={(msg) => sendBackMut.mutate({ schedule_id: s.id, feedback: msg })}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
