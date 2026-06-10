@@ -14,7 +14,6 @@ import {
 } from "@/lib/approvals.functions";
 import { FeedbackChat } from "@/components/feedback-chat";
 import { ApprovalActions } from "@/components/erp/approval-actions";
-import { RejectFeedbackDialog } from "@/components/erp/reject-feedback-dialog";
 import { ConflictBadges } from "@/components/erp/conflict-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
