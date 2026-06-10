@@ -9,6 +9,7 @@ import { getDHStats, listDHSessionFeed, listPendingLeaves, decideLeaveRequest } 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ApprovalActions } from "@/components/erp/approval-actions";
 import { Activity, CalendarDays, AlertTriangle, Plane, ArrowLeftRight, ChevronRight, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -49,8 +50,12 @@ function DHDashboard() {
   }, [canQuery, qc]);
 
   const decideMut = useMutation({
-    mutationFn: (v: { id: string; decision: "APPROVED" | "REJECTED" }) => decide({ data: v }),
-    onSuccess: () => { toast.success("Decision saved"); qc.invalidateQueries({ queryKey: ["dh-leaves"] }); },
+    mutationFn: (v: { id: string; decision: "APPROVED" | "REJECTED"; reason?: string }) =>
+      decide({ data: { id: v.id, decision: v.decision } }),
+    onSuccess: (_d, v) => {
+      toast.success(v.decision === "APPROVED" ? "Leave approved" : "Leave rejected — trainer will be notified");
+      qc.invalidateQueries({ queryKey: ["dh-leaves"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -165,9 +170,15 @@ function DHDashboard() {
                   <p className="text-xs text-muted-foreground">{leaveRows?.length ?? 0} pending approval</p>
                 </div>
                 {!!leaveRows?.length && (
-                  <Button size="sm" variant="outline" className="rounded-lg"
-                    onClick={() => decideMut.mutate({ id: leaveRows[0].id, decision: "APPROVED" })}
-                    disabled={decideMut.isPending}>Approve</Button>
+                  <ApprovalActions
+                    size="sm"
+                    entityName={leaveRows[0]?.trainer_registry?.full_name ?? "Leave request"}
+                    rejectTitle="Reject leave request"
+                    rejectDescription="The trainer will be notified that this leave request was declined."
+                    isPending={decideMut.isPending}
+                    onApprove={() => decideMut.mutate({ id: leaveRows[0].id, decision: "APPROVED" })}
+                    onReject={(reason) => decideMut.mutate({ id: leaveRows[0].id, decision: "REJECTED", reason })}
+                  />
                 )}
               </div>
               <div className="flex items-center gap-3 rounded-xl border p-3 text-sm">
