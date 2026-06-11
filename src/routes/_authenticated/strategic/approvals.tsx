@@ -7,11 +7,12 @@ import { listApprovalQueue, decideApproval } from "@/lib/ma.functions";
 import { maRejectSemesterWithFeedback } from "@/lib/feedback.functions";
 import {
   listDeptsWithPendingSessions,
-  listPendingWeeksForDept,
+  listAllWeeksForDept,
   getWeekTimetable,
   decideWeek,
   splitSemesterToWeeks,
 } from "@/lib/approvals.functions";
+import { listSemesters } from "@/lib/ma.functions";
 import { FeedbackChat } from "@/components/feedback-chat";
 import { ApprovalActions } from "@/components/erp/approval-actions";
 import { ConflictBadges } from "@/components/erp/conflict-badges";
@@ -25,6 +26,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp, Search, X, Inbox } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
@@ -326,7 +328,8 @@ function ApprovalRow({ row, onApprove, onReject, rejecting, onOpenChat, onSplit,
 function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?: string; onSwitchTab?: () => void } = {}) {
   const qc = useQueryClient();
   const listDeptsFn = useServerFn(listDeptsWithPendingSessions);
-  const listWeeksFn = useServerFn(listPendingWeeksForDept);
+  const listWeeksFn = useServerFn(listAllWeeksForDept);
+  const listSemestersFn = useServerFn(listSemesters);
   const getWeekFn = useServerFn(getWeekTimetable);
   const decideWeekFn = useServerFn(decideWeek);
 
@@ -337,6 +340,12 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
   const setDeptId = (v: string | null) => {
     if (!fixedDeptId) setStoredDeptId(v);
   };
+  const [storedSemesterId, setStoredSemesterId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("approvals.semesterId") : null,
+  );
+  const semesterId = storedSemesterId;
+  const [tablePage, setTablePage] = useState(1);
+  const PAGE_SIZE = 10;
   const [viewWeek, setViewWeek] = useState<number | null>(null);
   const [pendingDecision, setPendingDecision] = useState<{
     week: number; decision: "approved" | "rejected";
@@ -346,15 +355,29 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
   useEffect(() => {
     if (!fixedDeptId && storedDeptId) localStorage.setItem("approvals.deptId", storedDeptId);
   }, [fixedDeptId, storedDeptId]);
+  useEffect(() => {
+    if (storedSemesterId) localStorage.setItem("approvals.semesterId", storedSemesterId);
+  }, [storedSemesterId]);
+  useEffect(() => { setTablePage(1); }, [deptId, semesterId]);
 
   const { data: depts, isLoading: deptsLoading } = useQuery({
     queryKey: ["approvals-depts"],
     queryFn: () => listDeptsFn(),
     enabled: !fixedDeptId,
   });
+  const { data: semesters } = useQuery({
+    queryKey: ["approvals-semesters"],
+    queryFn: () => listSemestersFn(),
+    enabled: !fixedDeptId,
+  });
+  useEffect(() => {
+    if (!storedSemesterId && (semesters ?? []).length > 0) {
+      setStoredSemesterId((semesters as any[])[0].id);
+    }
+  }, [semesters, storedSemesterId]);
   const { data: weeks, isLoading: weeksLoading } = useQuery({
-    queryKey: ["approvals-weeks", deptId],
-    queryFn: () => listWeeksFn({ data: { department_id: deptId! } }),
+    queryKey: ["approvals-weeks", deptId, semesterId],
+    queryFn: () => listWeeksFn({ data: { department_id: deptId!, semester_id: semesterId ?? undefined } }),
     enabled: !!deptId,
   });
   const { data: weekRows, isLoading: weekLoading } = useQuery({
@@ -386,100 +409,57 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
 
   return (
     <div className="space-y-4">
-      {!fixedDeptId && <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Filter by Department</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {deptsLoading && <p className="text-sm text-muted-foreground">Loading departments…</p>}
-          {!deptsLoading && (
-            <Select value={deptId ?? ""} onValueChange={(v) => { setDeptId(v); setViewWeek(null); }}>
-              <SelectTrigger className="w-full max-w-md">
-                <SelectValue placeholder="Choose a department…" />
-              </SelectTrigger>
-              <SelectContent>
-                {(depts ?? []).map((d: any) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.name} {d.pending_count > 0 && <span className="ml-2 text-xs text-muted-foreground">({d.pending_count} pending)</span>}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </CardContent>
-      </Card>}
+      {!fixedDeptId && (
+        <Card className="rounded-2xl">
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Filter by Academic Session</label>
+              <Select value={semesterId ?? ""} onValueChange={(v) => { setStoredSemesterId(v); setViewWeek(null); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Choose a semester…" /></SelectTrigger>
+                <SelectContent>
+                  {(semesters ?? []).map((s: any) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Filter by Department</label>
+              {deptsLoading ? (
+                <p className="text-sm text-muted-foreground">Loading departments…</p>
+              ) : (
+                <Select value={deptId ?? ""} onValueChange={(v) => { setDeptId(v); setViewWeek(null); }}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Choose a department…" /></SelectTrigger>
+                  <SelectContent>
+                    {(depts ?? []).map((d: any) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}{d.pending_count > 0 ? ` (${d.pending_count} pending)` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {!deptId && !fixedDeptId && (
         <p className="text-sm text-muted-foreground">Select a department to view weekly schedules.</p>
       )}
 
       {deptId && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Weeks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {weeksLoading && <p className="text-sm text-muted-foreground">Loading weeks…</p>}
-            {!weeksLoading && (weeks ?? []).length === 0 && (
-              <EmptyState
-                icon={Inbox}
-                title="No sessions found for this department"
-                description="Once the Department Head uploads a semester and submits weeks for review, they will appear here."
-                action={onSwitchTab && (
-                  <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Semesters tab</Button>
-                )}
-              />
-            )}
-            {!weeksLoading && (weeks ?? []).length > 0 && (weeks ?? []).every((w: any) => w.pending === 0) && (
-              <EmptyState
-                icon={Inbox}
-                title="No pending sessions in this department"
-                description="When the Department Head submits weeks for review, they appear here. Semester-level approvals live on the Semesters tab."
-                action={onSwitchTab && (
-                  <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Semesters tab</Button>
-                )}
-                className="mb-3"
-              />
-            )}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {(weeks ?? []).map((w: any) => {
-                const hasPending = w.pending > 0;
-                return (
-                  <Card key={w.week_num} className="border">
-                    <CardContent className="space-y-2 p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold">Week {w.week_num}</span>
-                        {hasPending ? (
-                          <Badge variant="destructive">{w.pending} pending</Badge>
-                        ) : (
-                          <Badge variant="secondary">cleared</Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">{w.total} session(s) total</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        <Button size="sm" variant="outline" onClick={() => setViewWeek(w.week_num)}>
-                          <Eye className="mr-1 h-3 w-3" /> View
-                        </Button>
-                        {hasPending && (
-                          <>
-                            <Button size="sm"
-                              onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "approved" }); }}>
-                              <Check className="mr-1 h-3 w-3" /> Approve
-                            </Button>
-                            <Button size="sm" variant="destructive"
-                              onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "rejected" }); }}>
-                              <MessageSquareWarning className="mr-1 h-3 w-3" /> Send back
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <WeeklyStatusTable
+          weeks={weeks ?? []}
+          loading={weeksLoading}
+          page={tablePage}
+          pageSize={PAGE_SIZE}
+          onPageChange={setTablePage}
+          onSwitchTab={onSwitchTab}
+          onView={(w) => setViewWeek(w)}
+          onApprove={(w) => { setComment(""); setPendingDecision({ week: w, decision: "approved" }); }}
+          onSendBack={(w) => { setComment(""); setPendingDecision({ week: w, decision: "rejected" }); }}
+        />
       )}
 
       {/* View week dialog */}
@@ -562,5 +542,180 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+type WeekRow = {
+  week_num: number;
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  draft: number;
+  start_date: string | null;
+  end_date: string | null;
+};
+
+function fmtDate(d: string | null) {
+  if (!d) return "—";
+  const dt = new Date(d + "T00:00:00");
+  return dt.toLocaleDateString(undefined, { month: "short", day: "2-digit" });
+}
+
+function weekStatus(w: WeekRow): "approved" | "pending" | "draft" | "rejected" {
+  if (w.rejected > 0) return "rejected";
+  if (w.pending > 0) return "pending";
+  if (w.total > 0 && w.approved === w.total) return "approved";
+  return "draft";
+}
+
+function StatusPill({ status }: { status: ReturnType<typeof weekStatus> }) {
+  const map = {
+    approved: { label: "Approved", cls: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+    pending: { label: "Pending Master", cls: "bg-amber-100 text-amber-900 border-amber-200" },
+    draft: { label: "Draft (Trainer)", cls: "bg-muted text-muted-foreground border-border" },
+    rejected: { label: "Rejected", cls: "bg-red-100 text-red-800 border-red-200" },
+  } as const;
+  const m = map[status];
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${m.cls}`}>
+      {m.label}
+    </span>
+  );
+}
+
+function WeeklyStatusTable({
+  weeks, loading, page, pageSize, onPageChange, onView, onApprove, onSendBack, onSwitchTab,
+}: {
+  weeks: WeekRow[];
+  loading: boolean;
+  page: number;
+  pageSize: number;
+  onPageChange: (p: number) => void;
+  onView: (week: number) => void;
+  onApprove: (week: number) => void;
+  onSendBack: (week: number) => void;
+  onSwitchTab?: () => void;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const currentWeek = weeks.find((w) => w.start_date && w.end_date && w.start_date <= today && today <= w.end_date)?.week_num;
+  const total = weeks.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(page, pageCount);
+  const rows = weeks.slice((current - 1) * pageSize, current * pageSize);
+
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Approvals — Weekly Status</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 p-0 sm:p-2">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/40">
+              <TableRow>
+                <TableHead className="w-[160px]">Week</TableHead>
+                <TableHead className="w-[180px]">Dates</TableHead>
+                <TableHead className="w-[140px]">Sessions Total</TableHead>
+                <TableHead className="w-[180px]">Approval Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && (
+                <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">Loading weeks…</TableCell></TableRow>
+              )}
+              {!loading && rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-8">
+                    <EmptyState
+                      icon={Inbox}
+                      title="No weeks to show"
+                      description="Once the Department Head uploads a semester and submits weeks for review, they appear here."
+                      action={onSwitchTab && (
+                        <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Semesters tab</Button>
+                      )}
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && rows.map((w) => {
+                const status = weekStatus(w);
+                const isCurrent = w.week_num === currentWeek;
+                return (
+                  <TableRow key={w.week_num} className="hover:bg-accent/30">
+                    <TableCell className="font-medium">
+                      Week {w.week_num}
+                      {isCurrent && <span className="ml-2 text-xs text-primary">(Current)</span>}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {fmtDate(w.start_date)} – {fmtDate(w.end_date)}
+                    </TableCell>
+                    <TableCell className="text-sm">{w.total}</TableCell>
+                    <TableCell><StatusPill status={status} /></TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                        <Button size="sm" variant="outline" onClick={() => onView(w.week_num)}>
+                          <Eye className="mr-1 h-3 w-3" /> View Details
+                        </Button>
+                        <TooltipProvider>
+                          {status === "pending" && (
+                            <>
+                              <Button size="sm" variant="destructive" onClick={() => onSendBack(w.week_num)}>
+                                <MessageSquareWarning className="mr-1 h-3 w-3" /> Send Back
+                              </Button>
+                              <Button size="sm" onClick={() => onApprove(w.week_num)}>
+                                <Check className="mr-1 h-3 w-3" /> Approve Week
+                              </Button>
+                            </>
+                          )}
+                          {status === "draft" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={0}>
+                                  <Button size="sm" disabled>Awaiting DH</Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>Department Head hasn't submitted this week yet.</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {status === "approved" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={0}>
+                                  <Button size="sm" variant="outline" disabled>Un-Approve</Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>Sessions are already live — contact admin to revoke.</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {status === "rejected" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={0}>
+                                  <Button size="sm" variant="outline" disabled>Awaiting Resubmit</Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>Returned to Department Head for changes.</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </TooltipProvider>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+        {pageCount > 1 && (
+          <div className="flex items-center justify-between gap-2 px-3 py-2">
+            <Button size="sm" variant="outline" disabled={current <= 1} onClick={() => onPageChange(current - 1)}>Previous</Button>
+            <span className="text-xs text-muted-foreground">Page {current} of {pageCount}</span>
+            <Button size="sm" variant="outline" disabled={current >= pageCount} onClick={() => onPageChange(current + 1)}>Next</Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

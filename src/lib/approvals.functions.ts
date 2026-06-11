@@ -74,6 +74,87 @@ export const listPendingWeeksForDept = createServerFn({ method: "POST" })
     return out;
   });
 
+/**
+ * All weeks for a department (optionally scoped to a semester), with rich
+ * per-week rollup status: total, pending, approved, rejected, draft, and the
+ * min/max session date for the week. Powers the redesigned Weekly Status table.
+ */
+export const listAllWeeksForDept = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      department_id: z.string().uuid(),
+      semester_id: z.string().uuid().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    let q = supabase
+      .from("schedules")
+      .select("id, week_num, date, status, semester_id")
+      .eq("department_id", data.department_id);
+    if (data.semester_id) q = q.eq("semester_id", data.semester_id);
+    const { data: scheds, error } = await q;
+    if (error) throw new Error(error.message);
+
+    type Bucket = {
+      ids: string[];
+      dates: string[];
+      pending: number;
+      approved: number;
+      rejected: number;
+      draft: number;
+      other: number;
+    };
+    const byWeek = new Map<number, Bucket>();
+    for (const s of scheds ?? []) {
+      const wk = s.week_num as number;
+      const b = byWeek.get(wk) ?? {
+        ids: [], dates: [], pending: 0, approved: 0, rejected: 0, draft: 0, other: 0,
+      };
+      b.ids.push(s.id);
+      if (s.date) b.dates.push(s.date);
+      const st = String(s.status ?? "").toUpperCase();
+      if (st === "PENDING_MA") b.pending++;
+      else if (st === "LIVE" || st === "ACTIVE" || st === "ENDED") b.approved++;
+      else if (st === "DRAFT") b.draft++;
+      else if (st === "REJECTED" || st === "FEEDBACK_ACTIVE") b.rejected++;
+      else b.other++;
+      byWeek.set(wk, b);
+    }
+
+    // Cross-check pending via approval_queue (authoritative).
+    const allIds = (scheds ?? []).map((s) => s.id);
+    const pendingApprovalIds = new Set<string>();
+    if (allIds.length) {
+      const { data: aq } = await supabase
+        .from("approval_queue")
+        .select("schedule_id")
+        .eq("type", "session")
+        .eq("decision", "pending")
+        .in("schedule_id", allIds);
+      for (const r of aq ?? []) if (r.schedule_id) pendingApprovalIds.add(r.schedule_id);
+    }
+
+    const out = Array.from(byWeek.entries()).map(([week_num, b]) => {
+      const pendingByApproval = b.ids.filter((i) => pendingApprovalIds.has(i)).length;
+      const pending = Math.max(b.pending, pendingByApproval);
+      const sortedDates = [...b.dates].sort();
+      return {
+        week_num,
+        total: b.ids.length,
+        pending,
+        approved: b.approved,
+        rejected: b.rejected,
+        draft: b.draft,
+        start_date: sortedDates[0] ?? null,
+        end_date: sortedDates[sortedDates.length - 1] ?? null,
+      };
+    });
+    out.sort((a, b) => a.week_num - b.week_num);
+    return out;
+  });
+
 /** Full timetable + approval rows for a (department, week). */
 export const getWeekTimetable = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
