@@ -7,11 +7,12 @@ import { listApprovalQueue, decideApproval } from "@/lib/ma.functions";
 import { maRejectSemesterWithFeedback } from "@/lib/feedback.functions";
 import {
   listDeptsWithPendingSessions,
-  listPendingWeeksForDept,
+  listAllWeeksForDept,
   getWeekTimetable,
   decideWeek,
   splitSemesterToWeeks,
 } from "@/lib/approvals.functions";
+import { listSemesters } from "@/lib/ma.functions";
 import { FeedbackChat } from "@/components/feedback-chat";
 import { ApprovalActions } from "@/components/erp/approval-actions";
 import { ConflictBadges } from "@/components/erp/conflict-badges";
@@ -25,6 +26,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp, Search, X, Inbox } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
