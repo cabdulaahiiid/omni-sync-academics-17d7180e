@@ -323,7 +323,7 @@ function ApprovalRow({ row, onApprove, onReject, rejecting, onOpenChat, onSplit,
   );
 }
 
-function SessionApprovalsByDeptWeek({ fixedDeptId }: { fixedDeptId?: string } = {}) {
+function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?: string; onSwitchTab?: () => void } = {}) {
   const qc = useQueryClient();
   const listDeptsFn = useServerFn(listDeptsWithPendingSessions);
   const listWeeksFn = useServerFn(listPendingWeeksForDept);
