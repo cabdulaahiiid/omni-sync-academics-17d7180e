@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { listSemesterDrafts, requestSemesterApproval } from "@/lib/semester-drafts.functions";
+import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
 import { listWeekThreadsForDept } from "@/lib/feedback.functions";
 import { FeedbackChat } from "@/components/feedback-chat";
 import { WeekTimetableDialog } from "@/components/week-timetable-dialog";
@@ -11,7 +11,8 @@ import { useMe } from "@/hooks/use-me";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Send, FileClock, MessageSquareWarning } from "lucide-react";
+import { Send, FileClock, MessageSquareWarning, CalendarRange } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -30,6 +31,7 @@ function DraftsPage() {
   const { data: me } = useMe();
   const listFn = useServerFn(listSemesterDrafts);
   const reqFn = useServerFn(requestSemesterApproval);
+  const reqWeekFn = useServerFn(dhRequestApprovalPerWeek);
   const weekThreadsFn = useServerFn(listWeekThreadsForDept);
   const qc = useQueryClient();
   const [openThread, setOpenThread] = useState<{ semester_id: string; week_num: number; title: string } | null>(null);
@@ -70,11 +72,24 @@ function DraftsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const submitPerWeekMut = useMutation({
+    mutationFn: (semester_id: string) => reqWeekFn({ data: { semester_id } }),
+    onSuccess: (r) => {
+      if ((r?.created ?? 0) === 0) {
+        toast.warning("Nothing new to submit — all sessions are already pending or live.");
+      } else {
+        toast.success(`Submitted ${r.created} weekly session(s) to Admin`);
+      }
+      qc.invalidateQueries({ queryKey: ["semester-drafts"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Schedule Drafts</h1>
-        <p className="text-sm text-muted-foreground">Review sliced weeks and request Admin approval for the whole semester.</p>
+        <p className="text-sm text-muted-foreground">Submit weeks individually (preferred) or submit the whole semester for one-shot approval.</p>
       </div>
       {(weekThreads ?? []).length > 0 && (
         <Card className="rounded-2xl border-destructive/40">
@@ -120,7 +135,20 @@ function DraftsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant={STATUS_VARIANT[ds]}>{ds}</Badge>
-                <Button size="sm" disabled={!canSubmit || submitMut.isPending}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="sm"
+                        disabled={!canSubmit || submitPerWeekMut.isPending}
+                        onClick={() => submitPerWeekMut.mutate(s.id)}>
+                        <CalendarRange className="mr-2 h-3 w-3" /> Submit by Week
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Sends each week as an individual approval — Admin can approve week-by-week.</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <Button size="sm" variant="secondary"
+                  disabled={!canSubmit || submitMut.isPending}
                   onClick={() => submitMut.mutate(s.id)}>
                   <Send className="mr-2 h-3 w-3" /> Request Semester Approval
                 </Button>

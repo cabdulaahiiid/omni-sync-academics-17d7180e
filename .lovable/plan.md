@@ -1,54 +1,44 @@
-# Standardize Approval Workflow UI
+# Why "Approve" does nothing today
 
-Promote the existing `/strategic/approvals` Approval Queue pattern (Approve + Reject-with-required-feedback dialog + conflict badges + comment field) to a single reusable interface used everywhere approvals happen.
+Two real problems, not one:
 
-## Scope
+1. **MA → Approval Queue → Sessions tab.** The week-card Approve button is bound to `disabled={w.pending === 0}` and only the visible affordance changes (a grey "cleared" badge). The database currently has **zero** `approval_queue` rows of type `session` with `decision='pending'`, so every week renders disabled. Clicks are no-ops. Looks broken — is actually "nothing to approve".
+2. **DH → Schedule Drafts.** The only submit action is **Request Semester Approval**, which creates one `approval_queue` row of type `semester`. That fills the **Semesters** tab on the MA queue, never the **Sessions** tab. To populate the Sessions tab the DH must submit per-week (RPC `dh_submit_semester_per_week` exists but is not wired into the Drafts page). Result: the MA opens the Sessions tab expecting weeks to approve and finds it empty.
 
-**Canonical reference (unchanged):** `src/routes/_authenticated/strategic/approvals.tsx`. Its `ApprovalRow` + reject-with-feedback dialog define the standard.
+The fix is both: the MA UI should explain emptiness, and the DH UI needs a per-week submit so weeks actually arrive.
 
-**Surfaces that currently diverge and need to adopt the standard:**
+# Changes
 
-1. **MA dashboard — `src/routes/_authenticated/strategic/index.tsx`**
-   - "Approval Queue" card currently renders inline `Approve` + `Send back` buttons with a custom send-back dialog (lines 220–240, 370–385).
-   - Replace the inline action cluster with a shared `<ApprovalActions>` component (Approve immediate / Reject opens shared feedback dialog requiring ≥3 chars). Keep the existing `approveSchedule` and `sendBackSchedule` server calls — only the UI changes.
+## 1. MA Approval Queue — Sessions tab empty-state polish
+File: `src/routes/_authenticated/strategic/approvals.tsx` (`SessionApprovalsByDeptWeek`).
 
-2. **DH dashboard — `src/routes/_authenticated/operational/index.tsx`**
-   - "Trainer Leave" row currently shows only a bare `Approve` button (line 168–170) with no Reject path.
-   - Replace with the same `<ApprovalActions>` cluster (Approve / Reject-with-feedback) wired to `decideLeaveRequest({ id, decision: "APPROVED"|"REJECTED", reason })`. Add the optional `reason` field to the existing server fn signature only if not already supported; otherwise pass via existing parameter. (Confirmed reject already supported; reason becomes a comment param if available.)
+- When `weeks` is non-empty but `weeks.every(w => w.pending === 0)`: render the existing `EmptyState` component (icon, "No pending sessions in this department", subtitle "When the Department Head submits weeks for review, they appear here.", action button "Open Semesters tab" that calls a passed-in `onSwitchTab` prop).
+- When `weeks` is empty: existing copy stays, but use `EmptyState` for consistency.
+- For week cards where `pending === 0`: stop rendering Approve / Send back at all. Keep only **View** and a small `Badge variant="secondary">cleared</Badge>`.
+- Keep the existing week dialog and bulk-decide flow exactly as is for weeks where `pending > 0`.
+- Add a small instruction strip above the week grid when **any** pending semester-level row exists for this department: "There's also a semester-level approval pending — use the Semesters tab to either approve the whole semester or split it into weeks." Linked button switches `tab` to `"semester"`.
+- Wire `onSwitchTab` from `ApprovalsPage` (`setTab`) down to `SessionApprovalsByDeptWeek`.
 
-## New shared components
+## 2. DH Schedule Drafts — per-week submission
+File: `src/routes/_authenticated/operational/drafts.tsx`.
 
-- `src/components/erp/approval-actions.tsx` — the canonical action cluster:
-  - Props: `onApprove(comment) => Promise|void`, `onReject(feedback) => Promise|void`, `isPending`, optional `approveLabel`, optional `rejectLabel`, optional `entityName` (for dialog title), optional `disabled`.
-  - Renders: green Approve button (immediate), outline Reject button. Reject opens the shared `<RejectFeedbackDialog>`. Approve uses an optional inline comment input or popover.
-  - Visual style matches the existing `ApprovalRow` buttons (same sizes, same destructive variant, same spacing).
+- Import `dhRequestApprovalPerWeek` from `@/lib/semester-drafts.functions`.
+- Add a second submit mutation `submitPerWeekMut` calling that RPC; on success toast `"Submitted {created} weekly session(s) to Admin"`. If `created === 0`, toast.warning("Nothing new to submit — all sessions are already pending or live.").
+- In each semester card header, render a small action cluster:
+  - Primary: existing **Request Semester Approval** (`size="sm"`, secondary variant).
+  - Primary (preferred): new **Submit by Week** button (`size="sm"`, default variant) — disabled when `canSubmit === false`. Tooltip: "Sends each week as an individual approval — Admin can approve week-by-week."
+- Update the subtitle copy to: "Submit weeks individually (preferred) or submit the whole semester for one-shot approval."
+- Refetch `["semester-drafts"]` after either submit (already wired for the semester path; mirror for per-week).
 
-- `src/components/erp/reject-feedback-dialog.tsx` — extracted from the existing reject dialog in `approvals.tsx`:
-  - Required feedback text (≥3 chars), Cancel + "Send feedback & reject" (destructive) buttons, helper copy explaining the recipient will be notified.
-  - Controlled `open`, `onOpenChange`, `entityName`, `onSubmit(message)`, `isPending`.
+## 3. Status counts on MA Sessions tab refresh after submit
+The realtime channel on `approval_queue` already invalidates `["approval-queue"]`, `["approvals-depts"]`, and `["approvals-weeks"]` (line 47-56 of approvals.tsx). No change needed — once the DH submits per week, the MA tab updates live.
 
-- `src/components/erp/conflict-badges.tsx` — extracted from the inline `<Badge>` cluster in both `approvals.tsx` and `strategic/index.tsx`:
-  - Props: `{ trainer?, venue?, qualification?, load? }` booleans → renders normalized destructive badges.
+# Out of scope
+- No changes to RLS, RPCs, `decide_approval`, `ma_decide_week`, or any server function.
+- No changes to the Semesters tab, Feedback chat, week-timetable dialog, or DH dashboard leave approvals.
+- No new database migration.
 
-## Wiring
-
-1. Create the three components.
-2. `approvals.tsx`: replace the inline reject dialog + inline conflict badges with the new components (visual parity, no logic change). The existing `ApprovalRow` keeps its current Approve/Reject buttons but now uses `<ApprovalActions>` and `<ConflictBadges>` internally.
-3. `strategic/index.tsx` (MA dashboard "Approval Queue" card): replace inline Approve / Send back buttons + custom send-back dialog with `<ApprovalActions>` and the shared `<RejectFeedbackDialog>`. Existing `approveSchedule(id)` and `sendBackSchedule(id, feedback)` mutations stay; only the UI wrappers change. The local `feedbackTarget` / `feedbackText` state and custom dialog are removed.
-4. `operational/index.tsx` (DH dashboard leave card): replace the single Approve button with `<ApprovalActions>` wired to `decideLeaveRequest`. Reject submits `{ id, decision: "REJECTED" }` plus optional reason. If `decideLeaveRequest` doesn't currently accept a reason, pass it as `comment` only when the server fn schema supports it; otherwise just submit the decision and surface the typed feedback as a toast/notification message (no server-fn change in this cycle).
-
-## Explicitly out of scope
-
-- All server functions (`approveSchedule`, `sendBackSchedule`, `decideApproval`, `decideWeek`, `maRejectSemesterWithFeedback`, `decideLeaveRequest`), RLS, RPCs, audit logs, realtime channels — unchanged.
-- Week-level approval and DH schedule builder (already canonical from prior cycle).
-- Trainer-facing screens — no approval actions.
-
-## Files to add
-- `src/components/erp/approval-actions.tsx`
-- `src/components/erp/reject-feedback-dialog.tsx`
-- `src/components/erp/conflict-badges.tsx`
-
-## Files to edit (UI only)
-- `src/routes/_authenticated/strategic/approvals.tsx` — use the new shared components for visual parity (no logic change).
-- `src/routes/_authenticated/strategic/index.tsx` — replace inline approval action cluster + custom send-back dialog.
-- `src/routes/_authenticated/operational/index.tsx` — replace single Approve button with the standard Approve/Reject cluster.
+# Technical notes
+- `EmptyState` already exists at `src/components/erp/empty-state.tsx`; reuse it.
+- `dh_submit_semester_per_week` RPC returns `{ created: number }` and is already wrapped by `dhRequestApprovalPerWeek` in `src/lib/semester-drafts.functions.ts` — only UI wiring is needed.
+- Tooltip uses existing `@/components/ui/tooltip`.

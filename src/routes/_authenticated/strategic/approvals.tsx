@@ -15,6 +15,7 @@ import {
 import { FeedbackChat } from "@/components/feedback-chat";
 import { ApprovalActions } from "@/components/erp/approval-actions";
 import { ConflictBadges } from "@/components/erp/conflict-badges";
+import { EmptyState } from "@/components/erp/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -23,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp, Search, X, Inbox } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
@@ -187,7 +188,7 @@ function ApprovalsPage() {
           <TabsTrigger value="semester">Semesters</TabsTrigger>
         </TabsList>
         <TabsContent value="session" className="mt-4">
-          <SessionApprovalsByDeptWeek />
+          <SessionApprovalsByDeptWeek onSwitchTab={() => setTab("semester")} />
         </TabsContent>
         <TabsContent value="semester" className="space-y-3 mt-4">
           {semLoading && <p className="text-muted-foreground">Loading…</p>}
@@ -322,7 +323,7 @@ function ApprovalRow({ row, onApprove, onReject, rejecting, onOpenChat, onSplit,
   );
 }
 
-function SessionApprovalsByDeptWeek({ fixedDeptId }: { fixedDeptId?: string } = {}) {
+function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?: string; onSwitchTab?: () => void } = {}) {
   const qc = useQueryClient();
   const listDeptsFn = useServerFn(listDeptsWithPendingSessions);
   const listWeeksFn = useServerFn(listPendingWeeksForDept);
@@ -420,37 +421,62 @@ function SessionApprovalsByDeptWeek({ fixedDeptId }: { fixedDeptId?: string } = 
           <CardContent>
             {weeksLoading && <p className="text-sm text-muted-foreground">Loading weeks…</p>}
             {!weeksLoading && (weeks ?? []).length === 0 && (
-              <p className="text-sm text-muted-foreground">No sessions found for this department.</p>
+              <EmptyState
+                icon={Inbox}
+                title="No sessions found for this department"
+                description="Once the Department Head uploads a semester and submits weeks for review, they will appear here."
+                action={onSwitchTab && (
+                  <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Semesters tab</Button>
+                )}
+              />
+            )}
+            {!weeksLoading && (weeks ?? []).length > 0 && (weeks ?? []).every((w: any) => w.pending === 0) && (
+              <EmptyState
+                icon={Inbox}
+                title="No pending sessions in this department"
+                description="When the Department Head submits weeks for review, they appear here. Semester-level approvals live on the Semesters tab."
+                action={onSwitchTab && (
+                  <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Semesters tab</Button>
+                )}
+                className="mb-3"
+              />
             )}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {(weeks ?? []).map((w: any) => (
-                <Card key={w.week_num} className="border">
-                  <CardContent className="space-y-2 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold">Week {w.week_num}</span>
-                      {w.pending > 0 ? (
-                        <Badge variant="destructive">{w.pending} pending</Badge>
-                      ) : (
-                        <Badge variant="secondary">cleared</Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{w.total} session(s) total</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      <Button size="sm" variant="outline" onClick={() => setViewWeek(w.week_num)}>
-                        <Eye className="mr-1 h-3 w-3" /> View
-                      </Button>
-                      <Button size="sm" disabled={w.pending === 0}
-                        onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "approved" }); }}>
-                        <Check className="mr-1 h-3 w-3" /> Approve
-                      </Button>
-                      <Button size="sm" variant="destructive" disabled={w.pending === 0}
-                        onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "rejected" }); }}>
-                        <MessageSquareWarning className="mr-1 h-3 w-3" /> Send back
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {(weeks ?? []).map((w: any) => {
+                const hasPending = w.pending > 0;
+                return (
+                  <Card key={w.week_num} className="border">
+                    <CardContent className="space-y-2 p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">Week {w.week_num}</span>
+                        {hasPending ? (
+                          <Badge variant="destructive">{w.pending} pending</Badge>
+                        ) : (
+                          <Badge variant="secondary">cleared</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{w.total} session(s) total</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <Button size="sm" variant="outline" onClick={() => setViewWeek(w.week_num)}>
+                          <Eye className="mr-1 h-3 w-3" /> View
+                        </Button>
+                        {hasPending && (
+                          <>
+                            <Button size="sm"
+                              onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "approved" }); }}>
+                              <Check className="mr-1 h-3 w-3" /> Approve
+                            </Button>
+                            <Button size="sm" variant="destructive"
+                              onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "rejected" }); }}>
+                              <MessageSquareWarning className="mr-1 h-3 w-3" /> Send back
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
