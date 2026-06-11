@@ -421,37 +421,62 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
           <CardContent>
             {weeksLoading && <p className="text-sm text-muted-foreground">Loading weeks…</p>}
             {!weeksLoading && (weeks ?? []).length === 0 && (
-              <p className="text-sm text-muted-foreground">No sessions found for this department.</p>
+              <EmptyState
+                icon={Inbox}
+                title="No sessions found for this department"
+                description="Once the Department Head uploads a semester and submits weeks for review, they will appear here."
+                action={onSwitchTab && (
+                  <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Semesters tab</Button>
+                )}
+              />
+            )}
+            {!weeksLoading && (weeks ?? []).length > 0 && (weeks ?? []).every((w: any) => w.pending === 0) && (
+              <EmptyState
+                icon={Inbox}
+                title="No pending sessions in this department"
+                description="When the Department Head submits weeks for review, they appear here. Semester-level approvals live on the Semesters tab."
+                action={onSwitchTab && (
+                  <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Semesters tab</Button>
+                )}
+                className="mb-3"
+              />
             )}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {(weeks ?? []).map((w: any) => (
-                <Card key={w.week_num} className="border">
-                  <CardContent className="space-y-2 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold">Week {w.week_num}</span>
-                      {w.pending > 0 ? (
-                        <Badge variant="destructive">{w.pending} pending</Badge>
-                      ) : (
-                        <Badge variant="secondary">cleared</Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{w.total} session(s) total</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      <Button size="sm" variant="outline" onClick={() => setViewWeek(w.week_num)}>
-                        <Eye className="mr-1 h-3 w-3" /> View
-                      </Button>
-                      <Button size="sm" disabled={w.pending === 0}
-                        onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "approved" }); }}>
-                        <Check className="mr-1 h-3 w-3" /> Approve
-                      </Button>
-                      <Button size="sm" variant="destructive" disabled={w.pending === 0}
-                        onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "rejected" }); }}>
-                        <MessageSquareWarning className="mr-1 h-3 w-3" /> Send back
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {(weeks ?? []).map((w: any) => {
+                const hasPending = w.pending > 0;
+                return (
+                  <Card key={w.week_num} className="border">
+                    <CardContent className="space-y-2 p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">Week {w.week_num}</span>
+                        {hasPending ? (
+                          <Badge variant="destructive">{w.pending} pending</Badge>
+                        ) : (
+                          <Badge variant="secondary">cleared</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{w.total} session(s) total</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <Button size="sm" variant="outline" onClick={() => setViewWeek(w.week_num)}>
+                          <Eye className="mr-1 h-3 w-3" /> View
+                        </Button>
+                        {hasPending && (
+                          <>
+                            <Button size="sm"
+                              onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "approved" }); }}>
+                              <Check className="mr-1 h-3 w-3" /> Approve
+                            </Button>
+                            <Button size="sm" variant="destructive"
+                              onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "rejected" }); }}>
+                              <MessageSquareWarning className="mr-1 h-3 w-3" /> Send back
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
