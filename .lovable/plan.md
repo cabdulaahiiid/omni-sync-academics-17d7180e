@@ -1,44 +1,66 @@
-# Why "Approve" does nothing today
+# Weekly Approvals — Professional Redesign
 
-Two real problems, not one:
+Replace the current card-grid week list on **Strategic → Approvals → Sessions** with a structured, table-driven workflow matching the reference mockup. Scope is UI/UX only; no schema, RPC, or server-function changes.
 
-1. **MA → Approval Queue → Sessions tab.** The week-card Approve button is bound to `disabled={w.pending === 0}` and only the visible affordance changes (a grey "cleared" badge). The database currently has **zero** `approval_queue` rows of type `session` with `decision='pending'`, so every week renders disabled. Clicks are no-ops. Looks broken — is actually "nothing to approve".
-2. **DH → Schedule Drafts.** The only submit action is **Request Semester Approval**, which creates one `approval_queue` row of type `semester`. That fills the **Semesters** tab on the MA queue, never the **Sessions** tab. To populate the Sessions tab the DH must submit per-week (RPC `dh_submit_semester_per_week` exists but is not wired into the Drafts page). Result: the MA opens the Sessions tab expecting weeks to approve and finds it empty.
+## What changes
 
-The fix is both: the MA UI should explain emptiness, and the DH UI needs a per-week submit so weeks actually arrive.
+### 1. Page header
+- Rename heading to **"Approvals — Weekly Status"** (Sessions tab body).
+- Remove the existing Sessions/Semesters tabs from the visual top — replace with a single segmented control (Weekly Sessions · Semesters) styled as a subtle inline switch, so the Weekly view feels like the primary workflow.
 
-# Changes
+### 2. Filter bar (replaces the dept dropdown card)
+A single clean row with two clearly labeled filters:
+- **Filter by Academic Session** — Select bound to `listSemesters` (already loaded elsewhere; re-use). Defaults to current/most recent.
+- **Filter by Department** — Select bound to `listDeptsWithPendingSessions`, with `(N pending)` count suffix retained.
+- Persist both selections to `localStorage` (`approvals.semesterId`, `approvals.deptId`).
 
-## 1. MA Approval Queue — Sessions tab empty-state polish
-File: `src/routes/_authenticated/strategic/approvals.tsx` (`SessionApprovalsByDeptWeek`).
+### 3. Weekly Status table (core change)
+Replace the `grid grid-cols-2…` card grid with a real `<Table>`:
 
-- When `weeks` is non-empty but `weeks.every(w => w.pending === 0)`: render the existing `EmptyState` component (icon, "No pending sessions in this department", subtitle "When the Department Head submits weeks for review, they appear here.", action button "Open Semesters tab" that calls a passed-in `onSwitchTab` prop).
-- When `weeks` is empty: existing copy stays, but use `EmptyState` for consistency.
-- For week cards where `pending === 0`: stop rendering Approve / Send back at all. Keep only **View** and a small `Badge variant="secondary">cleared</Badge>`.
-- Keep the existing week dialog and bulk-decide flow exactly as is for weeks where `pending > 0`.
-- Add a small instruction strip above the week grid when **any** pending semester-level row exists for this department: "There's also a semester-level approval pending — use the Semesters tab to either approve the whole semester or split it into weeks." Linked button switches `tab` to `"semester"`.
-- Wire `onSwitchTab` from `ApprovalsPage` (`setTab`) down to `SessionApprovalsByDeptWeek`.
+| Column | Content |
+|---|---|
+| Week | `Week N` with `(Current)` chip on the active week |
+| Dates | `Sep 11 – Sep 17` (derived from week_num + semester start_date) |
+| Sessions Total | numeric count |
+| Approval Status | colored status badge (see below) |
+| Actions | contextual button cluster |
 
-## 2. DH Schedule Drafts — per-week submission
-File: `src/routes/_authenticated/operational/drafts.tsx`.
+**Status badge mapping** (derived from existing week data — `pending`, `total`, plus a new lightweight aggregate the page already has via `weeks`):
+- `Approved` → green (`bg-emerald-100 text-emerald-700`) — all sessions live/approved
+- `Pending Master` → amber (`bg-amber-100 text-amber-800`) — `pending > 0`
+- `Draft (Trainer)` → neutral grey — DH hasn't submitted yet
+- `Rejected` → red — at least one rejected session
 
-- Import `dhRequestApprovalPerWeek` from `@/lib/semester-drafts.functions`.
-- Add a second submit mutation `submitPerWeekMut` calling that RPC; on success toast `"Submitted {created} weekly session(s) to Admin"`. If `created === 0`, toast.warning("Nothing new to submit — all sessions are already pending or live.").
-- In each semester card header, render a small action cluster:
-  - Primary: existing **Request Semester Approval** (`size="sm"`, secondary variant).
-  - Primary (preferred): new **Submit by Week** button (`size="sm"`, default variant) — disabled when `canSubmit === false`. Tooltip: "Sends each week as an individual approval — Admin can approve week-by-week."
-- Update the subtitle copy to: "Submit weeks individually (preferred) or submit the whole semester for one-shot approval."
-- Refetch `["semester-drafts"]` after either submit (already wired for the semester path; mirror for per-week).
+**Action cluster** (contextual, matches reference):
+- Always: `View Details` (opens existing week timetable dialog)
+- When `Pending Master`: `Send Back` + `Approve Week`
+- When `Approved`: `Un-Approve` (disabled with tooltip "Already live — contact admin" — wires to existing decideWeek with `rejected` only if business allows; otherwise keep disabled placeholder, no new RPC)
+- When `Draft (Trainer)`: both action buttons disabled with tooltip "Awaiting DH submission"
 
-## 3. Status counts on MA Sessions tab refresh after submit
-The realtime channel on `approval_queue` already invalidates `["approval-queue"]`, `["approvals-depts"]`, and `["approvals-weeks"]` (line 47-56 of approvals.tsx). No change needed — once the DH submits per week, the MA tab updates live.
+All buttons use shared `ApprovalActions` semantics: Approve fires `decideWeek` with `approved`; Send Back opens the canonical `RejectFeedbackDialog` (required message).
 
-# Out of scope
-- No changes to RLS, RPCs, `decide_approval`, `ma_decide_week`, or any server function.
-- No changes to the Semesters tab, Feedback chat, week-timetable dialog, or DH dashboard leave approvals.
-- No new database migration.
+### 4. Pagination
+- Footer row with `Previous` / `Next` and `Page X of Y`.
+- Default 10 weeks per page; show all weeks of the semester (currently the API only returns pending — extend query to return all weeks with rollup status, or fall back to paging the returned set).
 
-# Technical notes
-- `EmptyState` already exists at `src/components/erp/empty-state.tsx`; reuse it.
-- `dh_submit_semester_per_week` RPC returns `{ created: number }` and is already wrapped by `dhRequestApprovalPerWeek` in `src/lib/semester-drafts.functions.ts` — only UI wiring is needed.
-- Tooltip uses existing `@/components/ui/tooltip`.
+### 5. Empty states
+Keep the `EmptyState` component but render it as a single full-width row inside the table body (`colSpan={5}`) when no weeks match.
+
+### 6. Visual polish
+- Sticky table header, zebra striping (`even:bg-muted/20`), row hover (`hover:bg-accent/30`).
+- Status badges use rounded-full pill style, matching reference.
+- Tighter row height (`h-12`), action buttons `size="sm"` with consistent gap.
+- Card wrapper around the table with `rounded-2xl border` for the elevated look in the mockup.
+
+## Out of scope
+- No DB migrations, no new RPCs, no changes to `decideWeek`/`decide_approval`.
+- Semesters tab unchanged.
+- DH-side drafts page unchanged.
+- No new design tokens; reuse existing semantic colors (add the emerald/amber utility classes inline only where status badges need them, since destructive/secondary alone don't cover the 4-state palette).
+
+## Files touched
+- `src/routes/_authenticated/strategic/approvals.tsx` — rewrite `SessionApprovalsByDeptWeek` to use Table layout, add academic-session filter, add status derivation + pagination.
+- `src/lib/approvals.functions.ts` — extend `listPendingWeeksForDept` (or add a sibling `listAllWeeksForDept`) to return ALL weeks of the chosen semester with `{week_num, total, pending, approved, rejected, draft, start_date, end_date}` so status can be rendered for every row (read-only query — no schema change).
+
+## Question before I build
+The reference shows an **"Un-Approve"** action on already-approved weeks. The current backend has no "un-approve" RPC and approved sessions become LIVE. Want me to (a) render Un-Approve as disabled-with-tooltip for now (safe, no backend work), or (b) skip the column entirely for approved weeks?
