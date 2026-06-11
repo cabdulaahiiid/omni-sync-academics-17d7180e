@@ -188,7 +188,7 @@ function ApprovalsPage() {
           <TabsTrigger value="semester">Semesters</TabsTrigger>
         </TabsList>
         <TabsContent value="session" className="mt-4">
-          <SessionApprovalsByDeptWeek />
+          <SessionApprovalsByDeptWeek onSwitchTab={() => setTab("semester")} />
         </TabsContent>
         <TabsContent value="semester" className="space-y-3 mt-4">
           {semLoading && <p className="text-muted-foreground">Loading…</p>}
