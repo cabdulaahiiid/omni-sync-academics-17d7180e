@@ -409,100 +409,57 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
 
   return (
     <div className="space-y-4">
-      {!fixedDeptId && <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Filter by Department</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {deptsLoading && <p className="text-sm text-muted-foreground">Loading departments…</p>}
-          {!deptsLoading && (
-            <Select value={deptId ?? ""} onValueChange={(v) => { setDeptId(v); setViewWeek(null); }}>
-              <SelectTrigger className="w-full max-w-md">
-                <SelectValue placeholder="Choose a department…" />
-              </SelectTrigger>
-              <SelectContent>
-                {(depts ?? []).map((d: any) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.name} {d.pending_count > 0 && <span className="ml-2 text-xs text-muted-foreground">({d.pending_count} pending)</span>}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </CardContent>
-      </Card>}
+      {!fixedDeptId && (
+        <Card className="rounded-2xl">
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Filter by Academic Session</label>
+              <Select value={semesterId ?? ""} onValueChange={(v) => { setStoredSemesterId(v); setViewWeek(null); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Choose a semester…" /></SelectTrigger>
+                <SelectContent>
+                  {(semesters ?? []).map((s: any) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Filter by Department</label>
+              {deptsLoading ? (
+                <p className="text-sm text-muted-foreground">Loading departments…</p>
+              ) : (
+                <Select value={deptId ?? ""} onValueChange={(v) => { setDeptId(v); setViewWeek(null); }}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Choose a department…" /></SelectTrigger>
+                  <SelectContent>
+                    {(depts ?? []).map((d: any) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}{d.pending_count > 0 ? ` (${d.pending_count} pending)` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {!deptId && !fixedDeptId && (
         <p className="text-sm text-muted-foreground">Select a department to view weekly schedules.</p>
       )}
 
       {deptId && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Weeks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {weeksLoading && <p className="text-sm text-muted-foreground">Loading weeks…</p>}
-            {!weeksLoading && (weeks ?? []).length === 0 && (
-              <EmptyState
-                icon={Inbox}
-                title="No sessions found for this department"
-                description="Once the Department Head uploads a semester and submits weeks for review, they will appear here."
-                action={onSwitchTab && (
-                  <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Semesters tab</Button>
-                )}
-              />
-            )}
-            {!weeksLoading && (weeks ?? []).length > 0 && (weeks ?? []).every((w: any) => w.pending === 0) && (
-              <EmptyState
-                icon={Inbox}
-                title="No pending sessions in this department"
-                description="When the Department Head submits weeks for review, they appear here. Semester-level approvals live on the Semesters tab."
-                action={onSwitchTab && (
-                  <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Semesters tab</Button>
-                )}
-                className="mb-3"
-              />
-            )}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {(weeks ?? []).map((w: any) => {
-                const hasPending = w.pending > 0;
-                return (
-                  <Card key={w.week_num} className="border">
-                    <CardContent className="space-y-2 p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold">Week {w.week_num}</span>
-                        {hasPending ? (
-                          <Badge variant="destructive">{w.pending} pending</Badge>
-                        ) : (
-                          <Badge variant="secondary">cleared</Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">{w.total} session(s) total</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        <Button size="sm" variant="outline" onClick={() => setViewWeek(w.week_num)}>
-                          <Eye className="mr-1 h-3 w-3" /> View
-                        </Button>
-                        {hasPending && (
-                          <>
-                            <Button size="sm"
-                              onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "approved" }); }}>
-                              <Check className="mr-1 h-3 w-3" /> Approve
-                            </Button>
-                            <Button size="sm" variant="destructive"
-                              onClick={() => { setComment(""); setPendingDecision({ week: w.week_num, decision: "rejected" }); }}>
-                              <MessageSquareWarning className="mr-1 h-3 w-3" /> Send back
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <WeeklyStatusTable
+          weeks={weeks ?? []}
+          loading={weeksLoading}
+          page={tablePage}
+          pageSize={PAGE_SIZE}
+          onPageChange={setTablePage}
+          onSwitchTab={onSwitchTab}
+          onView={(w) => setViewWeek(w)}
+          onApprove={(w) => { setComment(""); setPendingDecision({ week: w, decision: "approved" }); }}
+          onSendBack={(w) => { setComment(""); setPendingDecision({ week: w, decision: "rejected" }); }}
+        />
       )}
 
       {/* View week dialog */}
