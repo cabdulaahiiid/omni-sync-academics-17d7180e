@@ -328,7 +328,8 @@ function ApprovalRow({ row, onApprove, onReject, rejecting, onOpenChat, onSplit,
 function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?: string; onSwitchTab?: () => void } = {}) {
   const qc = useQueryClient();
   const listDeptsFn = useServerFn(listDeptsWithPendingSessions);
-  const listWeeksFn = useServerFn(listPendingWeeksForDept);
+  const listWeeksFn = useServerFn(listAllWeeksForDept);
+  const listSemestersFn = useServerFn(listSemesters);
   const getWeekFn = useServerFn(getWeekTimetable);
   const decideWeekFn = useServerFn(decideWeek);
 
@@ -339,6 +340,12 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
   const setDeptId = (v: string | null) => {
     if (!fixedDeptId) setStoredDeptId(v);
   };
+  const [storedSemesterId, setStoredSemesterId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("approvals.semesterId") : null,
+  );
+  const semesterId = storedSemesterId;
+  const [tablePage, setTablePage] = useState(1);
+  const PAGE_SIZE = 10;
   const [viewWeek, setViewWeek] = useState<number | null>(null);
   const [pendingDecision, setPendingDecision] = useState<{
     week: number; decision: "approved" | "rejected";
@@ -348,15 +355,29 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
   useEffect(() => {
     if (!fixedDeptId && storedDeptId) localStorage.setItem("approvals.deptId", storedDeptId);
   }, [fixedDeptId, storedDeptId]);
+  useEffect(() => {
+    if (storedSemesterId) localStorage.setItem("approvals.semesterId", storedSemesterId);
+  }, [storedSemesterId]);
+  useEffect(() => { setTablePage(1); }, [deptId, semesterId]);
 
   const { data: depts, isLoading: deptsLoading } = useQuery({
     queryKey: ["approvals-depts"],
     queryFn: () => listDeptsFn(),
     enabled: !fixedDeptId,
   });
+  const { data: semesters } = useQuery({
+    queryKey: ["approvals-semesters"],
+    queryFn: () => listSemestersFn(),
+    enabled: !fixedDeptId,
+  });
+  useEffect(() => {
+    if (!storedSemesterId && (semesters ?? []).length > 0) {
+      setStoredSemesterId((semesters as any[])[0].id);
+    }
+  }, [semesters, storedSemesterId]);
   const { data: weeks, isLoading: weeksLoading } = useQuery({
-    queryKey: ["approvals-weeks", deptId],
-    queryFn: () => listWeeksFn({ data: { department_id: deptId! } }),
+    queryKey: ["approvals-weeks", deptId, semesterId],
+    queryFn: () => listWeeksFn({ data: { department_id: deptId!, semester_id: semesterId ?? undefined } }),
     enabled: !!deptId,
   });
   const { data: weekRows, isLoading: weekLoading } = useQuery({
