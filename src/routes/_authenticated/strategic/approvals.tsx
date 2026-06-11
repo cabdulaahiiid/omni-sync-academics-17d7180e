@@ -544,3 +544,178 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
     </div>
   );
 }
+
+type WeekRow = {
+  week_num: number;
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  draft: number;
+  start_date: string | null;
+  end_date: string | null;
+};
+
+function fmtDate(d: string | null) {
+  if (!d) return "—";
+  const dt = new Date(d + "T00:00:00");
+  return dt.toLocaleDateString(undefined, { month: "short", day: "2-digit" });
+}
+
+function weekStatus(w: WeekRow): "approved" | "pending" | "draft" | "rejected" {
+  if (w.rejected > 0) return "rejected";
+  if (w.pending > 0) return "pending";
+  if (w.total > 0 && w.approved === w.total) return "approved";
+  return "draft";
+}
+
+function StatusPill({ status }: { status: ReturnType<typeof weekStatus> }) {
+  const map = {
+    approved: { label: "Approved", cls: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+    pending: { label: "Pending Master", cls: "bg-amber-100 text-amber-900 border-amber-200" },
+    draft: { label: "Draft (Trainer)", cls: "bg-muted text-muted-foreground border-border" },
+    rejected: { label: "Rejected", cls: "bg-red-100 text-red-800 border-red-200" },
+  } as const;
+  const m = map[status];
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${m.cls}`}>
+      {m.label}
+    </span>
+  );
+}
+
+function WeeklyStatusTable({
+  weeks, loading, page, pageSize, onPageChange, onView, onApprove, onSendBack, onSwitchTab,
+}: {
+  weeks: WeekRow[];
+  loading: boolean;
+  page: number;
+  pageSize: number;
+  onPageChange: (p: number) => void;
+  onView: (week: number) => void;
+  onApprove: (week: number) => void;
+  onSendBack: (week: number) => void;
+  onSwitchTab?: () => void;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const currentWeek = weeks.find((w) => w.start_date && w.end_date && w.start_date <= today && today <= w.end_date)?.week_num;
+  const total = weeks.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(page, pageCount);
+  const rows = weeks.slice((current - 1) * pageSize, current * pageSize);
+
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Approvals — Weekly Status</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 p-0 sm:p-2">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/40">
+              <TableRow>
+                <TableHead className="w-[160px]">Week</TableHead>
+                <TableHead className="w-[180px]">Dates</TableHead>
+                <TableHead className="w-[140px]">Sessions Total</TableHead>
+                <TableHead className="w-[180px]">Approval Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && (
+                <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">Loading weeks…</TableCell></TableRow>
+              )}
+              {!loading && rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-8">
+                    <EmptyState
+                      icon={Inbox}
+                      title="No weeks to show"
+                      description="Once the Department Head uploads a semester and submits weeks for review, they appear here."
+                      action={onSwitchTab && (
+                        <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Semesters tab</Button>
+                      )}
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && rows.map((w) => {
+                const status = weekStatus(w);
+                const isCurrent = w.week_num === currentWeek;
+                return (
+                  <TableRow key={w.week_num} className="hover:bg-accent/30">
+                    <TableCell className="font-medium">
+                      Week {w.week_num}
+                      {isCurrent && <span className="ml-2 text-xs text-primary">(Current)</span>}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {fmtDate(w.start_date)} – {fmtDate(w.end_date)}
+                    </TableCell>
+                    <TableCell className="text-sm">{w.total}</TableCell>
+                    <TableCell><StatusPill status={status} /></TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                        <Button size="sm" variant="outline" onClick={() => onView(w.week_num)}>
+                          <Eye className="mr-1 h-3 w-3" /> View Details
+                        </Button>
+                        <TooltipProvider>
+                          {status === "pending" && (
+                            <>
+                              <Button size="sm" variant="destructive" onClick={() => onSendBack(w.week_num)}>
+                                <MessageSquareWarning className="mr-1 h-3 w-3" /> Send Back
+                              </Button>
+                              <Button size="sm" onClick={() => onApprove(w.week_num)}>
+                                <Check className="mr-1 h-3 w-3" /> Approve Week
+                              </Button>
+                            </>
+                          )}
+                          {status === "draft" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={0}>
+                                  <Button size="sm" disabled>Awaiting DH</Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>Department Head hasn't submitted this week yet.</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {status === "approved" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={0}>
+                                  <Button size="sm" variant="outline" disabled>Un-Approve</Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>Sessions are already live — contact admin to revoke.</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {status === "rejected" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={0}>
+                                  <Button size="sm" variant="outline" disabled>Awaiting Resubmit</Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>Returned to Department Head for changes.</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </TooltipProvider>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+        {pageCount > 1 && (
+          <div className="flex items-center justify-between gap-2 px-3 py-2">
+            <Button size="sm" variant="outline" disabled={current <= 1} onClick={() => onPageChange(current - 1)}>Previous</Button>
+            <span className="text-xs text-muted-foreground">Page {current} of {pageCount}</span>
+            <Button size="sm" variant="outline" disabled={current >= pageCount} onClick={() => onPageChange(current + 1)}>Next</Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
