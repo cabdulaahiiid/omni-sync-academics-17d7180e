@@ -139,6 +139,16 @@
   --teal-fg: oklch(0.99 0 0);
 }
 
+/* Fluent-style dashboard surfaces (derived from existing tokens) */
+:root {
+  --surface-raised: color-mix(in oklab, var(--card) 96%, white);
+  --surface-sunken: color-mix(in oklab, var(--muted) 80%, var(--background));
+}
+.dark {
+  --surface-raised: color-mix(in oklab, var(--card) 92%, white 4%);
+  --surface-sunken: color-mix(in oklab, var(--card) 70%, black);
+}
+
 .dark {
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
