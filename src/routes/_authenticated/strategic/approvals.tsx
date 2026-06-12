@@ -130,9 +130,12 @@ function ApprovalsPage() {
   useEffect(() => { setPage(1); }, [search, conflictFilter, sortBy, pageSize, decisionFilter]);
 
   return (
-    <div className="container mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Approval Queue</h1>
-      <Card>
+    <div className="container mx-auto space-y-4 p-6">
+      <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-1 border-b border-border/70 bg-background/85 px-6 py-3 backdrop-blur">
+        <h1 className="text-[22px] font-semibold tracking-tight text-foreground">Approvals — Weekly Status</h1>
+        <p className="text-xs text-muted-foreground">Approve, return, or split semester &amp; per-week submissions.</p>
+      </div>
+      <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)]">
         <CardContent className="flex flex-wrap items-center gap-2 p-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
