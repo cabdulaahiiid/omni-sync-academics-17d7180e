@@ -1,66 +1,109 @@
-# Weekly Approvals — Professional Redesign
+# TVET ERP Dashboard Redesign — Master Admin & Department Head
 
-Replace the current card-grid week list on **Strategic → Approvals → Sessions** with a structured, table-driven workflow matching the reference mockup. Scope is UI/UX only; no schema, RPC, or server-function changes.
-
-## What changes
-
-### 1. Page header
-- Rename heading to **"Approvals — Weekly Status"** (Sessions tab body).
-- Remove the existing Sessions/Semesters tabs from the visual top — replace with a single segmented control (Weekly Sessions · Semesters) styled as a subtle inline switch, so the Weekly view feels like the primary workflow.
-
-### 2. Filter bar (replaces the dept dropdown card)
-A single clean row with two clearly labeled filters:
-- **Filter by Academic Session** — Select bound to `listSemesters` (already loaded elsewhere; re-use). Defaults to current/most recent.
-- **Filter by Department** — Select bound to `listDeptsWithPendingSessions`, with `(N pending)` count suffix retained.
-- Persist both selections to `localStorage` (`approvals.semesterId`, `approvals.deptId`).
-
-### 3. Weekly Status table (core change)
-Replace the `grid grid-cols-2…` card grid with a real `<Table>`:
-
-| Column | Content |
-|---|---|
-| Week | `Week N` with `(Current)` chip on the active week |
-| Dates | `Sep 11 – Sep 17` (derived from week_num + semester start_date) |
-| Sessions Total | numeric count |
-| Approval Status | colored status badge (see below) |
-| Actions | contextual button cluster |
-
-**Status badge mapping** (derived from existing week data — `pending`, `total`, plus a new lightweight aggregate the page already has via `weeks`):
-- `Approved` → green (`bg-emerald-100 text-emerald-700`) — all sessions live/approved
-- `Pending Master` → amber (`bg-amber-100 text-amber-800`) — `pending > 0`
-- `Draft (Trainer)` → neutral grey — DH hasn't submitted yet
-- `Rejected` → red — at least one rejected session
-
-**Action cluster** (contextual, matches reference):
-- Always: `View Details` (opens existing week timetable dialog)
-- When `Pending Master`: `Send Back` + `Approve Week`
-- When `Approved`: `Un-Approve` (disabled with tooltip "Already live — contact admin" — wires to existing decideWeek with `rejected` only if business allows; otherwise keep disabled placeholder, no new RPC)
-- When `Draft (Trainer)`: both action buttons disabled with tooltip "Awaiting DH submission"
-
-All buttons use shared `ApprovalActions` semantics: Approve fires `decideWeek` with `approved`; Send Back opens the canonical `RejectFeedbackDialog` (required message).
-
-### 4. Pagination
-- Footer row with `Previous` / `Next` and `Page X of Y`.
-- Default 10 weeks per page; show all weeks of the semester (currently the API only returns pending — extend query to return all weeks with rollup status, or fall back to paging the returned set).
-
-### 5. Empty states
-Keep the `EmptyState` component but render it as a single full-width row inside the table body (`colSpan={5}`) when no weeks match.
-
-### 6. Visual polish
-- Sticky table header, zebra striping (`even:bg-muted/20`), row hover (`hover:bg-accent/30`).
-- Status badges use rounded-full pill style, matching reference.
-- Tighter row height (`h-12`), action buttons `size="sm"` with consistent gap.
-- Card wrapper around the table with `rounded-2xl border` for the elevated look in the mockup.
-
-## Out of scope
-- No DB migrations, no new RPCs, no changes to `decideWeek`/`decide_approval`.
-- Semesters tab unchanged.
-- DH-side drafts page unchanged.
-- No new design tokens; reuse existing semantic colors (add the emerald/amber utility classes inline only where status badges need them, since destructive/secondary alone don't cover the 4-state palette).
+Fluent / Dynamics 365 visual direction. Sidebar untouched. UI restyle + targeted read-only server functions. All drill-downs deep-link to existing routes with URL search params; no new pages.
 
 ## Files touched
-- `src/routes/_authenticated/strategic/approvals.tsx` — rewrite `SessionApprovalsByDeptWeek` to use Table layout, add academic-session filter, add status derivation + pagination.
-- `src/lib/approvals.functions.ts` — extend `listPendingWeeksForDept` (or add a sibling `listAllWeeksForDept`) to return ALL weeks of the chosen semester with `{week_num, total, pending, approved, rejected, draft, start_date, end_date}` so status can be rendered for every row (read-only query — no schema change).
 
-## Question before I build
-The reference shows an **"Un-Approve"** action on already-approved weeks. The current backend has no "un-approve" RPC and approved sessions become LIVE. Want me to (a) render Un-Approve as disabled-with-tooltip for now (safe, no backend work), or (b) skip the column entirely for approved weeks?
+**New / extended server functions** (`src/lib/ma.functions.ts`, `src/lib/dh-ops.functions.ts`):
+- `getStrategicStatsExt` — extends `getStrategicStats` with: pending approvals (`approval_queue.decision='pending'`), attendance % today, geo compliance 7d, departments-reporting count (depts with ≥1 schedule today), trend deltas vs. 7-day prior.
+- `getApprovalQueueSummary` — `{pending, approved_today, returned, rejected}` counts from `approval_queue`.
+- `getInstitutionActivity` — `{active_classes, completed_today, missing_attendance, late_attendance, schedule_submissions_today}` from `schedules` + `session_logs` + `attendance_logs`.
+- `listCriticalAlerts` — union of: schedules with `status=LIVE` past `end_time` without `session_logs.submitted_at`; trainer leave gaps overlapping today's schedules; pending-approval count; conflict flags from `approval_queue`.
+- `getDepartmentPerformance` — per-department: attendance %, schedule-completion %, submission compliance %, trainer punctuality (proxy on `checkin_at` vs `start_time`).
+- `getWeeklyApprovalSeries` — 8-week window: submitted, approved, rejected counts grouped by ISO week from `audit_logs` + `approval_queue`.
+- `listLiveActivityFeed` — merges `audit_logs` recent 20 + last 10 `session_logs` + last 10 `attendance_logs` rollups into a unified, clickable timeline.
+- `getDHStatsExt` — extends `getDHStats`: active classes today, dept attendance %, pending schedule reviews (DRAFT/PENDING_MA), submitted vs missing attendance today, weekly compliance.
+- `listDHScheduleCommand` — current-week schedules joined with section, course, trainer, status, attendance status.
+- `listDHActiveClasses` — schedules where `status='ACTIVE'` OR (`status='LIVE'` AND now within window).
+- `listDHAttendanceMonitor` — today: submitted / missing / late buckets with schedule ids for drill-down.
+- `getDHAnalytics` — 8-week attendance trend, punctuality trend, completion trend for the DH's department.
+- `listDHAlerts` — missing attendance, late trainers (checkin_at > start_time + 15m), schedule conflicts, unreviewed drafts.
+
+All new fns use `requireSupabaseAuth`; MA fns gate on `has_role(uid,'MA')`, DH fns on `current_department_id()` to enforce dept scope.
+
+**Redesigned routes**:
+- `src/routes/_authenticated/strategic/index.tsx` — Strategic Command Center (rebuilt per layout below).
+- `src/routes/_authenticated/operational/index.tsx` — Department Operations Center (rebuilt).
+- `src/routes/_authenticated/strategic/approvals.tsx` — restyle header, filter bar, and KPI strip only; keep WeeklyStatusTable + logic unchanged.
+
+**New shared components** (`src/components/erp/`):
+- `kpi-tile.tsx` — Fluent-style large tile: label, value, delta chip, sparkline, "last updated" timestamp, click target.
+- `dashboard-section.tsx` — Sticky section header with title + actions.
+- `alert-row.tsx` — Severity icon, message, "Open records →" link.
+- `activity-row.tsx` — Unified timeline row with action chip, entity link, timestamp.
+
+**Search-param contracts on existing routes** (read-only additions; no behavior change when absent):
+- `/strategic/approvals?status=pending|returned|approved&dept=<id>&week=<n>`
+- `/strategic/audit?action=<type>&entity=<type>&from=<iso>`
+- `/strategic/insights?metric=attendance|punctuality|geo&dept=<id>`
+- `/strategic/departments/$id?tab=performance|reporting`
+- `/operational/live-monitor?status=active|missing|late`
+- `/operational/attendance?status=submitted|missing|late&date=<iso>`
+- `/operational/drafts?status=draft|pending|returned`
+- `/operational/reports?metric=attendance|punctuality|completion`
+
+Each consuming route adds `validateSearch` with `zodValidator` + `fallback`, then filters its existing query. No SQL changes — all filtering is client/server-fn level on data already returned.
+
+## Strategic Command Center layout
+
+```
+[ Sticky header: title • semester selector • "Last updated 12:04" • refresh ]
+[ Row 1: 6 KPI tiles ───────────────────────────────────────────────────── ]
+  Active Sessions │ Pending Approvals │ Attendance Rate
+  Trainer Punctuality │ Geo Compliance │ Departments Reporting
+[ Row 2: 3-col operational control ──────────────────────────────────────── ]
+  Approval Queue Summary │ Institution Activity Monitor │ Critical Alerts
+  (Pending/Approved Today/  (Active/Completed/Missing/    (real rows; click
+   Returned/Rejected;        Late/Submissions; each       opens filtered
+   each clickable)           clickable)                    route)
+[ Row 3: Analytics ──────────────────────────────────────────────────────── ]
+  Department Performance (bar/grid, click dept → /strategic/departments/$id)
+  Weekly Approval Analytics (8-wk stacked bar, click week → approvals?week=N)
+[ Row 4: Quick Actions strip ────────────────────────────────────────────── ]
+  Approvals · Audit · Insights · Users · Departments · Settings
+[ Row 5: Live Activity Feed (unified, clickable) ────────────────────────── ]
+```
+
+Realtime: existing `audit_logs` + `schedules` channels stay; add `attendance_logs` channel to invalidate KPI queries on insert.
+
+## Department Operations Center layout
+
+```
+[ Sticky header: dept name • week selector • refresh ]
+[ Row 1: 6 KPI tiles ───────────────────────────────────────────────────── ]
+  Active Classes Today │ Dept Attendance Rate │ Pending Schedule Reviews
+  Submitted Attendance │ Missing Attendance   │ Weekly Compliance
+[ Row 2: Schedule Command Center ────────────────────────────────────────── ]
+  Left: table (Week/Trainer/Course/Section/Schedule Status/Attendance Status)
+        — row select drives right detail panel (no navigation)
+  Right: action panel (Review / Approve / Return / View Timetable)
+[ Row 3: Live Monitoring (2 cols) ───────────────────────────────────────── ]
+  Active Classes list │ Attendance Monitoring (Submitted/Missing/Late)
+[ Row 4: Department Analytics ───────────────────────────────────────────── ]
+  Attendance Trend │ Trainer Punctuality │ Schedule Completion
+  (click point → /operational/reports?metric=…&date=…)
+[ Row 5: Department Alerts ──────────────────────────────────────────────── ]
+  Missing Attendance · Late Trainers · Conflicts · Unreviewed Drafts
+```
+
+Row 2 right panel reuses existing `dhRequestApprovalPerWeek` / `decideWeek` / week-timetable-dialog wiring. "Approve / Return" buttons call existing `dh_submit_semester_per_week` / `dh_resubmit_week` RPCs through the existing `dh.functions.ts` wrappers.
+
+## Visual system (Fluent / Dynamics 365)
+
+- Surfaces: existing `--card` / `--border` tokens; add `--surface-raised` (one notch lighter) for KPI tiles, `--surface-sunken` for table headers. No new color hex values — derive via `color-mix` from existing `--stat-*` tokens.
+- Type: keep current font; KPI value `text-[28px] font-semibold tracking-tight`; labels `text-[11px] uppercase tracking-[0.08em] text-muted-foreground`.
+- Density: row height 44px in tables, 12px section gaps, sticky header with bottom border + subtle shadow on scroll.
+- Status pills: reuse existing `StatusPill` from approvals redesign (emerald / amber / muted / rose).
+- Delta chip: green up-arrow / red down-arrow with % vs 7-day prior; neutral when no comparison data.
+- "Last updated" timestamp from React Query's `dataUpdatedAt`.
+- Mobile: KPI grid collapses 6→2 cols; Row 2/3 stack; Schedule Command Center splits into accordion (table → detail).
+
+## Real-data guarantees
+
+Every tile/row/chart sources from a server function listed above. If a metric has no source row yet (e.g. no `session_logs` today), the tile shows `0` with empty-state copy "No activity yet today" — not a placeholder number. The current `trainer_punctuality = geoPct` proxy is replaced by an actual `checkin_at` vs `start_time` calculation in `getStrategicStatsExt`.
+
+## Out of scope
+
+- No sidebar changes, no new routes, no schema migrations, no new RPCs.
+- Existing approvals table body, DH drafts page, semester upload, students hub, audit page, insights page — untouched (only deep-link search params honored when present).
+- No mocked or decorative numbers anywhere.
