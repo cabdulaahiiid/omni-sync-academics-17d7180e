@@ -102,7 +102,6 @@ export const updateDraftSession = createServerFn({ method: "POST" })
         end_time: z.string().optional(),
         venue_id: z.string().uuid().optional(),
         trainer_registry_id: z.string().uuid().optional(),
-        module_id: z.string().uuid().optional(),
         section_id: z.string().uuid().optional(),
         week_num: z.number().int().min(1).max(20).optional(),
         day: z.enum(["MON","TUE","WED","THU","FRI","SAT","SUN"]).optional(),
@@ -112,7 +111,7 @@ export const updateDraftSession = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: before } = await context.supabase
       .from("schedules")
-      .select("id, date, start_time, end_time, venue_id, trainer_registry_id, module_id, section_id, week_num, day, status")
+      .select("id, date, start_time, end_time, venue_id, trainer_registry_id, section_id, week_num, day, status")
       .eq("id", data.schedule_id)
       .maybeSingle();
     const { error } = await context.supabase
