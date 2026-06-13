@@ -187,6 +187,10 @@ function DraftsPage() {
                 ))}
               </div>
             </CardContent>
+            <CardContent className="border-t pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Version history</p>
+              <ApprovalVersionTimeline semesterId={s.id} />
+            </CardContent>
           </Card>
         );
       })}
