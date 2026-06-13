@@ -6,7 +6,6 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
 import { listWeekThreadsForDept } from "@/lib/feedback.functions";
-import { FeedbackChat } from "@/components/feedback-chat";
 import { ApprovalChatDock } from "@/components/approval-chat-dock";
 import { ApprovalVersionTimeline } from "@/components/approval-version-timeline";
 import { WeekTimetableDialog } from "@/components/week-timetable-dialog";

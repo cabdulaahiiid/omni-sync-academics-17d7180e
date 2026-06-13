@@ -13,7 +13,6 @@ import {
   splitSemesterToWeeks,
 } from "@/lib/approvals.functions";
 import { listSemesters } from "@/lib/ma.functions";
-import { FeedbackChat } from "@/components/feedback-chat";
 import { ApprovalChatDock } from "@/components/approval-chat-dock";
 import { ApprovalVersionTimeline } from "@/components/approval-version-timeline";
 import { ApprovalActions } from "@/components/erp/approval-actions";
