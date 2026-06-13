@@ -21,6 +21,91 @@ export const swapTrainer = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Re-check conflicts for a proposed edit to a single schedule row.
+ * Compares trainer/venue/section overlaps against all OTHER schedules on the
+ * same date (excluding the schedule being edited).
+ */
+export const validateScheduleEdit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      schedule_id: z.string().uuid(),
+      patch: z.object({
+        date: z.string().optional(),
+        start_time: z.string().optional(),
+        end_time: z.string().optional(),
+        venue_id: z.string().uuid().optional(),
+        trainer_registry_id: z.string().uuid().optional(),
+        section_id: z.string().uuid().optional(),
+      }),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("schedules")
+      .select("id, date, start_time, end_time, venue_id, trainer_registry_id, section_id")
+      .eq("id", data.schedule_id)
+      .single();
+    if (error || !row) throw new Error(error?.message ?? "Schedule not found");
+
+    const proposed = {
+      date: data.patch.date ?? row.date,
+      start_time: (data.patch.start_time ?? row.start_time).length === 5
+        ? (data.patch.start_time ?? row.start_time) + ":00"
+        : (data.patch.start_time ?? row.start_time),
+      end_time: (data.patch.end_time ?? row.end_time).length === 5
+        ? (data.patch.end_time ?? row.end_time) + ":00"
+        : (data.patch.end_time ?? row.end_time),
+      venue_id: data.patch.venue_id ?? row.venue_id,
+      trainer_registry_id: data.patch.trainer_registry_id ?? row.trainer_registry_id,
+      section_id: data.patch.section_id ?? row.section_id,
+    };
+
+    const { data: others } = await context.supabase
+      .from("schedules")
+      .select("id, date, start_time, end_time, venue_id, trainer_registry_id, section_id, module_code, trainer_name")
+      .eq("date", proposed.date)
+      .neq("id", data.schedule_id);
+
+    const overlap = (a: any, b: any) =>
+      !(a.end_time <= b.start_time || b.end_time <= a.start_time);
+
+    const conflicts: { kind: "trainer" | "venue" | "section"; with_id: string; with_label: string }[] = [];
+    for (const b of others ?? []) {
+      if (!overlap(proposed, b)) continue;
+      if (b.trainer_registry_id && proposed.trainer_registry_id === b.trainer_registry_id) {
+        conflicts.push({ kind: "trainer", with_id: b.id, with_label: `${b.module_code} (${b.trainer_name})` });
+      }
+      if (b.venue_id && proposed.venue_id === b.venue_id) {
+        conflicts.push({ kind: "venue", with_id: b.id, with_label: `${b.module_code}` });
+      }
+      if (b.section_id && proposed.section_id === b.section_id) {
+        conflicts.push({ kind: "section", with_id: b.id, with_label: `${b.module_code}` });
+      }
+    }
+    return { ok: conflicts.length === 0, conflicts, proposed };
+  });
+
+/** Department-scoped options for the Conflict Resolution Panel. */
+export const getConflictPanelOptions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ department_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const [{ data: trainers }, { data: venues }, { data: sections }] = await Promise.all([
+      context.supabase.from("trainer_registry").select("id, full_name").eq("department_id", data.department_id).order("full_name"),
+      context.supabase.from("venues").select("id, name").order("name"),
+      context.supabase.from("sections").select("id, name, level_id").eq("department_id", data.department_id).order("name"),
+    ]);
+    return {
+      trainers: trainers ?? [],
+      venues: venues ?? [],
+      sections: sections ?? [],
+    };
+  });
+
 export const overrideAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -57,7 +142,7 @@ export const getWeeklyMatrix = createServerFn({ method: "POST" })
 
     let q = context.supabase
       .from("schedules")
-      .select("id, date, day, start_time, end_time, module_code, module_name, trainer_registry_id, trainer_name, venue_id, status")
+      .select("id, date, day, week_num, semester_id, start_time, end_time, module_code, module_name, trainer_registry_id, trainer_name, venue_id, section_id, status")
       .gte("date", fmt(start))
       .lte("date", fmt(end))
       .order("date")

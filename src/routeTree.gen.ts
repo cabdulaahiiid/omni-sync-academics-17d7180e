@@ -21,6 +21,7 @@ import { Route as AuthenticatedGroundIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedStrategicVenuesRouteImport } from './routes/_authenticated/strategic/venues'
 import { Route as AuthenticatedStrategicUsersRouteImport } from './routes/_authenticated/strategic/users'
 import { Route as AuthenticatedStrategicTrainersRouteImport } from './routes/_authenticated/strategic/trainers'
+import { Route as AuthenticatedStrategicSystemDataRouteImport } from './routes/_authenticated/strategic/system-data'
 import { Route as AuthenticatedStrategicStudentsRouteImport } from './routes/_authenticated/strategic/students'
 import { Route as AuthenticatedStrategicSettingsRouteImport } from './routes/_authenticated/strategic/settings'
 import { Route as AuthenticatedStrategicSemestersRouteImport } from './routes/_authenticated/strategic/semesters'
@@ -107,6 +108,12 @@ const AuthenticatedStrategicTrainersRoute =
   AuthenticatedStrategicTrainersRouteImport.update({
     id: '/trainers',
     path: '/trainers',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
+const AuthenticatedStrategicSystemDataRoute =
+  AuthenticatedStrategicSystemDataRouteImport.update({
+    id: '/system-data',
+    path: '/system-data',
     getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
 const AuthenticatedStrategicStudentsRoute =
@@ -262,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
   '/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
   '/strategic/students': typeof AuthenticatedStrategicStudentsRoute
+  '/strategic/system-data': typeof AuthenticatedStrategicSystemDataRoute
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
@@ -293,6 +301,7 @@ export interface FileRoutesByTo {
   '/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
   '/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
   '/strategic/students': typeof AuthenticatedStrategicStudentsRoute
+  '/strategic/system-data': typeof AuthenticatedStrategicSystemDataRoute
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
@@ -329,6 +338,7 @@ export interface FileRoutesById {
   '/_authenticated/strategic/semesters': typeof AuthenticatedStrategicSemestersRoute
   '/_authenticated/strategic/settings': typeof AuthenticatedStrategicSettingsRoute
   '/_authenticated/strategic/students': typeof AuthenticatedStrategicStudentsRoute
+  '/_authenticated/strategic/system-data': typeof AuthenticatedStrategicSystemDataRoute
   '/_authenticated/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/_authenticated/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/_authenticated/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/strategic/semesters'
     | '/strategic/settings'
     | '/strategic/students'
+    | '/strategic/system-data'
     | '/strategic/trainers'
     | '/strategic/users'
     | '/strategic/venues'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/strategic/semesters'
     | '/strategic/settings'
     | '/strategic/students'
+    | '/strategic/system-data'
     | '/strategic/trainers'
     | '/strategic/users'
     | '/strategic/venues'
@@ -431,6 +443,7 @@ export interface FileRouteTypes {
     | '/_authenticated/strategic/semesters'
     | '/_authenticated/strategic/settings'
     | '/_authenticated/strategic/students'
+    | '/_authenticated/strategic/system-data'
     | '/_authenticated/strategic/trainers'
     | '/_authenticated/strategic/users'
     | '/_authenticated/strategic/venues'
@@ -530,6 +543,13 @@ declare module '@tanstack/react-router' {
       path: '/trainers'
       fullPath: '/strategic/trainers'
       preLoaderRoute: typeof AuthenticatedStrategicTrainersRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
+    '/_authenticated/strategic/system-data': {
+      id: '/_authenticated/strategic/system-data'
+      path: '/system-data'
+      fullPath: '/strategic/system-data'
+      preLoaderRoute: typeof AuthenticatedStrategicSystemDataRouteImport
       parentRoute: typeof AuthenticatedStrategicRoute
     }
     '/_authenticated/strategic/students': {
@@ -755,6 +775,7 @@ interface AuthenticatedStrategicRouteChildren {
   AuthenticatedStrategicSemestersRoute: typeof AuthenticatedStrategicSemestersRoute
   AuthenticatedStrategicSettingsRoute: typeof AuthenticatedStrategicSettingsRoute
   AuthenticatedStrategicStudentsRoute: typeof AuthenticatedStrategicStudentsRoute
+  AuthenticatedStrategicSystemDataRoute: typeof AuthenticatedStrategicSystemDataRoute
   AuthenticatedStrategicTrainersRoute: typeof AuthenticatedStrategicTrainersRoute
   AuthenticatedStrategicUsersRoute: typeof AuthenticatedStrategicUsersRoute
   AuthenticatedStrategicVenuesRoute: typeof AuthenticatedStrategicVenuesRoute
@@ -777,6 +798,8 @@ const AuthenticatedStrategicRouteChildren: AuthenticatedStrategicRouteChildren =
     AuthenticatedStrategicSemestersRoute: AuthenticatedStrategicSemestersRoute,
     AuthenticatedStrategicSettingsRoute: AuthenticatedStrategicSettingsRoute,
     AuthenticatedStrategicStudentsRoute: AuthenticatedStrategicStudentsRoute,
+    AuthenticatedStrategicSystemDataRoute:
+      AuthenticatedStrategicSystemDataRoute,
     AuthenticatedStrategicTrainersRoute: AuthenticatedStrategicTrainersRoute,
     AuthenticatedStrategicUsersRoute: AuthenticatedStrategicUsersRoute,
     AuthenticatedStrategicVenuesRoute: AuthenticatedStrategicVenuesRoute,
@@ -812,13 +835,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

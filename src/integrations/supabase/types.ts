@@ -1155,6 +1155,7 @@ export type Database = {
         Args: { _approval_id: string }
         Returns: Json
       }
+      reset_academic_data: { Args: never; Returns: Json }
       set_session_mode: {
         Args: {
           _mode: Database["public"]["Enums"]["session_mode"]
@@ -1194,6 +1195,7 @@ export type Database = {
         }
         Returns: Json
       }
+      wipe_entire_system: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "MA" | "DH" | "T"

@@ -13,7 +13,8 @@ import {
   splitSemesterToWeeks,
 } from "@/lib/approvals.functions";
 import { listSemesters } from "@/lib/ma.functions";
-import { FeedbackChat } from "@/components/feedback-chat";
+import { ApprovalChatDock } from "@/components/approval-chat-dock";
+import { ApprovalVersionTimeline } from "@/components/approval-version-timeline";
 import { ApprovalActions } from "@/components/erp/approval-actions";
 import { ConflictBadges } from "@/components/erp/conflict-badges";
 import { EmptyState } from "@/components/erp/empty-state";
@@ -230,14 +231,13 @@ function ApprovalsPage() {
       </Tabs>
 
       {chatSemesterId && (
-        <div className="fixed inset-0 z-50 bg-black/40 p-4 flex items-end sm:items-center justify-center">
-          <div className="w-full max-w-lg">
-            <div className="mb-2 flex justify-end">
-              <Button size="sm" variant="secondary" onClick={() => setChatSemesterId(null)}>Close</Button>
-            </div>
-            <FeedbackChat semesterId={chatSemesterId} title="Conversation with Department Head" />
-          </div>
-        </div>
+        <ApprovalChatDock
+          semesterId={chatSemesterId}
+          weekNum={null}
+          title="Discussion with DH"
+          open={true}
+          onOpenChange={(o) => !o && setChatSemesterId(null)}
+        />
       )}
 
     </div>
@@ -321,6 +321,12 @@ function ApprovalRow({ row, onApprove, onReject, rejecting, onOpenChat, onSplit,
         {row.type === "semester" && showWeekly && deptId && (
           <div className="rounded-lg border bg-muted/20 p-3">
             <SessionApprovalsByDeptWeek fixedDeptId={deptId} />
+          </div>
+        )}
+        {row.type === "semester" && (
+          <div className="mt-3 rounded-lg border bg-muted/20 p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Version history</p>
+            <ApprovalVersionTimeline semesterId={row.target_id} />
           </div>
         )}
       </CardContent>

@@ -102,15 +102,31 @@ export const updateDraftSession = createServerFn({ method: "POST" })
         end_time: z.string().optional(),
         venue_id: z.string().uuid().optional(),
         trainer_registry_id: z.string().uuid().optional(),
+        section_id: z.string().uuid().optional(),
+        week_num: z.number().int().min(1).max(20).optional(),
+        day: z.enum(["MON","TUE","WED","THU","FRI","SAT","SUN"]).optional(),
       }),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { data: before } = await context.supabase
+      .from("schedules")
+      .select("id, date, start_time, end_time, venue_id, trainer_registry_id, section_id, week_num, day, status")
+      .eq("id", data.schedule_id)
+      .maybeSingle();
     const { error } = await context.supabase
       .from("schedules")
       .update(data.patch)
       .eq("id", data.schedule_id);
     if (error) throw new Error(error.message);
+    await context.supabase.from("audit_logs").insert({
+      actor_id: context.userId,
+      action_type: "EDIT_DRAFT_SESSION",
+      entity_type: "schedules",
+      entity_id: data.schedule_id,
+      before_state: (before ?? {}) as any,
+      after_state: data.patch as any,
+    });
     return { ok: true };
   });
 

@@ -1,109 +1,106 @@
-# TVET ERP Dashboard Redesign — Master Admin & Department Head
+# TVET ERP Enhancement Plan
 
-Fluent / Dynamics 365 visual direction. Sidebar untouched. UI restyle + targeted read-only server functions. All drill-downs deep-link to existing routes with URL search params; no new pages.
+Six features, one deployment. Preserves auth, RLS, existing approval RPCs (`decide_approval`, `ma_decide_week`, `ma_reject_semester_with_feedback`, `dh_resubmit_*`) and the new Weekly Approvals UI. Existing sidebar untouched — Feature 1 adds one new entry under Strategic.
 
-## Files touched
+---
 
-**New / extended server functions** (`src/lib/ma.functions.ts`, `src/lib/dh-ops.functions.ts`):
-- `getStrategicStatsExt` — extends `getStrategicStats` with: pending approvals (`approval_queue.decision='pending'`), attendance % today, geo compliance 7d, departments-reporting count (depts with ≥1 schedule today), trend deltas vs. 7-day prior.
-- `getApprovalQueueSummary` — `{pending, approved_today, returned, rejected}` counts from `approval_queue`.
-- `getInstitutionActivity` — `{active_classes, completed_today, missing_attendance, late_attendance, schedule_submissions_today}` from `schedules` + `session_logs` + `attendance_logs`.
-- `listCriticalAlerts` — union of: schedules with `status=LIVE` past `end_time` without `session_logs.submitted_at`; trainer leave gaps overlapping today's schedules; pending-approval count; conflict flags from `approval_queue`.
-- `getDepartmentPerformance` — per-department: attendance %, schedule-completion %, submission compliance %, trainer punctuality (proxy on `checkin_at` vs `start_time`).
-- `getWeeklyApprovalSeries` — 8-week window: submitted, approved, rejected counts grouped by ISO week from `audit_logs` + `approval_queue`.
-- `listLiveActivityFeed` — merges `audit_logs` recent 20 + last 10 `session_logs` + last 10 `attendance_logs` rollups into a unified, clickable timeline.
-- `getDHStatsExt` — extends `getDHStats`: active classes today, dept attendance %, pending schedule reviews (DRAFT/PENDING_MA), submitted vs missing attendance today, weekly compliance.
-- `listDHScheduleCommand` — current-week schedules joined with section, course, trainer, status, attendance status.
-- `listDHActiveClasses` — schedules where `status='ACTIVE'` OR (`status='LIVE'` AND now within window).
-- `listDHAttendanceMonitor` — today: submitted / missing / late buckets with schedule ids for drill-down.
-- `getDHAnalytics` — 8-week attendance trend, punctuality trend, completion trend for the DH's department.
-- `listDHAlerts` — missing attendance, late trainers (checkin_at > start_time + 15m), schedule conflicts, unreviewed drafts.
+## Feature 1 — System Data Management (MA only)
 
-All new fns use `requireSupabaseAuth`; MA fns gate on `has_role(uid,'MA')`, DH fns on `current_department_id()` to enforce dept scope.
+**New route:** `src/routes/_authenticated/strategic/system-data.tsx` (sidebar entry added to existing Strategic group only).
 
-**Redesigned routes**:
-- `src/routes/_authenticated/strategic/index.tsx` — Strategic Command Center (rebuilt per layout below).
-- `src/routes/_authenticated/operational/index.tsx` — Department Operations Center (rebuilt).
-- `src/routes/_authenticated/strategic/approvals.tsx` — restyle header, filter bar, and KPI strip only; keep WeeklyStatusTable + logic unchanged.
+**Two destructive operations**, each via a confirm dialog requiring an exact-match phrase + the MA's current password (re-verified via `supabase.auth.signInWithPassword` against `me.email`) before the server fn runs.
 
-**New shared components** (`src/components/erp/`):
-- `kpi-tile.tsx` — Fluent-style large tile: label, value, delta chip, sparkline, "last updated" timestamp, click target.
-- `dashboard-section.tsx` — Sticky section header with title + actions.
-- `alert-row.tsx` — Severity icon, message, "Open records →" link.
-- `activity-row.tsx` — Unified timeline row with action chip, entity link, timestamp.
+**New SQL (migration):** two `SECURITY DEFINER` functions guarded by `has_role(auth.uid(),'MA')`:
 
-**Search-param contracts on existing routes** (read-only additions; no behavior change when absent):
-- `/strategic/approvals?status=pending|returned|approved&dept=<id>&week=<n>`
-- `/strategic/audit?action=<type>&entity=<type>&from=<iso>`
-- `/strategic/insights?metric=attendance|punctuality|geo&dept=<id>`
-- `/strategic/departments/$id?tab=performance|reporting`
-- `/operational/live-monitor?status=active|missing|late`
-- `/operational/attendance?status=submitted|missing|late&date=<iso>`
-- `/operational/drafts?status=draft|pending|returned`
-- `/operational/reports?metric=attendance|punctuality|completion`
+- `public.wipe_entire_system()` — truncates every domain table in FK-safe order, then deletes every `auth.users` row except the calling MA, then writes a single final `audit_logs` row (created before truncation completes, persisted after via a temp table → re-insert pattern).
+- `public.reset_academic_data()` — truncates only academic tables: `attendance_overrides, attendance_logs, session_logs, pending_sync, approval_queue, schedule_feedback_messages, schedule_feedback_threads, schedules, semester_registry, students, modules, trainer_skills, trainer_registry, leave_requests, notifications`. Keeps `profiles, user_roles, departments, levels, sections, venues, department_heads, global_config, audit_logs`.
 
-Each consuming route adds `validateSearch` with `zodValidator` + `fallback`, then filters its existing query. No SQL changes — all filtering is client/server-fn level on data already returned.
+**Server fns** (`src/lib/system-admin.functions.ts`, `requireSupabaseAuth` + MA check + `supabaseAdmin` loaded inside handler):
+- `getWipePreview()` → row counts per affected table for both modes.
+- `wipeEntireSystem({ confirm_phrase, password_ok })` — validates phrase `WIPE ENTIRE SYSTEM`, calls RPC, then `supabaseAdmin.auth.admin.deleteUser` for every non-MA auth user. Writes pre-action audit row.
+- `resetAcademicData({ confirm_phrase })` — validates `RESET ACADEMIC DATA`, calls RPC. Writes audit row.
 
-## Strategic Command Center layout
+**UI:** two large cards, live record-count table, phrase input, password input, progress indicator during mutation, success toast + auto-refresh. Sidebar: append one item to existing Strategic group (no module added/removed elsewhere).
 
+---
+
+## Feature 2 — DH Conflict Resolution Panel
+
+**File:** rebuild the swap sheet in `src/routes/_authenticated/operational/matrix.tsx` into a **Conflict Resolution Panel** (Sheet, wider).
+
+**Panel contents** (read from existing `getWeeklyMatrix` conflict fields + a new `getConflictDetail` server fn that returns the conflicting schedule row(s), trainer/venue/section/module options for the dept):
+- Conflict type chips (trainer / venue / qualification / load).
+- Original vs Proposed columns.
+- Editable fields: trainer, venue, date, start/end time, section, module.
+- **Validate Conflict Resolution** button → calls `validateScheduleEdit({schedule_id, patch})` which re-runs the same conflict checks the matrix uses and returns `{conflicts: [...]}`.
+- If empty → enable **Resubmit Schedule** (calls existing `dh_resubmit_week` / `dh_resubmit_semester` after applying patch via `updateDraftSession`).
+- If not empty → list remaining issues inline; resubmit stays disabled.
+
+**New server fns** in `src/lib/dh-extras.functions.ts`: `getConflictDetail`, `validateScheduleEdit`, `applyScheduleEdit` (wraps existing `updateDraftSession` + writes audit row `EDIT_DRAFT_RESOLVE_CONFLICT`).
+
+No schema change — reuses `schedules`, existing conflict-detection query.
+
+---
+
+## Feature 3 — Approval Feedback Chat (real-time, persistent)
+
+Reuses existing `schedule_feedback_threads` / `schedule_feedback_messages` + `FeedbackChat` component (already realtime via Supabase channel).
+
+**MA side** — in the redesigned Approvals page (`strategic/approvals.tsx`):
+- "Return for Revision" opens the existing `RejectFeedbackDialog`; on submit calls `ma_decide_week` / `ma_reject_semester_with_feedback` (already creates thread + first message). After return, a **Discussion** column shows an unread badge and opens the chat in a side sheet.
+
+**DH side** — in `operational/drafts.tsx` and `operational/index.tsx` alerts:
+- Notification deep-links to `/operational/drafts?semester=<id>&week=<n>&chat=1` which auto-opens the chat sheet.
+- New floating **Approval Discussion** dock component (`src/components/approval-chat-dock.tsx`): minimize / expand / close / reopen states persisted in `localStorage` keyed by thread id. Renders `FeedbackChat` inside.
+
+All messages already persisted in `schedule_feedback_messages` — no schema change. Add `chat_state` URL param handling only.
+
+---
+
+## Feature 4 — Full editing after feedback
+
+Already partially supported (DH can edit DRAFT sessions). Enhancements:
+- When a week/semester is returned (`status=DRAFT` + active feedback thread), `operational/drafts.tsx` exposes full editor for: trainer, venue, module, section, date, start/end, week. Uses `updateDraftSession` (extend its zod patch to accept `trainer_registry_id`, `venue_id`, `module_id`, `section_id`, `week_num` — backend already permissive on DRAFT).
+- Every save writes audit row `EDIT_DRAFT_AFTER_FEEDBACK` with before/after JSON (already done by triggerless audit insert in the server fn).
+
+---
+
+## Feature 5 — Resubmission loop
+
+Already functions via `dh_resubmit_semester` / `dh_resubmit_week` ↔ `decide_approval` / `ma_decide_week`. Plan locks in the UX:
+- On approval: schedules flip to LIVE (existing), UI re-renders cards as read-only with a green "Approved · Published" header. Edit buttons hidden.
+- On return: cards unlock, chat dock auto-opens, banner "Awaiting your changes" with link to Drafts.
+- Loop continues — no code change to the RPCs themselves, just UI states keyed on `schedules.status` + `approval_queue.decision`.
+
+---
+
+## Feature 6 — Approval History & Version Timeline
+
+**No new tables.** Derive timeline from existing `approval_queue` (one row per submission, with `decision`, `decided_at`, `comment`) + `audit_logs` (`SUBMIT_FOR_APPROVAL`, `RESUBMIT_WEEK`, `APPROVE_WEEK`, `REJECT_WEEK_WITH_FEEDBACK`) + `schedule_feedback_messages`.
+
+**New server fn:** `getApprovalHistory({ semester_id, week_num? })` returning ordered versions:
 ```
-[ Sticky header: title • semester selector • "Last updated 12:04" • refresh ]
-[ Row 1: 6 KPI tiles ───────────────────────────────────────────────────── ]
-  Active Sessions │ Pending Approvals │ Attendance Rate
-  Trainer Punctuality │ Geo Compliance │ Departments Reporting
-[ Row 2: 3-col operational control ──────────────────────────────────────── ]
-  Approval Queue Summary │ Institution Activity Monitor │ Critical Alerts
-  (Pending/Approved Today/  (Active/Completed/Missing/    (real rows; click
-   Returned/Rejected;        Late/Submissions; each       opens filtered
-   each clickable)           clickable)                    route)
-[ Row 3: Analytics ──────────────────────────────────────────────────────── ]
-  Department Performance (bar/grid, click dept → /strategic/departments/$id)
-  Weekly Approval Analytics (8-wk stacked bar, click week → approvals?week=N)
-[ Row 4: Quick Actions strip ────────────────────────────────────────────── ]
-  Approvals · Audit · Insights · Users · Departments · Settings
-[ Row 5: Live Activity Feed (unified, clickable) ────────────────────────── ]
-```
-
-Realtime: existing `audit_logs` + `schedules` channels stay; add `attendance_logs` channel to invalidate KPI queries on insert.
-
-## Department Operations Center layout
-
-```
-[ Sticky header: dept name • week selector • refresh ]
-[ Row 1: 6 KPI tiles ───────────────────────────────────────────────────── ]
-  Active Classes Today │ Dept Attendance Rate │ Pending Schedule Reviews
-  Submitted Attendance │ Missing Attendance   │ Weekly Compliance
-[ Row 2: Schedule Command Center ────────────────────────────────────────── ]
-  Left: table (Week/Trainer/Course/Section/Schedule Status/Attendance Status)
-        — row select drives right detail panel (no navigation)
-  Right: action panel (Review / Approve / Return / View Timetable)
-[ Row 3: Live Monitoring (2 cols) ───────────────────────────────────────── ]
-  Active Classes list │ Attendance Monitoring (Submitted/Missing/Late)
-[ Row 4: Department Analytics ───────────────────────────────────────────── ]
-  Attendance Trend │ Trainer Punctuality │ Schedule Completion
-  (click point → /operational/reports?metric=…&date=…)
-[ Row 5: Department Alerts ──────────────────────────────────────────────── ]
-  Missing Attendance · Late Trainers · Conflicts · Unreviewed Drafts
+[{ version:1, submitted_at, submitted_by, returned_at?, returned_by?, feedback?, resubmitted_at?, decision, approval_id }, ...]
 ```
 
-Row 2 right panel reuses existing `dhRequestApprovalPerWeek` / `decideWeek` / week-timetable-dialog wiring. "Approve / Return" buttons call existing `dh_submit_semester_per_week` / `dh_resubmit_week` RPCs through the existing `dh.functions.ts` wrappers.
+**New component:** `src/components/approval-version-timeline.tsx` — vertical timeline (V1 Submitted → Returned → V2 Resubmitted → … → Approved) embedded in:
+- MA Approvals row detail.
+- DH Drafts week detail.
 
-## Visual system (Fluent / Dynamics 365)
+**Version compare:** since schedule rows are mutated in place, snapshot each submission's schedule payload into a new lightweight table:
 
-- Surfaces: existing `--card` / `--border` tokens; add `--surface-raised` (one notch lighter) for KPI tiles, `--surface-sunken` for table headers. No new color hex values — derive via `color-mix` from existing `--stat-*` tokens.
-- Type: keep current font; KPI value `text-[28px] font-semibold tracking-tight`; labels `text-[11px] uppercase tracking-[0.08em] text-muted-foreground`.
-- Density: row height 44px in tables, 12px section gaps, sticky header with bottom border + subtle shadow on scroll.
-- Status pills: reuse existing `StatusPill` from approvals redesign (emerald / amber / muted / rose).
-- Delta chip: green up-arrow / red down-arrow with % vs 7-day prior; neutral when no comparison data.
-- "Last updated" timestamp from React Query's `dataUpdatedAt`.
-- Mobile: KPI grid collapses 6→2 cols; Row 2/3 stack; Schedule Command Center splits into accordion (table → detail).
+**Migration:** `public.approval_snapshots(id, approval_queue_id fk, semester_id, week_num, snapshot jsonb, created_at)` with GRANTs (`SELECT, INSERT` to `authenticated`, `ALL` to `service_role`), RLS: MA + DH-of-dept can SELECT; INSERT only via security-definer trigger on `approval_queue` INSERT that captures current schedule rows for the target week/semester. Compare view: side-by-side JSON diff (existing `diff` lib not needed — simple field-by-field render).
 
-## Real-data guarantees
+---
 
-Every tile/row/chart sources from a server function listed above. If a metric has no source row yet (e.g. no `session_logs` today), the tile shows `0` with empty-state copy "No activity yet today" — not a placeholder number. The current `trainer_punctuality = geoPct` proxy is replaced by an actual `checkin_at` vs `start_time` calculation in `getStrategicStatsExt`.
+## Technical notes
+
+- All new server fns use `createServerFn` + `requireSupabaseAuth`; `supabaseAdmin` only imported inside handlers for Feature 1.
+- All destructive UIs require typed phrase + (Feature 1) password reverification; all writes append to `audit_logs`.
+- One migration file: wipe RPCs + `approval_snapshots` + its trigger + grants/policies.
+- Sidebar: append "System Data" under existing Strategic group only — no other sidebar changes.
+- Existing approval RPCs, RLS, Cloud auth, and the Weekly Approvals redesign are untouched.
 
 ## Out of scope
 
-- No sidebar changes, no new routes, no schema migrations, no new RPCs.
-- Existing approvals table body, DH drafts page, semester upload, students hub, audit page, insights page — untouched (only deep-link search params honored when present).
-- No mocked or decorative numbers anywhere.
+- No new auth providers, no schema-wide refactor, no edge functions, no changes to attendance/session logic, no removal of any existing module.

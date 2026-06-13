@@ -23,6 +23,7 @@ import {
   ChevronRight,
   Search,
   Plus,
+  Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -82,6 +83,7 @@ const GROUPS: NavGroup[] = [
     label: "Governance",
     items: [
       { to: "/strategic/reports", label: "Reports", icon: FileBarChart },
+      { to: "/strategic/system-data", label: "System Data", icon: Database },
       { to: "/strategic/settings", label: "Settings", icon: Settings },
     ],
   },
