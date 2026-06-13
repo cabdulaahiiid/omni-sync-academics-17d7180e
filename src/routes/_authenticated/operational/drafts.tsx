@@ -192,14 +192,13 @@ function DraftsPage() {
         );
       })}
       {openThread && (
-        <div className="fixed inset-0 z-50 bg-black/40 p-4 flex items-end sm:items-center justify-center">
-          <div className="w-full max-w-lg">
-            <div className="mb-2 flex justify-end">
-              <Button size="sm" variant="secondary" onClick={() => setOpenThread(null)}>Close</Button>
-            </div>
-            <FeedbackChat semesterId={openThread.semester_id} weekNum={openThread.week_num} title={openThread.title} />
-          </div>
-        </div>
+        <ApprovalChatDock
+          semesterId={openThread.semester_id}
+          weekNum={openThread.week_num}
+          title={openThread.title}
+          open
+          onOpenChange={(o) => !o && setOpenThread(null)}
+        />
       )}
       {openWeek && (
         <WeekTimetableDialog
