@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
@@ -6,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
 import { listWeekThreadsForDept } from "@/lib/feedback.functions";
 import { FeedbackChat } from "@/components/feedback-chat";
+import { ApprovalChatDock } from "@/components/approval-chat-dock";
+import { ApprovalVersionTimeline } from "@/components/approval-version-timeline";
 import { WeekTimetableDialog } from "@/components/week-timetable-dialog";
 import { useMe } from "@/hooks/use-me";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +20,12 @@ import { toast } from "sonner";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/operational/drafts")({
+  validateSearch: (s: Record<string, unknown>) =>
+    z.object({
+      semester: z.string().uuid().optional(),
+      week: z.coerce.number().int().optional(),
+      chat: z.coerce.number().int().optional(),
+    }).parse(s),
   component: DraftsPage,
 });
 
@@ -29,6 +38,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 
 function DraftsPage() {
   const { data: me } = useMe();
+  const search = useSearch({ from: "/_authenticated/operational/drafts" });
   const listFn = useServerFn(listSemesterDrafts);
   const reqFn = useServerFn(requestSemesterApproval);
   const reqWeekFn = useServerFn(dhRequestApprovalPerWeek);
@@ -36,6 +46,16 @@ function DraftsPage() {
   const qc = useQueryClient();
   const [openThread, setOpenThread] = useState<{ semester_id: string; week_num: number; title: string } | null>(null);
   const [openWeek, setOpenWeek] = useState<{ semester_id: string; week_num: number; title: string } | null>(null);
+
+  useEffect(() => {
+    if (search.chat && search.semester && search.week != null) {
+      setOpenThread({
+        semester_id: search.semester,
+        week_num: search.week,
+        title: `Week ${search.week} discussion`,
+      });
+    }
+  }, [search.chat, search.semester, search.week]);
 
   const deptId = me?.profile?.department_id;
   useEffect(() => {
