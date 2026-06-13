@@ -142,7 +142,7 @@ export const getWeeklyMatrix = createServerFn({ method: "POST" })
 
     let q = context.supabase
       .from("schedules")
-      .select("id, date, day, start_time, end_time, module_code, module_name, trainer_registry_id, trainer_name, venue_id, status")
+      .select("id, date, day, week_num, semester_id, start_time, end_time, module_code, module_name, trainer_registry_id, trainer_name, venue_id, section_id, status")
       .gte("date", fmt(start))
       .lte("date", fmt(end))
       .order("date")
