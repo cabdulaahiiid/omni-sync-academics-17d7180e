@@ -143,10 +143,113 @@
 :root {
   --surface-raised: color-mix(in oklab, var(--card) 96%, white);
   --surface-sunken: color-mix(in oklab, var(--muted) 80%, var(--background));
+
+  /* Enterprise navigation palette (Dynamics 365 / Fluent inspired) */
+  --nav-bg: #071A52;
+  --nav-bg-2: #0A2472;
+  --nav-active: #1E88FF;
+  --nav-active-glow: 0 0 0 1px rgba(30,136,255,0.45), 0 8px 24px -8px rgba(30,136,255,0.55);
+  --nav-fg: rgba(255,255,255,0.92);
+  --nav-fg-muted: rgba(255,255,255,0.55);
+  --nav-hover: rgba(255,255,255,0.06);
+  --nav-border: rgba(255,255,255,0.08);
+
+  /* Elevation + focus */
+  --surface-elevated: color-mix(in oklab, var(--card) 92%, white 4%);
+  --surface-inset: color-mix(in oklab, var(--muted) 65%, var(--background));
+  --ring-focus: 0 0 0 2px color-mix(in oklab, var(--ring) 60%, transparent);
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px -4px rgb(15 23 42 / 0.06);
+  --shadow-card-hover: 0 2px 6px rgb(15 23 42 / 0.06), 0 12px 32px -8px rgb(15 23 42 / 0.10);
+
+  /* Status tokens */
+  --status-ok: var(--emerald);
+  --status-ok-fg: var(--emerald-fg);
+  --status-warn: var(--amber);
+  --status-warn-fg: var(--amber-fg);
+  --status-crit: var(--rose);
+  --status-crit-fg: var(--rose-fg);
+  --status-info: var(--stat-blue);
+  --status-info-fg: var(--stat-blue-fg);
+
+  --ease-fluent: cubic-bezier(0.33, 0, 0.10, 1);
 }
 .dark {
   --surface-raised: color-mix(in oklab, var(--card) 92%, white 4%);
   --surface-sunken: color-mix(in oklab, var(--card) 70%, black);
+  --surface-elevated: color-mix(in oklab, var(--card) 85%, white 6%);
+  --surface-inset: color-mix(in oklab, var(--card) 55%, black 10%);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px -4px rgb(0 0 0 / 0.4);
+  --shadow-card-hover: 0 2px 6px rgb(0 0 0 / 0.5), 0 12px 32px -8px rgb(0 0 0 / 0.55);
+}
+
+/* Enterprise keyframes + utilities */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+@keyframes slide-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes nav-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(30,136,255,0.35), 0 6px 18px -6px rgba(30,136,255,0.45); }
+  50%      { box-shadow: 0 0 0 1px rgba(30,136,255,0.55), 0 10px 28px -6px rgba(30,136,255,0.65); }
+}
+
+@utility kpi-counter {
+  font-variant-numeric: tabular-nums;
+  animation: count-up 240ms var(--ease-fluent) both;
+}
+@utility card-elevated {
+  background-color: var(--surface-elevated);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 180ms var(--ease-fluent), transform 180ms var(--ease-fluent);
+}
+@utility card-elevated-hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+@utility glow-active {
+  background: linear-gradient(135deg, rgba(30,136,255,0.18), rgba(30,136,255,0.06));
+  box-shadow: var(--nav-active-glow);
+}
+@utility row-hover {
+  transition: background-color 140ms var(--ease-fluent), transform 140ms var(--ease-fluent);
+}
+@utility nav-surface {
+  background: linear-gradient(180deg, var(--nav-bg) 0%, var(--nav-bg-2) 100%);
+  color: var(--nav-fg);
+}
+@utility skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--muted) 60%, transparent) 0%,
+    color-mix(in oklab, var(--muted) 80%, white 8%) 50%,
+    color-mix(in oklab, var(--muted) 60%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@utility animate-slide-fade-in {
+  animation: slide-fade-in 280ms var(--ease-fluent) both;
+}
+@utility animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .dark {
