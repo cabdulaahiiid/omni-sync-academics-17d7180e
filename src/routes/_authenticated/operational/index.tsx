@@ -352,3 +352,18 @@ function DHDashboard() {
     </div>
   );
 }
+
+function greetOpDH(name?: string | null) {
+  const h = new Date().getHours();
+  const g = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  return `${g}, ${name?.split(" ")[0] || "Department Head"}`;
+}
+
+function DHHeaderChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-white/8 px-3 py-2 ring-1 ring-white/10">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/55">{label}</p>
+      <p className="mt-0.5 truncate text-[13px] font-semibold text-white">{value}</p>
+    </div>
+  );
+}
