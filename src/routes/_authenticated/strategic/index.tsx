@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getDepartmentComparison } from "@/lib/data.functions";
+import { getDepartmentComparison, getStrategicStats } from "@/lib/data.functions";
+import { listSemesters } from "@/lib/ma.functions";
 import {
   getStrategicStatsExt,
   getApprovalQueueSummary,
@@ -20,6 +21,7 @@ import {
   Inbox, ClipboardCheck, Send, XCircle,
   PlayCircle, CheckCircle2, AlertTriangle, Timer, Upload,
   ShieldCheck, BarChart3, ScrollText, Users, Settings, RefreshCw,
+  GraduationCap, BookOpen, MapPin, Grid3x3, CalendarRange,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -33,6 +35,10 @@ import { DashboardSection } from "@/components/erp/dashboard-section";
 import { AlertRow } from "@/components/erp/alert-row";
 import { ActivityRow } from "@/components/erp/activity-row";
 import { EmptyState } from "@/components/erp/empty-state";
+import { HealthScoreCard } from "@/components/erp/health-score-card";
+import { AIInsightsPanel, type Insight } from "@/components/erp/ai-insights-panel";
+import { ReportingStrip } from "@/components/erp/reporting-strip";
+import { computeHealthScore, readPrevHealth, writeHealth } from "@/lib/ui/health-score";
 
 export const Route = createFileRoute("/_authenticated/strategic/")({
   component: StrategicDashboard,
@@ -61,6 +67,8 @@ function StrategicDashboard() {
   const weeklyFn = useServerFn(getWeeklyApprovalSeries);
   const feedFn = useServerFn(listLiveActivityFeed);
   const dept = useServerFn(getDepartmentComparison);
+  const totalsFn = useServerFn(getStrategicStats);
+  const semFn = useServerFn(listSemesters);
 
   const kpiQ = useQuery({ queryKey: ["mc-stats", userId], queryFn: () => stats(), enabled: canQuery, throwOnError: false, staleTime: 30000 });
   const queueQ = useQuery({ queryKey: ["mc-queue", userId], queryFn: () => queueSum(), enabled: canQuery, throwOnError: false, staleTime: 15000 });
@@ -71,6 +79,8 @@ function StrategicDashboard() {
   const feedQ = useQuery({ queryKey: ["mc-feed", userId], queryFn: () => feedFn(), enabled: canQuery, throwOnError: false, staleTime: 15000 });
   // Comparison query reserved for future drill-down enrichment
   useQuery({ queryKey: ["mc-compare", userId], queryFn: () => dept(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
+  const totalsQ = useQuery({ queryKey: ["mc-totals", userId], queryFn: () => totalsFn(), enabled: canQuery, throwOnError: false, staleTime: 60000 });
+  const semQ = useQuery({ queryKey: ["mc-sem", userId], queryFn: () => semFn(), enabled: canQuery, throwOnError: false, staleTime: 120000 });
 
   useEffect(() => {
     if (!canQuery) return;
@@ -103,6 +113,103 @@ function StrategicDashboard() {
   const deptPerfData = deptQ.data ?? [];
   const weekly = weeklyQ.data ?? [];
   const feed = feedQ.data ?? [];
+  const totals = totalsQ.data;
+  const semesters = semQ.data ?? [];
+  const activeSemester = semesters.find((s: any) => s.status === "ACTIVE" || s.status === "DISTRIBUTED") ?? semesters[0];
+
+  // Greeting
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const userName = me?.profile?.full_name?.split(" ")[0] || "Administrator";
+
+  // Health score
+  const health = useMemo(() => kpi ? computeHealthScore({
+    attendance_pct: kpi.attendance_pct ?? 0,
+    trainer_punctuality: kpi.trainer_punctuality ?? 0,
+    geo_compliance: kpi.geo_compliance ?? 0,
+    departments_reporting: kpi.departments_reporting ?? 0,
+    departments_total: kpi.departments_total ?? 0,
+    pending_approvals: kpi.pending_approvals ?? 0,
+  }) : null, [kpi]);
+
+  const prevScore = readPrevHealth();
+  useEffect(() => { if (health) writeHealth(health.score); }, [health?.score]);
+  const weeklyDelta = health && prevScore != null ? health.score - prevScore : null;
+
+  // AI insights — pure derivations from real data
+  const insights = useMemo<Insight[]>(() => {
+    const out: Insight[] = [];
+    if (!kpi) return out;
+    const weakest = [...deptPerfData].sort((a, b) => a.attendance - b.attendance)[0];
+    if (weakest && weakest.attendance < 70) {
+      out.push({
+        id: "weak-dept",
+        severity: weakest.attendance < 50 ? "crit" : "warn",
+        icon: "alert",
+        title: `${weakest.name} needs attention`,
+        detail: `Attendance ${weakest.attendance}% over last 7 days · completion ${weakest.completion}%.`,
+        to: `/strategic/departments`,
+      });
+    }
+    if ((kpi.attendance_delta ?? 0) <= -10) {
+      out.push({
+        id: "att-drop",
+        severity: "warn",
+        icon: "trend",
+        title: "Attendance anomaly detected",
+        detail: `Weekly attendance dropped ${Math.abs(kpi.attendance_delta!)}% vs prior period.`,
+        to: "/strategic/insights",
+      });
+    }
+    const topDept = [...deptPerfData].sort((a, b) => b.punctuality - a.punctuality)[0];
+    if (topDept && topDept.punctuality >= 85) {
+      out.push({
+        id: "trainer-top",
+        severity: "info",
+        icon: "trend",
+        title: `${topDept.name} leads on punctuality`,
+        detail: `${topDept.punctuality}% on-time check-ins — top performing department this week.`,
+        to: "/strategic/insights",
+      });
+    }
+    if (totals && (totals.counts?.students ?? 0) > 0) {
+      out.push({
+        id: "enrollment",
+        severity: "info",
+        icon: "users",
+        title: "Student enrollment overview",
+        detail: `${totals.counts.students.toLocaleString()} students across ${totals.counts.departments ?? 0} departments and ${semesters.length} semester record(s).`,
+        to: "/strategic/students",
+      });
+    }
+    const reportingRatio = kpi.departments_total
+      ? Math.round((kpi.departments_reporting / kpi.departments_total) * 100)
+      : 0;
+    if (kpi.departments_total > 0 && reportingRatio < 60) {
+      out.push({
+        id: "resource-util",
+        severity: "warn",
+        icon: "activity",
+        title: "Resource utilization low",
+        detail: `Only ${kpi.departments_reporting}/${kpi.departments_total} departments running sessions today.`,
+        to: "/strategic/departments",
+      });
+    }
+    return out;
+  }, [kpi, deptPerfData, totals, semesters]);
+
+  const reportingStats = useMemo(() => {
+    const c = totals?.counts ?? { departments: 0, trainers: 0, students: 0, schedules: 0 };
+    return [
+      { label: "Departments", value: c.departments,                 icon: Building2,     to: "/strategic/departments" },
+      { label: "Trainers",    value: c.trainers,                    icon: Users,         to: "/strategic/trainers" },
+      { label: "Students",    value: c.students.toLocaleString?.() ?? c.students, icon: GraduationCap, to: "/strategic/students" },
+      { label: "Modules",     value: kpi?.active_sessions ?? 0,     icon: BookOpen,      to: "/strategic/modules" },
+      { label: "Venues",      value: c.schedules,                   icon: MapPin,        to: "/strategic/venues" },
+      { label: "Sections",    value: 0,                             icon: Grid3x3,       to: "/strategic/sections" },
+      { label: "Semesters",   value: semesters.length,              icon: CalendarRange, to: "/strategic/semesters" },
+    ];
+  }, [totals, kpi, semesters]);
 
   const kpiTiles = [
     { label: "Active Sessions",        value: kpi?.active_sessions ?? 0,            icon: Activity,    tone: "blue" as const,   delta: null,                                       to: "/strategic/audit",        emptyHint: "No sessions live right now" },
@@ -123,33 +230,46 @@ function StrategicDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-1 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur lg:-mx-6 lg:-mt-6 lg:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-foreground">Strategic Command Center</h1>
-            <p className="text-xs text-muted-foreground">
-              Institution-wide oversight in real time •{" "}
-              <span className="font-medium text-foreground">
-                Updated {lastUpdated ? new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
-              </span>
-            </p>
+      {/* Executive header band */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="card-elevated rounded-2xl border border-border/70 bg-gradient-to-br from-[var(--nav-bg)] to-[var(--nav-bg-2)] p-5 text-white">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/55">Strategic Command Center</p>
+              <h1 className="mt-1 truncate text-[24px] font-semibold tracking-tight">{greet}, {userName}</h1>
+              <p className="mt-1 text-[12px] text-white/65">
+                Institution-wide oversight in real time · Updated{" "}
+                <span className="font-medium text-white">
+                  {lastUpdated ? new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
+                </span>
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="shrink-0 bg-white/10 text-white hover:bg-white/20 border border-white/15"
+              onClick={() => {
+                qc.invalidateQueries({ queryKey: ["mc-stats"] });
+                qc.invalidateQueries({ queryKey: ["mc-queue"] });
+                qc.invalidateQueries({ queryKey: ["mc-activity"] });
+                qc.invalidateQueries({ queryKey: ["mc-alerts"] });
+                qc.invalidateQueries({ queryKey: ["mc-dept-perf"] });
+                qc.invalidateQueries({ queryKey: ["mc-weekly"] });
+                qc.invalidateQueries({ queryKey: ["mc-feed"] });
+                qc.invalidateQueries({ queryKey: ["mc-totals"] });
+              }}
+            >
+              <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
+            </Button>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              qc.invalidateQueries({ queryKey: ["mc-stats"] });
-              qc.invalidateQueries({ queryKey: ["mc-queue"] });
-              qc.invalidateQueries({ queryKey: ["mc-activity"] });
-              qc.invalidateQueries({ queryKey: ["mc-alerts"] });
-              qc.invalidateQueries({ queryKey: ["mc-dept-perf"] });
-              qc.invalidateQueries({ queryKey: ["mc-weekly"] });
-              qc.invalidateQueries({ queryKey: ["mc-feed"] });
-            }}
-          >
-            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
-          </Button>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <HeaderChip label="Academic Year" value={activeSemester?.name?.match(/\d{4}/)?.[0] ?? new Date().getFullYear().toString()} />
+            <HeaderChip label="Active Semester" value={activeSemester?.name ?? "—"} />
+            <HeaderChip label="Active Sessions" value={String(kpi?.active_sessions ?? 0)} />
+            <HeaderChip label="Last Sync" value={lastUpdated ? new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} />
+          </div>
         </div>
+        {health && <HealthScoreCard health={health} weeklyDelta={weeklyDelta} />}
       </div>
 
       <DashboardSection title="Executive KPIs" description="Click any tile to drill into the source records.">
@@ -159,6 +279,8 @@ function StrategicDashboard() {
           ))}
         </div>
       </DashboardSection>
+
+      <AIInsightsPanel insights={insights} />
 
       <DashboardSection title="Operational Control" description="Approval queue • institution activity • critical alerts">
         <div className="grid gap-3 lg:grid-cols-3">
@@ -308,6 +430,19 @@ function StrategicDashboard() {
           </CardContent>
         </Card>
       </DashboardSection>
+
+      <DashboardSection title="Institution Totals" description="Counts across the entire installation.">
+        <ReportingStrip stats={reportingStats} />
+      </DashboardSection>
+    </div>
+  );
+}
+
+function HeaderChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-white/8 px-3 py-2 ring-1 ring-white/10">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/55">{label}</p>
+      <p className="mt-0.5 truncate text-[13px] font-semibold text-white">{value}</p>
     </div>
   );
 }
