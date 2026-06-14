@@ -1,106 +1,160 @@
-# TVET ERP Enhancement Plan
 
-Six features, one deployment. Preserves auth, RLS, existing approval RPCs (`decide_approval`, `ma_decide_week`, `ma_reject_semester_with_feedback`, `dh_resubmit_*`) and the new Weekly Approvals UI. Existing sidebar untouched — Feature 1 adds one new entry under Strategic.
+# TVET ERP — 2026 Enterprise Command Center Redesign (Single Delivery)
 
----
+One implementation pass. UI/UX only. Zero backend, schema, RLS, route path, or sidebar item changes. Every existing menu, permission, server function, and workflow stays exactly as is.
 
-## Feature 1 — System Data Management (MA only)
+## Scope guarantee
 
-**New route:** `src/routes/_authenticated/strategic/system-data.tsx` (sidebar entry added to existing Strategic group only).
+- Keep every sidebar item, route path, server function, RLS policy, and table.
+- Only touch presentation files: shells, dashboards, shared UI primitives, design tokens.
+- Reuse existing server functions in `src/lib/*.functions.ts` for all live data. No new tables. No new RPCs.
+- One delivery. No phases. No TODOs. No placeholders.
 
-**Two destructive operations**, each via a confirm dialog requiring an exact-match phrase + the MA's current password (re-verified via `supabase.auth.signInWithPassword` against `me.email`) before the server fn runs.
+## 1. Design system upgrade (`src/styles.css`)
 
-**New SQL (migration):** two `SECURITY DEFINER` functions guarded by `has_role(auth.uid(),'MA')`:
+Add enterprise tokens layered on top of existing shadcn tokens (no removals):
 
-- `public.wipe_entire_system()` — truncates every domain table in FK-safe order, then deletes every `auth.users` row except the calling MA, then writes a single final `audit_logs` row (created before truncation completes, persisted after via a temp table → re-insert pattern).
-- `public.reset_academic_data()` — truncates only academic tables: `attendance_overrides, attendance_logs, session_logs, pending_sync, approval_queue, schedule_feedback_messages, schedule_feedback_threads, schedules, semester_registry, students, modules, trainer_skills, trainer_registry, leave_requests, notifications`. Keeps `profiles, user_roles, departments, levels, sections, venues, department_heads, global_config, audit_logs`.
+- Brand: `--nav-bg: #071A52`, `--nav-bg-2: #0A2472`, `--nav-active: #1E88FF`, `--nav-active-glow`, `--nav-fg`, `--nav-fg-muted`.
+- Surfaces: refine existing `--surface-raised` / `--surface-sunken`; add `--surface-elevated`, `--surface-inset`, `--ring-focus`.
+- Status: `--status-ok`, `--status-warn`, `--status-crit`, `--status-info` + `-fg` pairs.
+- Typography scale: `--font-display`, tightened tracking for headings, tabular-nums for KPI values.
+- Motion: `--ease-fluent`, durations 120/180/240ms.
+- Add `@utility` helpers: `kpi-counter`, `glow-active`, `card-elevated`, `row-hover`, `skeleton-shimmer`.
+- Add keyframes: `count-up`, `pulse-soft`, `slide-fade-in`, `shimmer`.
 
-**Server fns** (`src/lib/system-admin.functions.ts`, `requireSupabaseAuth` + MA check + `supabaseAdmin` loaded inside handler):
-- `getWipePreview()` → row counts per affected table for both modes.
-- `wipeEntireSystem({ confirm_phrase, password_ok })` — validates phrase `WIPE ENTIRE SYSTEM`, calls RPC, then `supabaseAdmin.auth.admin.deleteUser` for every non-MA auth user. Writes pre-action audit row.
-- `resetAcademicData({ confirm_phrase })` — validates `RESET ACADEMIC DATA`, calls RPC. Writes audit row.
+All tokens are additive; no existing class breaks.
 
-**UI:** two large cards, live record-count table, phrase input, password input, progress indicator during mutation, success toast + auto-refresh. Sidebar: append one item to existing Strategic group (no module added/removed elsewhere).
+## 2. Sidebar (Strategic + Operational shells)
 
----
+Files: `src/components/strategic/strategic-shell.tsx`, the operational shell, and any nav data file they consume.
 
-## Feature 2 — DH Conflict Resolution Panel
+Preserved exactly (labels, routes, order):
+- Core Operations: Command Center, Insights, Approvals, Audit Logs
+- Academic & Structure: Departments, Modules, Venues, Levels, Sections, Semesters
+- User Management: Department Heads, Trainers, Students, Users & Roles
+- Governance: Reports, System Data, Settings
 
-**File:** rebuild the swap sheet in `src/routes/_authenticated/operational/matrix.tsx` into a **Conflict Resolution Panel** (Sheet, wider).
+Visual + behavior upgrades only:
+- Navy gradient background using `--nav-bg` → `--nav-bg-2`.
+- Active item: left accent bar + soft glow (`box-shadow` using `--nav-active-glow`), 180ms ease.
+- Group headers collapsible (Radix Collapsible), persisted in `localStorage` per role.
+- Icon refresh using existing `lucide-react` set (no new deps); 18px stroke 1.75.
+- Hover: subtle background lift + 1px translate.
+- Notification badges on Approvals (pending count) and Audit Logs (today count) via existing `dashboardInsights` / `listApprovalQueue` counts.
+- Collapse toggle (icon-only mode) using shadcn sidebar `collapsible="icon"`; width via `var(--sidebar-width)` to avoid the TW4 sidebar bug.
+- Sidebar search: client-side fuzzy filter over the same nav array; jumps via `<Link>`.
+- Recent pages: track last 5 visited routes in `localStorage` via a router subscription in the shell.
+- Favorites: star toggle per item, persisted in `localStorage`.
+- Quick Actions block at bottom: deep-links to existing routes (New Semester → `/strategic/semesters`, Submit Approvals → `/strategic/approvals`, Upload Schedule → `/operational/semester-upload`, etc.). No new actions invented.
 
-**Panel contents** (read from existing `getWeeklyMatrix` conflict fields + a new `getConflictDetail` server fn that returns the conflicting schedule row(s), trainer/venue/section/module options for the dept):
-- Conflict type chips (trainer / venue / qualification / load).
-- Original vs Proposed columns.
-- Editable fields: trainer, venue, date, start/end time, section, module.
-- **Validate Conflict Resolution** button → calls `validateScheduleEdit({schedule_id, patch})` which re-runs the same conflict checks the matrix uses and returns `{conflicts: [...]}`.
-- If empty → enable **Resubmit Schedule** (calls existing `dh_resubmit_week` / `dh_resubmit_semester` after applying patch via `updateDraftSession`).
-- If not empty → list remaining issues inline; resubmit stays disabled.
+## 3. Top navigation bar
 
-**New server fns** in `src/lib/dh-extras.functions.ts`: `getConflictDetail`, `validateScheduleEdit`, `applyScheduleEdit` (wraps existing `updateDraftSession` + writes audit row `EDIT_DRAFT_RESOLVE_CONFLICT`).
+A new `TopBar` rendered inside both shells (replacing current thin header):
+- Left: sidebar trigger, breadcrumb (existing `breadcrumbs.tsx`).
+- Center: global search (filters the same nav + opens routes).
+- Right: theme toggle, `NotificationsBell` (existing component), `Help`, user menu (uses existing `useMe` + `supabase.auth.signOut`).
+- Sticky, backdrop-blur, 56px, divider hairline.
 
-No schema change — reuses `schedules`, existing conflict-detection query.
+## 4. Command Center (Strategic) — `src/routes/_authenticated/strategic/index.tsx`
 
----
+Full rebuild of the page composition; data sources are existing server fns in `src/lib/dashboard.functions.ts` and `src/lib/ma.functions.ts` (`getStrategicStatsExt`, `getApprovalQueueSummary`, `getInstitutionActivity`, `getDepartmentPerformance`, `listLiveActivityFeed`, `dashboardInsights`, `listSemesters`).
 
-## Feature 3 — Approval Feedback Chat (real-time, persistent)
+### Header band
+- Greeting: "Good {morning|afternoon|evening}, {profile.full_name}" from `useMe`.
+- Institution Overview chips: Academic Year + Active Semester (from `listSemesters` where `status='ACTIVE'`), Last Sync (current time, refreshed on query refetch), Active Session count (from stats).
+- Right: **Institution Health Score** card. Score = weighted blend of attendance %, approval-clearance %, geo-compliance %, trainer-active %, all from existing stats. Show %, trend arrow vs previous fetch (cached in `localStorage`), status badge (Excellent/Good/Watch/Critical), "Weekly change" using 7-day series from `getDepartmentPerformance` aggregate.
 
-Reuses existing `schedule_feedback_threads` / `schedule_feedback_messages` + `FeedbackChat` component (already realtime via Supabase channel).
+### Row 1 — 8 KPI tiles (`KpiTile`)
+Total Students, Total Trainers, Departments, Active Modules, Pending Approvals, Attendance Today, Active Classes, Venue Utilization. Each: icon, value (animated count-up), % delta, sparkline. All values from existing fns; for any metric not already returned, derive client-side from already-fetched lists (e.g., venue utilization = activeSessions / totalVenues). No new server fns.
 
-**MA side** — in the redesigned Approvals page (`strategic/approvals.tsx`):
-- "Return for Revision" opens the existing `RejectFeedbackDialog`; on submit calls `ma_decide_week` / `ma_reject_semester_with_feedback` (already creates thread + first message). After return, a **Discussion** column shows an unread badge and opens the chat in a side sheet.
+### Row 2 — Analytics (3 cards)
+- Attendance Trend: tabs Daily / Weekly / Monthly, Recharts area chart over `getDepartmentPerformance` series aggregated.
+- Student Distribution: tabs Department / Level / Semester, Recharts donut from existing counts (group client-side).
+- Department Performance Ranking: horizontal bar chart with Attendance, Completion, Trainer-perf columns (already provided by `getDepartmentPerformance`).
 
-**DH side** — in `operational/drafts.tsx` and `operational/index.tsx` alerts:
-- Notification deep-links to `/operational/drafts?semester=<id>&week=<n>&chat=1` which auto-opens the chat sheet.
-- New floating **Approval Discussion** dock component (`src/components/approval-chat-dock.tsx`): minimize / expand / close / reopen states persisted in `localStorage` keyed by thread id. Renders `FeedbackChat` inside.
+### Row 3 — Operations (3 cards)
+- Critical Alerts: list using `AlertRow`, fed by existing alert sources (missing attendance from `listLiveActivityFeed` gaps, unapproved from approval queue counts, inactive trainers from trainer registry status, missing timetables from schedules without sessions). Each alert deep-links to the relevant route with query filter.
+- Approval Queue: top 5 pending from `listApprovalQueue({decision:'pending'})` with inline Approve/Reject buttons calling existing `decideApproval` — full functionality preserved, just restyled.
+- Today's Academic Activities: today's sessions from existing schedules query filtered by date — class, venue, trainer, time.
 
-All messages already persisted in `schedule_feedback_messages` — no schema change. Add `chat_state` URL param handling only.
+### Row 4 — Institution Management (3 cards)
+- Department Overview table: Department / Students / Trainers / Modules / Attendance / Performance Score using `getDepartmentPerformance` + counts. Sortable, sticky header, row-click → `/strategic/departments/$id`.
+- Recent Activities Feed: existing `ActivityRow` x `listLiveActivityFeed`.
+- Audit Trail: latest 10 from `audit_logs` via existing query used by `/strategic/audit` (reuse server fn), row-click → audit detail.
 
----
+### AI Insights Panel
+Pure derivation from already-fetched data (no LLM call, no new secret):
+- "Departments requiring attention" (lowest performance + alerts count).
+- "Attendance anomalies" (today vs 7-day mean > 1.5σ).
+- "Trainer performance trends" (rank deltas).
+- "Student enrollment trends" (semester-over-semester from `listSemesters` + students count).
+- "Resource utilization" (venue + trainer load).
+Each insight is a card with severity chip and deep-link CTA.
 
-## Feature 4 — Full editing after feedback
+### Reporting widgets strip
+Footer strip: Total Departments/Trainers/Students/Modules/Venues/Sections/Semesters as compact stat chips (existing counts).
 
-Already partially supported (DH can edit DRAFT sessions). Enhancements:
-- When a week/semester is returned (`status=DRAFT` + active feedback thread), `operational/drafts.tsx` exposes full editor for: trainer, venue, module, section, date, start/end, week. Uses `updateDraftSession` (extend its zod patch to accept `trainer_registry_id`, `venue_id`, `module_id`, `section_id`, `week_num` — backend already permissive on DRAFT).
-- Every save writes audit row `EDIT_DRAFT_AFTER_FEEDBACK` with before/after JSON (already done by triggerless audit insert in the server fn).
+## 5. Operational (DH) Command Center — `src/routes/_authenticated/operational/index.tsx`
 
----
+Same visual system, scoped to the DH's department using existing `getDHStatsExt`, `listDHScheduleCommand`, `listDHAttendanceMonitor`. Keep current Schedule Command Center; restyle to new tokens, add KPI row, alerts, activities, insights — all from existing DH server fns.
 
-## Feature 5 — Resubmission loop
+## 6. Shared primitive upgrades
 
-Already functions via `dh_resubmit_semester` / `dh_resubmit_week` ↔ `decide_approval` / `ma_decide_week`. Plan locks in the UX:
-- On approval: schedules flip to LIVE (existing), UI re-renders cards as read-only with a green "Approved · Published" header. Edit buttons hidden.
-- On return: cards unlock, chat dock auto-opens, banner "Awaiting your changes" with link to Drafts.
-- Loop continues — no code change to the RPCs themselves, just UI states keyed on `schedules.status` + `approval_queue.decision`.
+- `src/components/erp/kpi-tile.tsx`: add animated count-up (CSS + `requestAnimationFrame`), tabular-nums, focus ring, skeleton state.
+- `src/components/erp/dashboard-section.tsx`: add optional `tone` + collapsible.
+- `src/components/erp/alert-row.tsx`, `activity-row.tsx`: density variants, severity chip, keyboard focus styles.
+- New `src/components/erp/health-score-card.tsx`, `top-bar.tsx`, `quick-actions.tsx`, `sidebar-search.tsx`, `favorites-store.ts`, `recent-pages-store.ts`, `ai-insights-panel.tsx`, `reporting-strip.tsx`, `chart-card.tsx`.
 
----
+## 7. Responsiveness, motion, a11y
 
-## Feature 6 — Approval History & Version Timeline
+- Grid: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8` for KPI row; analytics row `lg:grid-cols-3`; uses `min-w-0` + `grid-cols-[minmax(0,1fr)_auto]` on all header rows (per responsive-layout rule).
+- Mobile sidebar: shadcn `Sheet` already wired; verified collapse + offcanvas.
+- Motion: `animate-fade-in`, `animate-scale-in`, count-up; respects `prefers-reduced-motion`.
+- A11y: every icon button gets `aria-label`; tap targets ≥ 44px on mobile primary actions; semantic `<main>` single per route; tokens used (no hardcoded colors); focus-visible rings via `--ring-focus`.
 
-**No new tables.** Derive timeline from existing `approval_queue` (one row per submission, with `decision`, `decided_at`, `comment`) + `audit_logs` (`SUBMIT_FOR_APPROVAL`, `RESUBMIT_WEEK`, `APPROVE_WEEK`, `REJECT_WEEK_WITH_FEEDBACK`) + `schedule_feedback_messages`.
+## 8. Theme
 
-**New server fn:** `getApprovalHistory({ semester_id, week_num? })` returning ordered versions:
-```
-[{ version:1, submitted_at, submitted_by, returned_at?, returned_by?, feedback?, resubmitted_at?, decision, approval_id }, ...]
-```
+- Light + dark both retuned for the new navy/accent system using `@theme inline` mapping; `class="dark"` continues to drive dark mode.
 
-**New component:** `src/components/approval-version-timeline.tsx` — vertical timeline (V1 Submitted → Returned → V2 Resubmitted → … → Approved) embedded in:
-- MA Approvals row detail.
-- DH Drafts week detail.
+## 9. Out of scope (explicit)
 
-**Version compare:** since schedule rows are mutated in place, snapshot each submission's schedule payload into a new lightweight table:
-
-**Migration:** `public.approval_snapshots(id, approval_queue_id fk, semester_id, week_num, snapshot jsonb, created_at)` with GRANTs (`SELECT, INSERT` to `authenticated`, `ALL` to `service_role`), RLS: MA + DH-of-dept can SELECT; INSERT only via security-definer trigger on `approval_queue` INSERT that captures current schedule rows for the target week/semester. Compare view: side-by-side JSON diff (existing `diff` lib not needed — simple field-by-field render).
-
----
+- No sidebar item add/remove/rename.
+- No new routes, no new tables, no new RPCs, no new secrets, no new edge functions, no AI Gateway calls.
+- No changes to Approvals workflow, System Data destructive flows, Conflict Resolution Panel, or Feedback Chat behavior (only restyle to new tokens).
+- No `tailwind.config.js` (Tailwind v4 — tokens go in `src/styles.css`).
 
 ## Technical notes
 
-- All new server fns use `createServerFn` + `requireSupabaseAuth`; `supabaseAdmin` only imported inside handlers for Feature 1.
-- All destructive UIs require typed phrase + (Feature 1) password reverification; all writes append to `audit_logs`.
-- One migration file: wipe RPCs + `approval_snapshots` + its trigger + grants/policies.
-- Sidebar: append "System Data" under existing Strategic group only — no other sidebar changes.
-- Existing approval RPCs, RLS, Cloud auth, and the Weekly Approvals redesign are untouched.
+- All new components are presentation-only. Data via `useServerFn` + `useQuery` against existing fns. React Query `staleTime` 30s (already configured); add `refetchInterval: 60_000` on Command Center queries for "real-time" feel.
+- Sidebar width fix: use `w-[var(--sidebar-width)]` explicitly (TW4 caveat).
+- Charts: existing `recharts`. No new chart libs.
+- Animations: CSS keyframes + existing animate utilities. No `framer-motion` added.
+- LocalStorage keys namespaced `tvet:sidebar:*`, `tvet:health:prev`.
+- Verification after build: load `/strategic` and `/operational` in preview, confirm all KPIs render with live counts, approvals approve/reject still calls `decideApproval`, sidebar nav unchanged in labels/routes.
 
-## Out of scope
+## Files touched
 
-- No new auth providers, no schema-wide refactor, no edge functions, no changes to attendance/session logic, no removal of any existing module.
+Edited:
+- `src/styles.css`
+- `src/components/strategic/strategic-shell.tsx`
+- `src/routes/_authenticated/strategic/index.tsx`
+- `src/routes/_authenticated/operational/index.tsx`
+- `src/routes/_authenticated/operational.tsx` (shell, if it owns nav)
+- `src/components/erp/kpi-tile.tsx`
+- `src/components/erp/dashboard-section.tsx`
+- `src/components/erp/alert-row.tsx`
+- `src/components/erp/activity-row.tsx`
+
+Created:
+- `src/components/erp/top-bar.tsx`
+- `src/components/erp/health-score-card.tsx`
+- `src/components/erp/quick-actions.tsx`
+- `src/components/erp/sidebar-search.tsx`
+- `src/components/erp/ai-insights-panel.tsx`
+- `src/components/erp/reporting-strip.tsx`
+- `src/components/erp/chart-card.tsx`
+- `src/lib/ui/favorites-store.ts`
+- `src/lib/ui/recent-pages-store.ts`
+- `src/lib/ui/health-score.ts`
+
+No migrations. No deletions. No sidebar item changes. No backend changes.
