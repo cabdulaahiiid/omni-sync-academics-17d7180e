@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line } from "recharts";
 import { cn } from "@/lib/utils";
+import { useEffect, useRef, useState } from "react";
 
 export interface KpiTileProps {
   label: string;
@@ -39,11 +40,38 @@ export function KpiTile(props: KpiTileProps) {
   const up = (props.delta ?? 0) >= 0;
   const isZero = props.value === 0 || props.value === "0" || props.value === "0%";
 
+  // Animated count-up for numeric values (preserves % / mixed strings).
+  const target = typeof props.value === "number" ? props.value : extractNumber(String(props.value));
+  const suffix = typeof props.value === "string" ? extractSuffix(props.value) : "";
+  const [display, setDisplay] = useState<number>(target ?? 0);
+  const raf = useRef<number | null>(null);
+  useEffect(() => {
+    if (target == null) return;
+    const start = performance.now();
+    const from = display;
+    const to = target;
+    const dur = 600;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(from + (to - from) * eased);
+      if (t < 1) raf.current = requestAnimationFrame(tick);
+    };
+    raf.current = requestAnimationFrame(tick);
+    return () => { if (raf.current) cancelAnimationFrame(raf.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target]);
+
+  const renderedValue = target == null
+    ? props.value
+    : (Number.isInteger(target) ? Math.round(display).toLocaleString() : display.toFixed(0)) + suffix;
+
   const body = (
     <div
       className={cn(
-        "group relative flex h-full flex-col gap-2 rounded-xl border border-border/70 p-4 transition-all",
+        "group relative flex h-full flex-col gap-2 rounded-xl border border-border/70 p-4 card-elevated",
         "bg-[var(--surface-raised)] hover:border-border hover:shadow-[0_2px_8px_-2px_rgb(15_23_42_/_0.08)]",
+        "hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         (props.to || props.onClick) && "cursor-pointer",
       )}
     >
@@ -52,15 +80,15 @@ export function KpiTile(props: KpiTileProps) {
           {props.label}
         </span>
         <span
-          className="flex h-7 w-7 items-center justify-center rounded-lg"
+          className="flex h-7 w-7 items-center justify-center rounded-lg ring-1 ring-inset ring-white/10"
           style={{ backgroundColor: tone.bg, color: tone.fg }}
         >
           <props.icon className="h-3.5 w-3.5" />
         </span>
       </div>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[28px] font-semibold tracking-tight leading-none text-foreground">
-          {props.value}
+        <span className="kpi-counter text-[28px] font-semibold tracking-tight leading-none text-foreground">
+          {renderedValue}
         </span>
         {hasDelta && (
           <span
@@ -116,4 +144,13 @@ export function KpiTile(props: KpiTileProps) {
     );
   }
   return body;
+}
+
+function extractNumber(s: string): number | null {
+  const m = s.match(/-?\d+(\.\d+)?/);
+  return m ? Number(m[0]) : null;
+}
+function extractSuffix(s: string): string {
+  const m = s.match(/-?\d+(\.\d+)?(.*)$/);
+  return m ? m[2] : "";
 }
