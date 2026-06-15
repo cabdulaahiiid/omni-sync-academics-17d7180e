@@ -25,11 +25,13 @@ export const ReportFiltersSchema = z.object({
 export type ReportFilters = z.infer<typeof ReportFiltersSchema>;
 
 export type ReportColumn = { key: string; label: string; align?: "left" | "right" | "center" };
+export type ReportCell = string | number | boolean | null;
+export type ReportRow = Record<string, ReportCell>;
 export type ReportResult = {
   key: string;
   title: string;
   columns: ReportColumn[];
-  rows: Record<string, unknown>[];
+  rows: ReportRow[];
   summary?: { label: string; value: string | number }[];
   generated_at: string;
   filters: ReportFilters;
@@ -48,7 +50,7 @@ async function logRun(supabase: any, userId: string, key: string, filters: Repor
     action_type: "RUN_REPORT",
     entity_type: "reports",
     entity_id: key,
-    after_state: filters as unknown as Record<string, unknown>,
+    after_state: filters as unknown as Record<string, string | undefined>,
   });
 }
 
@@ -120,7 +122,7 @@ async function dispatch(
   key: string,
   f: ReportFilters,
   range: { from: string; to: string },
-): Promise<{ title: string; columns: ReportColumn[]; rows: Record<string, unknown>[]; summary?: { label: string; value: string | number }[] } | null> {
+): Promise<{ title: string; columns: ReportColumn[]; rows: ReportRow[]; summary?: { label: string; value: string | number }[] } | null> {
   switch (key) {
     case "enrollment": return enrollment(supabase, f);
     case "attendanceSummary": return attendanceSummary(supabase, f, range);
