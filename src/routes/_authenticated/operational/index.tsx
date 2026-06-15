@@ -29,6 +29,8 @@ import { KpiTile } from "@/components/erp/kpi-tile";
 import { DashboardSection } from "@/components/erp/dashboard-section";
 import { AlertRow } from "@/components/erp/alert-row";
 import { EmptyState } from "@/components/erp/empty-state";
+import { AIInsightsPanel, type Insight } from "@/components/erp/ai-insights-panel";
+import { ReportingStrip } from "@/components/erp/reporting-strip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/operational/")({
@@ -102,6 +104,96 @@ function DHDashboard() {
     { label: "Missing Attendance",       value: kpi?.missing_attendance ?? 0,      icon: AlertTriangle, tone: "rose" as const,   delta: null,                                  to: "/operational/attendance",   emptyHint: "All sessions logged" },
     { label: "Weekly Compliance",        value: `${kpi?.weekly_compliance ?? 0}%`, icon: ShieldCheck,   tone: "orange" as const, delta: null,                                  to: "/operational/reports",      emptyHint: "No schedule activity" },
   ];
+
+  // Derived AI insights from already-fetched data
+  const insights: Insight[] = [];
+  if (kpi) {
+    if ((kpi.pending_reviews ?? 0) >= 3) {
+      insights.push({
+        id: "pending-backlog",
+        severity: (kpi.pending_reviews ?? 0) >= 10 ? "crit" : "warn",
+        icon: "alert",
+        title: "Schedule review backlog growing",
+        detail: `${kpi.pending_reviews} weekly submission(s) awaiting your action.`,
+        to: "/operational/drafts",
+      });
+    }
+    if ((kpi.missing_attendance ?? 0) > 0) {
+      insights.push({
+        id: "missing-att",
+        severity: (kpi.missing_attendance ?? 0) >= 5 ? "crit" : "warn",
+        icon: "alert",
+        title: "Sessions missing attendance",
+        detail: `${kpi.missing_attendance} ended session(s) have no attendance log filed.`,
+        to: "/operational/attendance",
+      });
+    }
+    if ((kpi.weekly_compliance ?? 0) > 0 && (kpi.weekly_compliance ?? 0) < 70) {
+      insights.push({
+        id: "compliance-low",
+        severity: "warn",
+        icon: "trend",
+        title: "Weekly compliance below target",
+        detail: `Department compliance is ${kpi.weekly_compliance}% — target is ≥ 70%.`,
+        to: "/operational/reports",
+      });
+    }
+  }
+  if (analytics.length >= 2) {
+    const last = analytics[analytics.length - 1];
+    const prev = analytics[analytics.length - 2];
+    const drop = (prev?.attendance ?? 0) - (last?.attendance ?? 0);
+    if (drop >= 10) {
+      insights.push({
+        id: "att-drop",
+        severity: drop >= 20 ? "crit" : "warn",
+        icon: "trend",
+        title: "Attendance dropped week-over-week",
+        detail: `Attendance fell ${drop}% from ${prev.week} to ${last.week}.`,
+        to: "/operational/reports",
+      });
+    }
+    const punc = analytics.map((a: any) => a.punctuality ?? 0);
+    const avgPunc = Math.round(punc.reduce((s, v) => s + v, 0) / punc.length);
+    if (avgPunc >= 85) {
+      insights.push({
+        id: "punc-strong",
+        severity: "info",
+        icon: "trend",
+        title: "Trainer punctuality is strong",
+        detail: `8-week average punctuality at ${avgPunc}% — keep it up.`,
+        to: "/operational/live-monitor",
+      });
+    }
+  }
+  if ((active ?? []).length > 0) {
+    insights.push({
+      id: "live-now",
+      severity: "info",
+      icon: "activity",
+      title: "Classes are live right now",
+      detail: `${active.length} session(s) currently active in your department.`,
+      to: "/operational/live-monitor",
+    });
+  }
+
+  const reportingStats = [
+    { label: "Active Today",     value: kpi?.active_today ?? 0,            icon: PlayCircle,    to: "/operational/live-monitor" },
+    { label: "Pending Reviews",  value: kpi?.pending_reviews ?? 0,         icon: Inbox,         to: "/operational/drafts" },
+    { label: "Submitted",        value: kpi?.submitted_attendance ?? 0,    icon: Upload,        to: "/operational/attendance" },
+    { label: "Missing",          value: kpi?.missing_attendance ?? 0,      icon: AlertTriangle, to: "/operational/attendance" },
+    { label: "Attendance",       value: `${kpi?.attendance_pct ?? 0}%`,    icon: ClipboardCheck, to: "/operational/attendance" },
+    { label: "Compliance",       value: `${kpi?.weekly_compliance ?? 0}%`, icon: ShieldCheck,   to: "/operational/reports" },
+  ];
+
+  const QUICK_ACTIONS = [
+    { to: "/operational/drafts",          label: "Drafts",         icon: Inbox },
+    { to: "/operational/attendance",      label: "Attendance",     icon: ClipboardCheck },
+    { to: "/operational/matrix",          label: "Timetable",      icon: CalendarDays },
+    { to: "/operational/live-monitor",    label: "Live Monitor",   icon: Activity },
+    { to: "/operational/semester-upload", label: "Semester Upload", icon: Upload },
+    { to: "/operational/reports",         label: "Reports",        icon: BarChart3 },
+  ] as const;
 
   return (
     <div className="space-y-6">
@@ -348,6 +440,30 @@ function DHDashboard() {
             )}
           </CardContent>
         </Card>
+      </DashboardSection>
+
+      <AIInsightsPanel insights={insights} />
+
+      <DashboardSection title="Quick Actions">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {QUICK_ACTIONS.map((a) => (
+            <Button
+              key={a.to}
+              asChild
+              variant="outline"
+              className="h-auto justify-start gap-2 rounded-xl border-border/70 bg-[var(--surface-raised)] px-3 py-2.5 text-[13px]"
+            >
+              <Link to={a.to as string}>
+                <a.icon className="h-4 w-4" />
+                {a.label}
+              </Link>
+            </Button>
+          ))}
+        </div>
+      </DashboardSection>
+
+      <DashboardSection title="Department Totals" description="Click a tile to drill into the source.">
+        <ReportingStrip stats={reportingStats} />
       </DashboardSection>
     </div>
   );
