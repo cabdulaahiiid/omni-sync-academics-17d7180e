@@ -357,8 +357,8 @@ function EditRow({
   const [date, setDate] = useState<string>(row.date);
   const [start, setStart] = useState<string>(row.start_time?.slice(0, 5) ?? "");
   const [end, setEnd] = useState<string>(row.end_time?.slice(0, 5) ?? "");
-  const [venueId, setVenueId] = useState<string>(row.venue_id ?? "");
-  const [trainerId, setTrainerId] = useState<string>(row.trainer_registry_id ?? "");
+  const [venueId, setVenueId] = useState<string | undefined>(row.venue_id ?? undefined);
+  const [trainerId, setTrainerId] = useState<string | undefined>(row.trainer_registry_id ?? undefined);
   const [saving, setSaving] = useState(false);
   return (
     <TableRow className="bg-accent/30">
@@ -372,18 +372,22 @@ function EditRow({
       <TableCell><span className="font-mono text-xs">{row.module_code}</span></TableCell>
       <TableCell>{row.section_name}</TableCell>
       <TableCell>
-        <Select value={venueId} onValueChange={setVenueId}>
+        <Select value={venueId || undefined} onValueChange={(v) => setVenueId(v || undefined)}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Venue" /></SelectTrigger>
           <SelectContent>
-            {venues.map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+            {(venues ?? []).filter((v: any) => v?.id).map((v: any) => (
+              <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </TableCell>
       <TableCell>
-        <Select value={trainerId} onValueChange={setTrainerId}>
+        <Select value={trainerId || undefined} onValueChange={(v) => setTrainerId(v || undefined)}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Trainer" /></SelectTrigger>
           <SelectContent>
-            {trainers.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
+            {(trainers ?? []).filter((t: any) => t?.id).map((t: any) => (
+              <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </TableCell>
