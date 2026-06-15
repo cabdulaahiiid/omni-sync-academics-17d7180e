@@ -40,9 +40,9 @@ function OperationalShell() {
   }
   const initials = (me?.profile?.full_name || me?.profile?.email || "DH").slice(0, 2).toUpperCase();
   return (
-    <div className="flex min-h-screen bg-muted/30">
+    <div className="flex h-screen overflow-hidden bg-muted/30">
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform lg:static lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-40 flex h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-transform lg:static lg:translate-x-0",
         open ? "translate-x-0" : "-translate-x-full",
       )}>
         <div className="flex h-20 items-center gap-3 border-b border-white/10 px-5">
@@ -85,8 +85,8 @@ function OperationalShell() {
           </button>
         </div>
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center gap-3 border-b bg-background px-4 lg:px-8">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur lg:px-8">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(!open)}>
             <Menu className="h-5 w-5" />
           </Button>
@@ -96,7 +96,9 @@ function OperationalShell() {
           </div>
           <NotificationsBell />
         </header>
-        <main className="flex-1 overflow-auto p-4 lg:p-6"><Outlet /></main>
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-[1600px] p-3 lg:p-4"><Outlet /></div>
+        </main>
         <OfflineBanner />
       </div>
     </div>

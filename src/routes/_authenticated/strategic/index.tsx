@@ -122,22 +122,20 @@ function StrategicDashboard() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-1 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur lg:-mx-6 lg:-mt-6 lg:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-foreground">Strategic Command Center</h1>
-            <p className="text-xs text-muted-foreground">
-              Institution-wide oversight in real time •{" "}
-              <span className="font-medium text-foreground">
-                Updated {lastUpdated ? new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
-              </span>
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">Strategic Command Center</h1>
+          <p className="text-[11px] text-muted-foreground">
+            Institution-wide oversight •{" "}
+            <span className="font-medium text-foreground">
+              Updated {lastUpdated ? new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
+            </span>
+          </p>
+        </div>
+        <Button
+          size="sm" variant="outline" className="h-8"
+          onClick={() => {
               qc.invalidateQueries({ queryKey: ["mc-stats"] });
               qc.invalidateQueries({ queryKey: ["mc-queue"] });
               qc.invalidateQueries({ queryKey: ["mc-activity"] });
@@ -145,20 +143,19 @@ function StrategicDashboard() {
               qc.invalidateQueries({ queryKey: ["mc-dept-perf"] });
               qc.invalidateQueries({ queryKey: ["mc-weekly"] });
               qc.invalidateQueries({ queryKey: ["mc-feed"] });
-            }}
-          >
-            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
-          </Button>
-        </div>
+          }}
+        >
+          <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
+        </Button>
       </div>
 
-      <DashboardSection title="Executive KPIs" description="Click any tile to drill into the source records.">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="sticky top-0 z-10 -mx-3 bg-background/85 px-3 py-2 backdrop-blur lg:-mx-4 lg:px-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
           {kpiTiles.map((t) => (
-            <KpiTile key={t.label} {...t} lastUpdated={lastUpdated} />
+            <KpiTile key={t.label} {...t} lastUpdated={lastUpdated} compact />
           ))}
         </div>
-      </DashboardSection>
+      </div>
 
       <DashboardSection title="Operational Control" description="Approval queue • institution activity • critical alerts">
         <div className="grid gap-3 lg:grid-cols-3">

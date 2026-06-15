@@ -22,11 +22,11 @@ import {
   Inbox,
 } from "lucide-react";
 import {
-  ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar,
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { KpiTile } from "@/components/erp/kpi-tile";
-import { DashboardSection } from "@/components/erp/dashboard-section";
 import { AlertRow } from "@/components/erp/alert-row";
 import { EmptyState } from "@/components/erp/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -95,250 +95,273 @@ function DHDashboard() {
   const selected = scheds.find((s) => s.id === selectedId) ?? scheds[0] ?? null;
 
   const kpiTiles = [
-    { label: "Active Classes Today",     value: kpi?.active_today ?? 0,            icon: PlayCircle,    tone: "blue" as const,   delta: null,                                  to: "/operational/live-monitor", emptyHint: "No classes running" },
-    { label: "Dept Attendance Rate",     value: `${kpi?.attendance_pct ?? 0}%`,    icon: ClipboardCheck, tone: "green" as const,  delta: null,                                  to: "/operational/attendance",   emptyHint: "No attendance today" },
-    { label: "Pending Schedule Reviews", value: kpi?.pending_reviews ?? 0,         icon: Inbox,         tone: "amber" as const,  delta: null,                                  to: "/operational/drafts",       emptyHint: "Queue is clear" },
-    { label: "Submitted Attendance",     value: kpi?.submitted_attendance ?? 0,    icon: Upload,        tone: "purple" as const, delta: null,                                  to: "/operational/attendance",   emptyHint: "No submissions yet" },
-    { label: "Missing Attendance",       value: kpi?.missing_attendance ?? 0,      icon: AlertTriangle, tone: "rose" as const,   delta: null,                                  to: "/operational/attendance",   emptyHint: "All sessions logged" },
-    { label: "Weekly Compliance",        value: `${kpi?.weekly_compliance ?? 0}%`, icon: ShieldCheck,   tone: "orange" as const, delta: null,                                  to: "/operational/reports",      emptyHint: "No schedule activity" },
+    { label: "Active Classes",       value: kpi?.active_today ?? 0,            icon: PlayCircle,    tone: "blue" as const,   to: "/operational/live-monitor", emptyHint: "None running" },
+    { label: "Attendance Rate",      value: `${kpi?.attendance_pct ?? 0}%`,    icon: ClipboardCheck, tone: "green" as const,  to: "/operational/attendance",   emptyHint: "No data" },
+    { label: "Pending Reviews",      value: kpi?.pending_reviews ?? 0,         icon: Inbox,         tone: "amber" as const,  to: "/operational/drafts",       emptyHint: "Clear" },
+    { label: "Submitted Attendance", value: kpi?.submitted_attendance ?? 0,    icon: Upload,        tone: "purple" as const, to: "/operational/attendance",   emptyHint: "None" },
+    { label: "Missing Attendance",   value: kpi?.missing_attendance ?? 0,      icon: AlertTriangle, tone: "rose" as const,   to: "/operational/attendance",   emptyHint: "All logged" },
+    { label: "Weekly Compliance",    value: `${kpi?.weekly_compliance ?? 0}%`, icon: ShieldCheck,   tone: "orange" as const, to: "/operational/reports",      emptyHint: "No activity" },
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-1 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur lg:-mx-6 lg:-mt-6 lg:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-foreground">Department Operations Center</h1>
-            <p className="text-xs text-muted-foreground">
-              Live status for your department •{" "}
-              <span className="font-medium text-foreground">
-                Updated {lastUpdated ? new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
-              </span>
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              qc.invalidateQueries({ queryKey: ["dh-stats"] });
-              qc.invalidateQueries({ queryKey: ["dh-sched"] });
-              qc.invalidateQueries({ queryKey: ["dh-active"] });
-              qc.invalidateQueries({ queryKey: ["dh-att-mon"] });
-              qc.invalidateQueries({ queryKey: ["dh-analytics"] });
-              qc.invalidateQueries({ queryKey: ["dh-alerts"] });
-            }}
-          >
-            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
-          </Button>
+    <div className="space-y-3">
+      {/* Page title bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">Department Operations Center</h1>
+          <p className="text-[11px] text-muted-foreground">
+            Live status • <span className="font-medium text-foreground">Updated {lastUpdated ? new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}</span>
+          </p>
+        </div>
+        <Button
+          size="sm" variant="outline" className="h-8"
+          onClick={() => {
+            qc.invalidateQueries({ queryKey: ["dh-stats"] });
+            qc.invalidateQueries({ queryKey: ["dh-sched"] });
+            qc.invalidateQueries({ queryKey: ["dh-active"] });
+            qc.invalidateQueries({ queryKey: ["dh-att-mon"] });
+            qc.invalidateQueries({ queryKey: ["dh-analytics"] });
+            qc.invalidateQueries({ queryKey: ["dh-alerts"] });
+          }}
+        >
+          <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
+        </Button>
+      </div>
+
+      {/* ROW 1 — Compact KPI strip (sticky) */}
+      <div className="sticky top-0 z-10 -mx-3 bg-background/85 px-3 py-2 backdrop-blur lg:-mx-4 lg:px-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+          {kpiTiles.map((t) => (
+            <KpiTile key={t.label} {...t} lastUpdated={lastUpdated} compact />
+          ))}
         </div>
       </div>
 
-      <DashboardSection title="Department KPIs" description="Click any tile to drill into source records.">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {kpiTiles.map((t) => (
-            <KpiTile key={t.label} {...t} lastUpdated={lastUpdated} />
-          ))}
-        </div>
-      </DashboardSection>
+      {/* ROW 2 — Schedule 70% + Side rail 30% */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-10">
+        <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)] lg:col-span-7">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 px-3 pb-2 pt-3">
+            <div className="min-w-0">
+              <CardTitle className="text-sm font-semibold">Schedule Command Center</CardTitle>
+              <p className="text-[10px] text-muted-foreground">Select a row to load actions on the right.</p>
+            </div>
+            <Button asChild size="sm" variant="outline" className="h-7">
+              <Link to="/operational/drafts">Open drafts →</Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            {scheds.length === 0 ? (
+              <EmptyState icon={CalendarDays} title="No upcoming sessions" description="Nothing scheduled in the next 7 days." className="m-3" />
+            ) : (
+              <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 z-10 bg-[var(--surface-sunken)]">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="text-[10px] uppercase tracking-wider">Week</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-wider">Date</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-wider">Trainer</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-wider">Course</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-wider">Status</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-wider">Att.</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {scheds.map((s) => {
+                      const isSel = selected?.id === s.id;
+                      return (
+                        <TableRow
+                          key={s.id}
+                          onClick={() => setSelectedId(s.id)}
+                          className={cn("h-9 cursor-pointer", isSel ? "bg-stat-blue/10 hover:bg-stat-blue/10" : "hover:bg-muted/40")}
+                        >
+                          <TableCell className="py-1 text-xs font-medium">{s.week_num ?? "—"}</TableCell>
+                          <TableCell className="py-1 text-xs text-muted-foreground">{s.date}</TableCell>
+                          <TableCell className="py-1 text-xs">{s.trainer_name ?? "—"}</TableCell>
+                          <TableCell className="py-1 text-xs">
+                            <div className="font-medium">{s.module_code}</div>
+                            <div className="truncate text-[10px] text-muted-foreground">{s.module_name}</div>
+                          </TableCell>
+                          <TableCell className="py-1">
+                            <Badge className={cn("rounded-full text-[10px]", statusPill(s.status))}>{s.status}</Badge>
+                          </TableCell>
+                          <TableCell className="py-1 text-xs text-muted-foreground">{s.attendance_count}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      <DashboardSection
-        title="Schedule Command Center"
-        description="Select a row to load detail and actions on the right."
-        actions={
-          <Button asChild size="sm" variant="outline">
-            <Link to="/operational/drafts">Open drafts →</Link>
-          </Button>
-        }
-      >
-        <div className="grid gap-3 lg:grid-cols-3">
-          <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)] lg:col-span-2">
-            <CardContent className="p-0">
-              {scheds.length === 0 ? (
-                <EmptyState
-                  icon={CalendarDays}
-                  title="No upcoming sessions"
-                  description="Nothing scheduled for your department in the next 7 days."
-                  className="m-4"
-                />
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-[var(--surface-sunken)]">
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="text-[10px] uppercase tracking-wider">Week</TableHead>
-                        <TableHead className="text-[10px] uppercase tracking-wider">Date</TableHead>
-                        <TableHead className="text-[10px] uppercase tracking-wider">Trainer</TableHead>
-                        <TableHead className="text-[10px] uppercase tracking-wider">Course</TableHead>
-                        <TableHead className="text-[10px] uppercase tracking-wider">Schedule</TableHead>
-                        <TableHead className="text-[10px] uppercase tracking-wider">Attendance</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {scheds.map((s) => {
-                        const isSel = selected?.id === s.id;
-                        return (
-                          <TableRow
-                            key={s.id}
-                            onClick={() => setSelectedId(s.id)}
-                            className={cn(
-                              "h-11 cursor-pointer",
-                              isSel ? "bg-stat-blue/10 hover:bg-stat-blue/10" : "hover:bg-muted/40",
-                            )}
-                          >
-                            <TableCell className="text-xs font-medium">{s.week_num ?? "—"}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{s.date}</TableCell>
-                            <TableCell className="text-xs">{s.trainer_name ?? "—"}</TableCell>
-                            <TableCell className="text-xs">
-                              <div className="font-medium">{s.module_code}</div>
-                              <div className="text-muted-foreground">{s.module_name}</div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={cn("rounded-full text-[10px]", statusPill(s.status))}>{s.status}</Badge>
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{s.attendance_count} logs</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
+        <div className="flex flex-col gap-3 lg:col-span-3">
           <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)]">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Actions</CardTitle></CardHeader>
-            <CardContent className="space-y-2 pt-0">
+            <CardHeader className="px-3 pb-2 pt-3"><CardTitle className="text-sm font-semibold">Actions</CardTitle></CardHeader>
+            <CardContent className="space-y-2 px-3 pb-3 pt-0">
               {!selected ? (
                 <p className="text-xs text-muted-foreground">Select a row to see actions.</p>
               ) : (
                 <>
-                  <div className="rounded-lg border border-border/70 bg-card p-3">
-                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Selected</p>
+                  <div className="rounded-lg border border-border/70 bg-card p-2.5">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Selected</p>
                     <p className="mt-0.5 text-sm font-semibold">{selected.module_code}</p>
-                    <p className="text-xs text-muted-foreground">{selected.module_name}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      {selected.date} • {selected.start_time}–{selected.end_time} • {selected.trainer_name ?? "Unassigned"}
+                    <p className="truncate text-[11px] text-muted-foreground">{selected.module_name}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      {selected.date} • {selected.start_time}–{selected.end_time}
                     </p>
-                    <Badge className={cn("mt-2 rounded-full text-[10px]", statusPill(selected.status))}>{selected.status}</Badge>
+                    <Badge className={cn("mt-1.5 rounded-full text-[10px]", statusPill(selected.status))}>{selected.status}</Badge>
                   </div>
-                  <Button asChild size="sm" variant="default" className="w-full">
-                    <Link to="/operational/drafts"><Eye className="mr-2 h-3.5 w-3.5" /> Review schedule</Link>
-                  </Button>
-                  <Button asChild size="sm" variant="secondary" className="w-full">
-                    <Link to="/operational/drafts"><ClipboardCheck className="mr-2 h-3.5 w-3.5" /> Approve submission</Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline" className="w-full">
-                    <Link to="/operational/drafts"><Send className="mr-2 h-3.5 w-3.5" /> Return for correction</Link>
-                  </Button>
-                  <Button asChild size="sm" variant="ghost" className="w-full">
-                    <Link to="/operational/matrix"><CalendarDays className="mr-2 h-3.5 w-3.5" /> View timetable</Link>
-                  </Button>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button asChild size="sm" className="h-8 text-xs"><Link to="/operational/drafts"><Eye className="mr-1 h-3 w-3" />Review</Link></Button>
+                    <Button asChild size="sm" variant="secondary" className="h-8 text-xs"><Link to="/operational/drafts"><ClipboardCheck className="mr-1 h-3 w-3" />Approve</Link></Button>
+                    <Button asChild size="sm" variant="outline" className="h-8 text-xs"><Link to="/operational/drafts"><Send className="mr-1 h-3 w-3" />Return</Link></Button>
+                    <Button asChild size="sm" variant="ghost" className="h-8 text-xs"><Link to="/operational/matrix"><CalendarDays className="mr-1 h-3 w-3" />Matrix</Link></Button>
+                  </div>
                 </>
               )}
             </CardContent>
           </Card>
-        </div>
-      </DashboardSection>
 
-      <DashboardSection title="Live Monitoring" description="Right-now activity and today's attendance roll-up.">
-        <div className="grid gap-3 lg:grid-cols-2">
           <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-semibold">Active Classes</CardTitle>
-              <Badge variant="outline" className="rounded-full text-[10px]">{active.length} now</Badge>
-            </CardHeader>
-            <CardContent className="space-y-2 pt-0">
-              {active.length === 0 ? (
-                <EmptyState icon={Activity} title="No classes running" description="No live or active session in your department right now." />
+            <CardHeader className="px-3 pb-2 pt-3"><CardTitle className="text-sm font-semibold">Live Alerts</CardTitle></CardHeader>
+            <CardContent className="max-h-48 space-y-1.5 overflow-y-auto px-3 pb-3 pt-0">
+              {alerts.length === 0 ? (
+                <EmptyState icon={ShieldCheck} title="All clear" description="No outstanding issues." />
               ) : (
-                active.map((c) => (
-                  <Link
-                    key={c.id}
-                    to="/operational/live-monitor"
-                    className="flex items-center gap-3 rounded-lg border border-border/70 bg-card p-3 text-sm transition-colors hover:bg-muted/40"
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald/10 text-emerald">
-                      <PlayCircle className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{c.module_code} • {c.module_name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {c.trainer_name ?? "—"} · {c.start_time}–{c.end_time}
-                      </p>
-                    </div>
-                    <Badge className={cn("rounded-full text-[10px]", statusPill(c.status))}>{c.status}</Badge>
-                  </Link>
+                alerts.map((a) => (
+                  <AlertRow key={a.id} severity={a.severity as any} title={a.title} detail={a.detail} count={a.count} to={a.to} />
                 ))
               )}
             </CardContent>
           </Card>
 
           <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)]">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Attendance Monitoring</CardTitle></CardHeader>
-            <CardContent className="space-y-2 pt-0">
-              <Link to="/operational/attendance" className="flex items-center gap-3 rounded-lg border border-border/70 bg-card p-3 text-sm transition-colors hover:bg-muted/40">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald/10 text-emerald">
-                  <ClipboardCheck className="h-4 w-4" />
-                </div>
-                <div className="flex-1"><p className="font-medium">Submitted</p><p className="text-xs text-muted-foreground">Sessions ended with attendance log</p></div>
-                <span className="text-base font-semibold tabular-nums">{att?.submitted ?? 0}</span>
+            <CardHeader className="px-3 pb-2 pt-3"><CardTitle className="text-sm font-semibold">Approval & Drafts</CardTitle></CardHeader>
+            <CardContent className="space-y-1.5 px-3 pb-3 pt-0 text-xs">
+              <Link to="/operational/drafts" className="flex items-center justify-between rounded-lg border border-border/70 bg-card px-2.5 py-1.5 hover:bg-muted/40">
+                <span className="text-muted-foreground">Pending reviews</span>
+                <span className="font-semibold tabular-nums">{kpi?.pending_reviews ?? 0}</span>
               </Link>
-              <Link to="/operational/attendance" className="flex items-center gap-3 rounded-lg border border-border/70 bg-card p-3 text-sm transition-colors hover:bg-muted/40">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose/15 text-rose">
-                  <XCircle className="h-4 w-4" />
-                </div>
-                <div className="flex-1"><p className="font-medium">Missing</p><p className="text-xs text-muted-foreground">Ended sessions, no log filed</p></div>
-                <span className="text-base font-semibold tabular-nums">{att?.missing ?? 0}</span>
+              <Link to="/operational/drafts" className="flex items-center justify-between rounded-lg border border-border/70 bg-card px-2.5 py-1.5 hover:bg-muted/40">
+                <span className="text-muted-foreground">Submitted attendance</span>
+                <span className="font-semibold tabular-nums">{kpi?.submitted_attendance ?? 0}</span>
               </Link>
-              <Link to="/operational/live-monitor" className="flex items-center gap-3 rounded-lg border border-border/70 bg-card p-3 text-sm transition-colors hover:bg-muted/40">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber/20 text-amber-fg">
-                  <Timer className="h-4 w-4" />
-                </div>
-                <div className="flex-1"><p className="font-medium">Late</p><p className="text-xs text-muted-foreground">Check-in &gt; 15min after start</p></div>
-                <span className="text-base font-semibold tabular-nums">{att?.late ?? 0}</span>
+              <Link to="/operational/attendance" className="flex items-center justify-between rounded-lg border border-border/70 bg-card px-2.5 py-1.5 hover:bg-muted/40">
+                <span className="text-muted-foreground">Missing attendance</span>
+                <span className="font-semibold tabular-nums text-rose">{kpi?.missing_attendance ?? 0}</span>
               </Link>
             </CardContent>
           </Card>
         </div>
-      </DashboardSection>
+      </div>
 
-      <DashboardSection title="Department Analytics" description="8-week trend for the metrics that matter.">
+      {/* ROW 3 — Active Classes 50% + Attendance Monitoring 50% */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)]">
-          <CardContent className="h-72 p-4">
+          <CardHeader className="flex flex-row items-center justify-between px-3 pb-2 pt-3">
+            <CardTitle className="text-sm font-semibold">Active Classes</CardTitle>
+            <Badge variant="outline" className="rounded-full text-[10px]">{active.length} now</Badge>
+          </CardHeader>
+          <CardContent className="max-h-[320px] space-y-1.5 overflow-y-auto px-3 pb-3 pt-0">
+            {active.length === 0 ? (
+              <EmptyState icon={Activity} title="No classes running" description="No live or active session right now." />
+            ) : (
+              active.map((c) => (
+                <Link key={c.id} to="/operational/live-monitor" className="flex items-center gap-2.5 rounded-lg border border-border/70 bg-card px-2.5 py-2 text-sm transition-colors hover:bg-muted/40">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald/10 text-emerald">
+                    <PlayCircle className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium">{c.module_code} • {c.module_name}</p>
+                    <p className="truncate text-[10px] text-muted-foreground">{c.trainer_name ?? "—"} · {c.start_time}–{c.end_time}</p>
+                  </div>
+                  <Badge className={cn("rounded-full text-[10px]", statusPill(c.status))}>{c.status}</Badge>
+                </Link>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)]">
+          <CardHeader className="px-3 pb-2 pt-3"><CardTitle className="text-sm font-semibold">Attendance Monitoring</CardTitle></CardHeader>
+          <CardContent className="space-y-1.5 px-3 pb-3 pt-0">
+            <Link to="/operational/attendance" className="flex items-center gap-2.5 rounded-lg border border-border/70 bg-card px-2.5 py-2 text-sm transition-colors hover:bg-muted/40">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald/10 text-emerald"><ClipboardCheck className="h-3.5 w-3.5" /></div>
+              <div className="flex-1"><p className="text-xs font-medium">Submitted</p><p className="text-[10px] text-muted-foreground">Sessions ended with log</p></div>
+              <span className="text-sm font-semibold tabular-nums">{att?.submitted ?? 0}</span>
+            </Link>
+            <Link to="/operational/attendance" className="flex items-center gap-2.5 rounded-lg border border-border/70 bg-card px-2.5 py-2 text-sm transition-colors hover:bg-muted/40">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-rose/15 text-rose"><XCircle className="h-3.5 w-3.5" /></div>
+              <div className="flex-1"><p className="text-xs font-medium">Missing</p><p className="text-[10px] text-muted-foreground">Ended sessions, no log</p></div>
+              <span className="text-sm font-semibold tabular-nums">{att?.missing ?? 0}</span>
+            </Link>
+            <Link to="/operational/live-monitor" className="flex items-center gap-2.5 rounded-lg border border-border/70 bg-card px-2.5 py-2 text-sm transition-colors hover:bg-muted/40">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber/20 text-amber-fg"><Timer className="h-3.5 w-3.5" /></div>
+              <div className="flex-1"><p className="text-xs font-medium">Late</p><p className="text-[10px] text-muted-foreground">&gt;15min after start</p></div>
+              <span className="text-sm font-semibold tabular-nums">{att?.late ?? 0}</span>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ROW 4 — Three analytics columns */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)]">
+          <CardHeader className="px-3 pb-1 pt-3"><CardTitle className="text-sm font-semibold">Attendance Analytics</CardTitle></CardHeader>
+          <CardContent className="h-52 px-2 pb-3 pt-0">
             {analytics.length === 0 ? (
-              <EmptyState icon={BarChart3} title="No trend data yet" description="Trend lines populate as sessions complete." />
+              <EmptyState icon={BarChart3} title="No trend data yet" />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={analytics} margin={{ top: 6, right: 8, left: -16, bottom: 0 }}>
+                <LineChart data={analytics} margin={{ top: 6, right: 6, left: -20, bottom: 0 }}>
                   <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="week" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} />
-                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} iconSize={8} />
-                  <Line type="monotone" dataKey="attendance"  name="Attendance"  stroke="var(--stat-blue)"   strokeWidth={2} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="punctuality" name="Punctuality" stroke="var(--stat-purple)" strokeWidth={2} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="completion"  name="Completion"  stroke="var(--stat-green)"  strokeWidth={2} dot={{ r: 3 }} />
+                  <XAxis dataKey="week" fontSize={9} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={9} tickLine={false} axisLine={false} domain={[0, 100]} />
+                  <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+                  <Line type="monotone" dataKey="attendance" name="Attendance" stroke="var(--stat-blue)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
-      </DashboardSection>
-
-      <DashboardSection title="Department Alerts">
         <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)]">
-          <CardContent className="space-y-2 p-4">
-            {alerts.length === 0 ? (
-              <EmptyState icon={ShieldCheck} title="All clear" description="No outstanding issues for your department." />
+          <CardHeader className="px-3 pb-1 pt-3"><CardTitle className="text-sm font-semibold">Trainer Compliance</CardTitle></CardHeader>
+          <CardContent className="h-52 px-2 pb-3 pt-0">
+            {analytics.length === 0 ? (
+              <EmptyState icon={ShieldCheck} title="No data yet" />
             ) : (
-              alerts.map((a) => (
-                <AlertRow key={a.id} severity={a.severity as any} title={a.title} detail={a.detail} count={a.count} to={a.to} />
-              ))
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analytics} margin={{ top: 6, right: 6, left: -20, bottom: 0 }}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="week" fontSize={9} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={9} tickLine={false} axisLine={false} domain={[0, 100]} />
+                  <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+                  <Line type="monotone" dataKey="punctuality" name="Punctuality" stroke="var(--stat-purple)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
-      </DashboardSection>
+        <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)] md:col-span-2 xl:col-span-1">
+          <CardHeader className="px-3 pb-1 pt-3"><CardTitle className="text-sm font-semibold">Schedule Analytics</CardTitle></CardHeader>
+          <CardContent className="h-52 px-2 pb-3 pt-0">
+            {analytics.length === 0 ? (
+              <EmptyState icon={CalendarDays} title="No data yet" />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics} margin={{ top: 6, right: 6, left: -20, bottom: 0 }}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="week" fontSize={9} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={9} tickLine={false} axisLine={false} domain={[0, 100]} />
+                  <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+                  <Bar dataKey="completion" name="Completion" fill="var(--stat-green)" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
