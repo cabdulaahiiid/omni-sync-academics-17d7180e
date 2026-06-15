@@ -73,6 +73,13 @@ export const createStudent = createServerFn({ method: "POST" })
       department_id: deptId,
     }).select().single();
     if (error) throw new Error(error.message);
+    await supabase.from("audit_logs").insert({
+      actor_id: userId, action_type: "STUDENT_ADDED", entity_type: "students",
+      entity_id: row.id, after_state: {
+        registration_number: row.registration_number, full_name: row.full_name,
+        level: data.level_name, section: data.section_name,
+      },
+    });
     return row;
   });
 
@@ -125,6 +132,12 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
         if (error) throw new Error(error.message);
         inserted += ins?.length ?? 0;
       }
+    }
+    if (inserted > 0) {
+      await supabase.from("audit_logs").insert({
+        actor_id: userId, action_type: "BULK_IMPORT", entity_type: "students",
+        after_state: { inserted, errors: errors.length },
+      });
     }
     return { inserted, errors };
   });

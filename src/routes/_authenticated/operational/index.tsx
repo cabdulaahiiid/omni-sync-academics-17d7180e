@@ -30,6 +30,7 @@ import { KpiTile } from "@/components/erp/kpi-tile";
 import { AlertRow } from "@/components/erp/alert-row";
 import { EmptyState } from "@/components/erp/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useLiveTables } from "@/hooks/use-live-tables";
 
 export const Route = createFileRoute("/_authenticated/operational/")({
   component: DHDashboard,
@@ -46,6 +47,10 @@ function statusPill(status: string) {
 
 function DHDashboard() {
   const qc = useQueryClient();
+  useLiveTables(
+    ["schedules", "approval_queue", "attendance_logs", "session_logs", "attendance_overrides", "students", "trainer_registry", "modules"],
+    ["dh-stats", "dh-sched", "dh-active", "dh-att-mon", "dh-analytics", "dh-alerts"],
+  );
   const { authReady, hasSession, userId } = useAuthSession();
   const { data: me } = useMe();
   const canQuery = authReady && hasSession && !!userId && me?.userId === userId

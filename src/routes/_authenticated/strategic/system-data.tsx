@@ -228,3 +228,66 @@ function SystemDataPage() {
     </div>
   );
 }
+
+function DataIntegrityCard() {
+  const runFn = useServerFn(runConsistencyCheck);
+  const m = useMutation({
+    mutationFn: () => runFn(),
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const data = m.data;
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Data integrity check
+        </CardTitle>
+        <Button size="sm" onClick={() => m.mutate()} disabled={m.isPending}>
+          {m.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+          Run check
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {!data && !m.isPending && (
+          <p className="text-sm text-muted-foreground">
+            Compares dashboard aggregates with the underlying rows and reports any drift.
+          </p>
+        )}
+        {data && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              {data.drift === 0
+                ? <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">All consistent</Badge>
+                : <Badge variant="destructive">{data.drift} drift(s) detected</Badge>}
+              <span className="text-xs text-muted-foreground">
+                Checked {data.checks.length} aggregates · {new Date(data.generated_at).toLocaleString()}
+              </span>
+            </div>
+            <table className="mt-2 w-full text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Check</th>
+                  <th className="px-3 py-2 text-right font-medium">Expected</th>
+                  <th className="px-3 py-2 text-right font-medium">Actual</th>
+                  <th className="px-3 py-2 text-center font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.checks.map((c) => (
+                  <tr key={c.name} className="border-t">
+                    <td className="px-3 py-2">{c.name}</td>
+                    <td className="px-3 py-2 text-right">{String(c.expected)}</td>
+                    <td className="px-3 py-2 text-right">{String(c.actual)}</td>
+                    <td className="px-3 py-2 text-center">
+                      {c.ok ? <CheckCircle2 className="inline h-4 w-4 text-emerald-600" /> : <XCircle className="inline h-4 w-4 text-destructive" />}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
