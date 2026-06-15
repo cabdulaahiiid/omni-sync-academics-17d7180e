@@ -101,10 +101,6 @@ function StrategicDashboard() {
     return () => { supabase.removeChannel(ch); };
   }, [canQuery, qc]);
 
-  if (meLoading) {
-    return <div className="flex min-h-64 items-center justify-center text-muted-foreground">Loading…</div>;
-  }
-
   const kpi = kpiQ.data;
   const lastUpdated = kpiQ.dataUpdatedAt || null;
   const queue = queueQ.data;
@@ -122,6 +118,9 @@ function StrategicDashboard() {
   const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const userName = me?.profile?.full_name?.split(" ")[0] || "Administrator";
 
+  // All hooks must run unconditionally — render the loading state below,
+  // after every hook call, to satisfy the Rules of Hooks.
+
   // Health score
   const health = useMemo(() => kpi ? computeHealthScore({
     attendance_pct: kpi.attendance_pct ?? 0,
@@ -135,6 +134,10 @@ function StrategicDashboard() {
   const prevScore = readPrevHealth();
   useEffect(() => { if (health) writeHealth(health.score); }, [health?.score]);
   const weeklyDelta = health && prevScore != null ? health.score - prevScore : null;
+
+  if (meLoading) {
+    return <div className="flex min-h-64 items-center justify-center text-muted-foreground">Loading…</div>;
+  }
 
   // AI insights — pure derivations from real data
   const insights = useMemo<Insight[]>(() => {
