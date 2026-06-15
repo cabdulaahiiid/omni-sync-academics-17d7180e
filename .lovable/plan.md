@@ -1,79 +1,60 @@
+# Finish remaining UI/UX — Strategic Students & Audit Logs
 
-# Finish remaining 2026 Command Center work
+## Context
 
-The Strategic shell + Strategic Command Center are complete (HealthScore, KPIs, AI Insights, Analytics, Live Feed, Reporting Strip, Quick Actions, favorites, recent, sidebar search, badges, breadcrumbs, user menu). The pieces that were started but not finished all live on the **Operational (DH) side** and a couple of shared deep-link affordances. Nothing finished will be touched.
+The 2026 Command Center redesign is otherwise complete (sidebars, dashboards, approvals, drafts, attendance, deep-links, personalization, badges all done). A scan of `src/routes` for "Coming in the next iteration" / "Not yet implemented" turns up exactly **two true placeholders** still shipping the boilerplate "ships in the next phase" card:
 
-## Locked (do not modify)
-- `src/styles.css` design tokens
-- `src/components/strategic/strategic-shell.tsx`
-- `src/routes/_authenticated/strategic/index.tsx` and every existing strategic route
-- `health-score-card.tsx`, `ai-insights-panel.tsx`, `reporting-strip.tsx`, `kpi-tile.tsx`, `dashboard-section.tsx`, `alert-row.tsx`, `activity-row.tsx`
-- All server functions, RLS, sidebar items, route paths, approval / chat / system-data flows
+- `src/routes/_authenticated/strategic/students.tsx`
+- `src/routes/_authenticated/strategic/audit.tsx`
 
-## 1. Operational shell parity — `src/routes/_authenticated/operational.tsx`
-Bring the DH shell up to the same enterprise behavior the Strategic shell already has. Same tokens, same patterns, no new design.
+All other routes already have real implementations. Per the rules, completed screens stay locked.
 
-- Favorites: star toggle per nav item, persisted via existing `favorites-store.ts`; show "Favorites" mini-section above the main nav (collapsed-state: dot only).
-- Recent pages: render top 3 from `getRecentPages()` in a "Recent" mini-section (already pushing into store; only the render is missing).
-- Live badges on nav items:
-  - `Drafts`: pending DH submissions count via existing `getDHStatsExt().pending_reviews`.
-  - `Attendance`: missing-attendance count via existing `getDHStatsExt().missing_attendance`.
-  Reuse the same red glow pill style used in strategic-shell `SidebarItem`.
-- Top bar: add the same Quick Create `+` dropdown found in strategic-shell, scoped to DH actions that already exist:
-  - New Schedule → `/operational/semester-upload`
-  - Submit Draft → `/operational/drafts`
-  - Take Attendance → `/operational/attendance`
-  - Open Timetable → `/operational/matrix`
-- Top bar: add the same global search input (visual only, focus highlights) used in strategic, so both shells look identical.
-- User menu dropdown (avatar) with full name + role + Sign out — currently DH shell has no avatar/user menu.
+## Scope (only these two files)
 
-## 2. DH Command Center — `src/routes/_authenticated/operational/index.tsx`
-Reach feature parity with the Strategic dashboard composition using only existing DH server fns (`getDHStatsExt`, `listDHAlerts`, `getDHAnalytics`, `listDHActiveClasses`, `listDHAttendanceMonitor`, `listDHScheduleCommand`).
+### 1. Strategic → Students (institution-wide directory)
 
-Add, in this order, after the existing Department Analytics section:
-- **AI Insights Panel** (`AIInsightsPanel`) — derive insights purely from already-fetched DH data:
-  - Weekly attendance trend dip > 10% from `analyticsQ`.
-  - Punctuality leader vs laggard from `analyticsQ`.
-  - Pending reviews backlog from `kpi.pending_reviews`.
-  - Missing-attendance pressure from `kpi.missing_attendance`.
-  Each insight deep-links to the existing DH route with appropriate filter (`?status=pending`, `?missing=1`, etc.).
-- **Reporting strip** (`ReportingStrip`) at the bottom — department-scoped tiles built from already-fetched data:
-  - Active Today, Pending Reviews, Submitted, Missing, Late, Weekly Compliance — each linking to its existing DH route.
-- **Quick Actions** section mirroring strategic dashboard: deep-links to `/operational/drafts`, `/operational/attendance`, `/operational/matrix`, `/operational/live-monitor`, `/operational/semester-upload`, `/operational/reports`.
+Build a read-only MA-scope student directory that mirrors the look of the existing strategic pages (Trainers, Users, Departments).
 
-## 3. Deep-link filters consumed by existing routes
-Some new deep-links above pass query params (`?status=pending`, `?missing=1`) that the destination routes do not yet read. Wire **read-only** support in the existing routes:
-- `src/routes/_authenticated/operational/drafts.tsx` — if `search.status === "pending"`, set the existing status filter to Pending on mount.
-- `src/routes/_authenticated/operational/attendance.tsx` — if `search.missing === "1"`, set the existing missing-only toggle on mount.
-- `src/routes/_authenticated/strategic/approvals.tsx` — same `?status=pending` pre-filter (used by sidebar badge / AI insight CTA).
+Data source — reuse what already exists, **no new server fns or migrations**:
+- `listMyStudents` from `@/lib/students.functions` (already returns all students when caller is MA)
+- `listDepartments` from `@/lib/data.functions` for the department filter
 
-No new server fns, no schema changes — only `Route.useSearch()` → existing setState call.
+UI:
+- Page header (`text-2xl font-semibold tracking-tight` + muted subtitle) matching other strategic pages.
+- KPI strip using the existing `KpiTile` component: Total Students, Departments Represented, Levels Active, Sections Active (all derived client-side from the list).
+- Filter bar: search input (name / registration number), Department `Select`, Level `Select`, Section `Select`, Status `Select` (active/inactive) — all client-side filtering over the already-fetched list.
+- Results `Card` with `Table` (Reg #, Full Name, Department, Level, Section, Status badge). Loading skeleton rows while `isLoading`. Empty state via existing `EmptyState` component when zero results.
+- Pagination (client-side, 25/page) using existing `Pagination` ui component.
+- No create/edit/delete actions on the MA view (DH owns roster CRUD on `/operational/students`).
 
-## 4. Responsiveness + a11y polish on the new operational pieces
-- KPI / Reporting strip grid uses `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6` with `min-w-0` cells.
-- Sidebar star button has `aria-label`, `aria-pressed`.
-- Quick Create dropdown has `aria-label`.
-- All new tap targets ≥ 36×36.
-- Honor `prefers-reduced-motion` (reuse existing utility classes).
+### 2. Strategic → Audit Logs
 
-## Out of scope (explicit, not changed)
-- No new server functions, no migrations, no RPC changes, no new secrets.
-- No sidebar item add/remove/rename.
-- No changes to Strategic shell, Strategic Command Center, Approvals workflow, Chat dock, System Data, Conflict Resolution Panel, theme tokens.
-- No new standalone `top-bar.tsx` / `quick-actions.tsx` / `sidebar-search.tsx` / `chart-card.tsx` files — the equivalent logic already lives inside the shells; refactoring is unnecessary and would risk regressions on finished work.
+Build a real audit viewer for MA.
 
-## Files touched
-Edited:
-- `src/routes/_authenticated/operational.tsx`
-- `src/routes/_authenticated/operational/index.tsx`
-- `src/routes/_authenticated/operational/drafts.tsx`
-- `src/routes/_authenticated/operational/attendance.tsx`
-- `src/routes/_authenticated/strategic/approvals.tsx`
+Data source — reuse `listRecentAuditLogs` from `src/lib/data.functions.ts` (returns last 20). To support filters + a "Load older" button without backend changes, add a sibling client query that hits `supabase.from("audit_logs").select(...)` directly (the existing function does the same thing; RLS already protects it). No new server fn, no migration.
 
-Created: none.
+UI:
+- Page header matching other strategic pages.
+- KPI strip: Events (last 24h), Events (last 7d), Distinct Actors (7d), Top Action Type (7d) — derived from fetched rows.
+- Filter bar: search (entity_id / actor_id), Action Type `Select` (distinct values from data), Entity Type `Select`, date-range preset chips (24h / 7d / 30d).
+- Activity feed `Card` reusing existing `ActivityRow` component (`src/components/erp/activity-row.tsx`) so the styling matches the dashboard live-feed exactly. Each row: action type badge, entity, actor (short id), relative time + absolute timestamp on hover.
+- "Load more" button increments page size by 50.
+- Loading skeleton rows; `EmptyState` when no matches.
 
-## Verification after build
-- `/operational` shows Favorites, Recent, live badges on Drafts/Attendance, Quick Create dropdown, avatar/user menu.
-- DH dashboard shows AI Insights panel and Reporting strip with live counts; existing sections untouched.
-- Clicking the Drafts badge / AI Insight CTA opens `/operational/drafts?status=pending` with the Pending filter pre-applied.
-- `/strategic` page and every existing strategic route render identically to before.
+## Non-Goals
+
+- No changes to any other route, component, shell, store, server function, or migration.
+- No new design tokens, no theme tweaks, no navigation changes.
+- No CRUD on students or audit logs from these views (audit is append-only by design).
+- No new dependencies.
+
+## Files Touched
+
+- `src/routes/_authenticated/strategic/students.tsx` (rewrite placeholder → real page)
+- `src/routes/_authenticated/strategic/audit.tsx` (rewrite placeholder → real page)
+
+## Verification
+
+- Build passes (harness runs typecheck automatically).
+- Manually visit `/strategic/students` and `/strategic/audit` in the preview, confirm data loads, filters work, pagination/load-more works, empty state renders when filters exclude everything.
+- Confirm no other route file was modified (`git diff --stat` will only show the two files above).
