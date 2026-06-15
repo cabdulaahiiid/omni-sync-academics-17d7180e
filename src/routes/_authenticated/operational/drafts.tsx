@@ -3,6 +3,7 @@ import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
+import React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
 import { listWeekThreadsForDept } from "@/lib/feedback.functions";
@@ -193,14 +194,46 @@ function DraftsPage() {
         );
       })}
       {openWorkspace && (
-        <WeekFeedbackWorkspace
-          open
-          onOpenChange={(o) => !o && setOpenWorkspace(null)}
-          semesterId={openWorkspace.semester_id}
-          weekNum={openWorkspace.week_num}
-          title={openWorkspace.title}
-        />
+        <WorkspaceErrorBoundary onClose={() => setOpenWorkspace(null)}>
+          <WeekFeedbackWorkspace
+            open
+            onOpenChange={(o) => !o && setOpenWorkspace(null)}
+            semesterId={openWorkspace.semester_id}
+            weekNum={openWorkspace.week_num}
+            title={openWorkspace.title}
+          />
+        </WorkspaceErrorBoundary>
       )}
     </div>
   );
+}
+
+class WorkspaceErrorBoundary extends React.Component<
+  { children: React.ReactNode; onClose: () => void },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[WeekFeedbackWorkspace] render error:", error, info);
+    toast.error(`Workspace error: ${error.message}`);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6">
+          <Card className="max-w-md">
+            <CardHeader><CardTitle className="text-sm">Couldn't open this week's workspace</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">{this.state.error.message}</p>
+              <Button size="sm" variant="secondary" onClick={() => { this.setState({ error: null }); this.props.onClose(); }}>
+                Close
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
