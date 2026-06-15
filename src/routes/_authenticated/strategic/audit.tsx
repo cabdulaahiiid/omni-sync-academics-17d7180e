@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KpiTile } from "@/components/erp/kpi-tile";
@@ -203,5 +202,3 @@ function AuditLogsPage() {
   );
 }
 
-// silence unused-import lint in case Badge isn't referenced in this file later
-void Badge;
