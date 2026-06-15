@@ -33,6 +33,7 @@ import { DashboardSection } from "@/components/erp/dashboard-section";
 import { AlertRow } from "@/components/erp/alert-row";
 import { ActivityRow } from "@/components/erp/activity-row";
 import { EmptyState } from "@/components/erp/empty-state";
+import { useLiveTables } from "@/hooks/use-live-tables";
 
 export const Route = createFileRoute("/_authenticated/strategic/")({
   component: StrategicDashboard,
@@ -49,6 +50,10 @@ const ACTION_HINTS: { to: string; label: string; icon: typeof CheckSquare }[] = 
 
 function StrategicDashboard() {
   const qc = useQueryClient();
+  useLiveTables(
+    ["schedules", "approval_queue", "attendance_logs", "session_logs", "students", "trainer_registry", "modules"],
+    ["mc-stats", "mc-queue", "mc-activity", "mc-alerts", "mc-dept-perf", "mc-weekly", "mc-feed", "mc-compare"],
+  );
   const { authReady, hasSession, userId } = useAuthSession();
   const { data: me, isLoading: meLoading } = useMe();
   const canQuery = authReady && hasSession && Boolean(userId) && me?.userId === userId && Boolean(me.roles.includes("MA"));

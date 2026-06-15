@@ -30,12 +30,17 @@ import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp, Search
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useLiveTables } from "@/hooks/use-live-tables";
 
 export const Route = createFileRoute("/_authenticated/strategic/approvals")({
   component: ApprovalsPage,
 });
 
 function ApprovalsPage() {
+  useLiveTables(
+    ["approval_queue", "schedules"],
+    ["approval-queue", "approvals-depts", "approvals-weeks", "approvals-week", "approvals-semesters"],
+  );
   const [tab, setTab] = useState<"session" | "semester">("session");
   const [decisionFilter, setDecisionFilter] = useState<"pending" | "approved" | "rejected">("pending");
   const [search, setSearch] = useState("");
