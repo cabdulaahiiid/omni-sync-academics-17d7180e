@@ -15,6 +15,7 @@ export interface KpiTileProps {
   onClick?: () => void;
   lastUpdated?: number | null;
   emptyHint?: string;
+  compact?: boolean;
 }
 
 const TONE: Record<NonNullable<KpiTileProps["tone"]>, { bg: string; fg: string; stroke: string }> = {
@@ -38,6 +39,51 @@ export function KpiTile(props: KpiTileProps) {
   const hasDelta = props.delta != null && Number.isFinite(props.delta);
   const up = (props.delta ?? 0) >= 0;
   const isZero = props.value === 0 || props.value === "0" || props.value === "0%";
+
+  if (props.compact) {
+    const inner = (
+      <div
+        className={cn(
+          "group flex h-full items-center gap-3 rounded-lg border border-border/70 bg-[var(--surface-raised)] p-2.5 transition-all hover:border-border hover:shadow-[0_2px_8px_-2px_rgb(15_23_42_/_0.08)]",
+          (props.to || props.onClick) && "cursor-pointer",
+        )}
+      >
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
+          style={{ backgroundColor: tone.bg, color: tone.fg }}
+        >
+          <props.icon className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {props.label}
+          </p>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-lg font-semibold leading-tight tracking-tight text-foreground">
+              {props.value}
+            </span>
+            {hasDelta && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-0.5 text-[10px] font-semibold",
+                  up ? "text-emerald" : "text-rose",
+                )}
+              >
+                {up ? <ArrowUpRight className="h-2.5 w-2.5" /> : <ArrowDownRight className="h-2.5 w-2.5" />}
+                {Math.abs(props.delta as number)}%
+              </span>
+            )}
+          </div>
+          {isZero && props.emptyHint && (
+            <p className="truncate text-[9px] text-muted-foreground">{props.emptyHint}</p>
+          )}
+        </div>
+      </div>
+    );
+    if (props.to) return <Link to={props.to as string} onClick={props.onClick} className="block h-full">{inner}</Link>;
+    if (props.onClick) return <button type="button" onClick={props.onClick} className="block h-full w-full text-left">{inner}</button>;
+    return inner;
+  }
 
   const body = (
     <div

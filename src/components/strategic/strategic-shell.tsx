@@ -128,10 +128,10 @@ export function StrategicShell() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform lg:static lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-transform lg:static lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -222,8 +222,8 @@ export function StrategicShell() {
           </button>
         </div>
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center gap-3 border-b bg-card px-4 lg:px-6">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur lg:px-6">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(!open)}>
             <Menu className="h-5 w-5" />
           </Button>
@@ -270,8 +270,8 @@ export function StrategicShell() {
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
-        <main className="flex-1 overflow-auto bg-[oklch(0.98_0.005_250)] p-4 lg:p-6">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto bg-[oklch(0.98_0.005_250)]">
+          <div className="mx-auto w-full max-w-[1600px] p-3 lg:p-4"><Outlet /></div>
         </main>
         <OfflineBanner />
       </div>
