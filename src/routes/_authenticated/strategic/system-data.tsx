@@ -235,8 +235,10 @@ function SystemDataPage() {
 
 function DataIntegrityCard() {
   const runFn = useServerFn(runConsistencyCheck);
+  type CheckRow = { name: string; expected: number | string; actual: number | string; ok: boolean; detail?: string };
+  type CheckResult = { generated_at: string; drift: number; checks: CheckRow[] };
   const m = useMutation({
-    mutationFn: () => runFn(),
+    mutationFn: () => runFn() as Promise<CheckResult>,
     onError: (e: Error) => toast.error(e.message),
   });
   const data = m.data;
