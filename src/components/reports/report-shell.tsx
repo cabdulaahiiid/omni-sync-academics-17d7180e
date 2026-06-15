@@ -25,14 +25,12 @@ type Search = ReportFilters & { report: string; group?: string };
 
 export function ReportShell({
   search,
-  routeFrom,
   scope = "all",
 }: {
   search: Search;
-  routeFrom: string;
   scope?: "all" | "operational";
 }) {
-  const navigate = useNavigate({ from: routeFrom });
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const runFn = useServerFn(runReport);
   const optionsFn = useServerFn(getReportFilterOptions);
