@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +45,9 @@ export function WeekFeedbackWorkspace({ open, onOpenChange, semesterId, weekNum,
         className="w-full p-0 sm:max-w-5xl flex flex-col h-full overflow-hidden"
       >
         <SheetTitle className="sr-only">{title ?? `Week ${weekNum} feedback`}</SheetTitle>
+        <SheetDescription className="sr-only">
+          Chat with Admin and edit draft sessions for this week.
+        </SheetDescription>
         <WorkspaceBody
           semesterId={semesterId}
           weekNum={weekNum}
@@ -63,21 +66,22 @@ function WorkspaceBody({ semesterId, weekNum, title }: { semesterId: string; wee
   const tableFn = useServerFn(getSemesterWeekTimetable);
   const resubmitFn = useServerFn(dhResubmitWeek);
 
-  const { data: rows = [] } = useQuery({
+  const { data: rows = [], isLoading: rowsLoading } = useQuery({
     queryKey: ["semester-week-timetable", semesterId, weekNum],
     queryFn: () => tableFn({ data: { semester_id: semesterId, week_num: weekNum } }),
   });
 
   // Aggregate status for the week header pill
   const aggregateStatus = (() => {
-    const statuses = new Set((rows ?? []).map((r: any) => r.status));
+    const safeRows = Array.isArray(rows) ? rows : [];
+    const statuses = new Set(safeRows.map((r: any) => r?.status).filter(Boolean));
     if (statuses.has("LIVE") || statuses.has("ACTIVE")) return "LIVE";
     if (statuses.has("PENDING_MA")) return "PENDING_MA";
     if (statuses.has("DRAFT")) return "DRAFT";
     return [...statuses][0] ?? "DRAFT";
   })();
 
-  const draftCount = (rows ?? []).filter((r: any) => r.status === "DRAFT").length;
+  const draftCount = (Array.isArray(rows) ? rows : []).filter((r: any) => r?.status === "DRAFT").length;
   const canResubmit = isDH && draftCount > 0;
 
   const resubmit = useMutation({
@@ -181,16 +185,20 @@ function ChatPanel({ semesterId, weekNum }: { semesterId: string; weekNum: numbe
 
   const messages = (data?.messages ?? []) as Msg[];
   const hasThread = !!data?.thread;
+  const loading = data === undefined;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
-        {!hasThread && (
+        {loading && (
+          <p className="mt-8 text-center text-xs text-muted-foreground">Loading conversation…</p>
+        )}
+        {!loading && !hasThread && (
           <p className="mt-8 text-center text-xs text-muted-foreground">
             No feedback from Admin yet for this week.
           </p>
         )}
-        {hasThread && messages.length === 0 && (
+        {!loading && hasThread && messages.length === 0 && (
           <p className="mt-8 text-center text-xs text-muted-foreground">Conversation is empty.</p>
         )}
         {messages.map((m) => {
@@ -349,8 +357,8 @@ function EditRow({
   const [date, setDate] = useState<string>(row.date);
   const [start, setStart] = useState<string>(row.start_time?.slice(0, 5) ?? "");
   const [end, setEnd] = useState<string>(row.end_time?.slice(0, 5) ?? "");
-  const [venueId, setVenueId] = useState<string>(row.venue_id ?? "");
-  const [trainerId, setTrainerId] = useState<string>(row.trainer_registry_id ?? "");
+  const [venueId, setVenueId] = useState<string | undefined>(row.venue_id ?? undefined);
+  const [trainerId, setTrainerId] = useState<string | undefined>(row.trainer_registry_id ?? undefined);
   const [saving, setSaving] = useState(false);
   return (
     <TableRow className="bg-accent/30">
@@ -364,18 +372,22 @@ function EditRow({
       <TableCell><span className="font-mono text-xs">{row.module_code}</span></TableCell>
       <TableCell>{row.section_name}</TableCell>
       <TableCell>
-        <Select value={venueId} onValueChange={setVenueId}>
+        <Select value={venueId || undefined} onValueChange={(v) => setVenueId(v || undefined)}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Venue" /></SelectTrigger>
           <SelectContent>
-            {venues.map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+            {(venues ?? []).filter((v: any) => v?.id).map((v: any) => (
+              <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </TableCell>
       <TableCell>
-        <Select value={trainerId} onValueChange={setTrainerId}>
+        <Select value={trainerId || undefined} onValueChange={(v) => setTrainerId(v || undefined)}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Trainer" /></SelectTrigger>
           <SelectContent>
-            {trainers.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
+            {(trainers ?? []).filter((t: any) => t?.id).map((t: any) => (
+              <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </TableCell>
