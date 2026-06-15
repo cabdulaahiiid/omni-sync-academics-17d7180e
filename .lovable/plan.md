@@ -1,140 +1,86 @@
+# Week Feedback Workspace — Unified Chat + Edit Modal
+
 ## Goal
+Replace the two separate dialogs (`FeedbackChat` panel + `WeekTimetableDialog`) with **one** "Week Feedback Workspace" modal that opens from every "Open Chat" / week-feedback alert. It must give the DH a chat thread *and* a full CRUD edit surface for that week's schedule side-by-side, with a clear status-driven Resubmit loop.
 
-Turn the existing TVET ERP into a live, event-driven system where every dashboard, report, and metric is derived from the database in real time, exports are first-class, and every business action is auditable. No existing functionality, RLS, or auth changes.
+Scope is **frontend + composition only**. No DB, RLS, RPC, or server-function changes — all required server functions already exist (`getThreadForSemester`, `replyFeedback`, `getSemesterWeekTimetable`, `updateDraftSession`, `dhDeleteDraftSession`, `dhResubmitWeek`, plus venues/trainers lookups).
 
-## 1. Realtime sync layer (database + client)
+## 1. New component: `WeekFeedbackWorkspace`
+File: `src/components/week-feedback-workspace.tsx`
 
-**Migration — enable Realtime on the agreed tables:**
+Props: `{ open, onOpenChange, semesterId, weekNum, title }`.
 
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE
-  public.schedules,
-  public.approval_queue,
-  public.attendance_logs,
-  public.session_logs,
-  public.attendance_overrides,
-  public.students,
-  public.trainer_registry,
-  public.modules;
-ALTER TABLE public.schedules, public.approval_queue, public.attendance_logs,
-            public.session_logs, public.attendance_overrides, public.students,
-            public.trainer_registry, public.modules REPLICA IDENTITY FULL;
-```
+Shell: shadcn `Sheet` (right side, `w-full sm:max-w-5xl`) so it works as a drawer on desktop and full-screen on mobile — avoids the layout-break risk of a tall `Dialog` on small viewports.
 
-**New client primitive — `src/hooks/use-live-tables.ts`:**
-One channel per mounted hook, subscribes to `postgres_changes` for the requested tables, and on any event calls `queryClient.invalidateQueries({ queryKey: [scope] })` for the affected scopes (debounced 250ms to coalesce bursts). Replaces ad-hoc polling and supplements `use-dh-live-channel.ts` (kept for backward compat).
+Header row:
+- Title: "{semester} · Week N — Feedback"
+- Status pill from the week's aggregate schedule status (DRAFT / PENDING_MA / LIVE / FEEDBACK_ACTIVE) using existing `StatusBadge` tokens (amber for pending/needs-edit, green for approved/LIVE, neutral for draft).
+- Right-aligned primary button: **Resubmit to Admin** (disabled unless at least one session is DRAFT and week is not already PENDING_MA/LIVE).
 
-**Wiring:** mount `useLiveTables([...])` at the top of each dashboard / list route:
+Body: shadcn `Tabs` with two tabs, `Chat` (default) and `Edit timetable`. On `lg:` breakpoint, render both panels side-by-side (split-screen) instead of tabs, using the same child components — so the DH can read Admin feedback while editing. Tabs remain the mobile fallback.
 
-- Operational dashboard, drafts, matrix, attendance, live-monitor, students → schedules, approval_queue, attendance_logs, session_logs, attendance_overrides.
-- Strategic dashboard, approvals, students, trainers, modules, audit → schedules, approval_queue, students, trainer_registry, modules.
-- Approvals page → approval_queue + schedule_feedback_messages (already broadcast-friendly).
+### Chat panel
+Reuse the message rendering + composer from the current `FeedbackChat` component, but extracted into a presentational `<FeedbackThreadPanel semesterId weekNum />`:
+- Scrolling bubble history (mine = primary, theirs = muted), timestamps, auto-scroll on new message.
+- Realtime subscription to `schedule_feedback_messages` filtered by `thread_id` (already implemented).
+- Persistent `Textarea` + Send at the bottom, sticky inside the panel.
+- Empty state if no thread yet (Admin hasn't sent feedback): show muted helper "No feedback from Admin yet for this week."
 
-Result: any submit/approve/check-in/override pushes updates to every open client within ~1s with no manual refresh, while keeping the cache as the single source of truth.
+### Edit timetable panel
+Reuse the table + inline EditRow from `WeekTimetableDialog`, extracted into `<WeekTimetableEditor semesterId weekNum />`:
+- Full CRUD on DRAFT sessions: edit date/time/venue/trainer (existing `EditRow`), delete (existing `dhDeleteDraftSession`).
+- Add "+ New session" button (DH-only) that opens an inline create row → calls existing `dhCreateDraftSession` if present; if not, scope to U/D only in this iteration and surface a TODO note in the plan (verify during build).
+- Locked-state visualization: rows whose `status !== 'DRAFT'` render read-only with a small lock icon and a tooltip ("Locked — already submitted / approved"). Edit/Delete buttons disabled, matching current behavior.
+- Footer helper: "Edits saved here become a new draft version for Week N. They go live only after you Resubmit and Admin approves."
 
-## 2. Unified live report engine
+### Resubmit action (state loop)
+Single button in the header. Confirms with a small popover ("Resubmit N draft sessions for Admin review?") then calls existing `dhResubmitWeek({ semester_id, week_num })`. On success:
+- Toast "Week N resubmitted".
+- Invalidate `["semester-week-timetable", semesterId, weekNum]`, `["feedback-thread", …]`, `["dh-week-threads", …]`, and the operational dashboard queries.
+- Status pill flips to PENDING_MA; Edit panel auto-locks (all rows now PENDING_MA, so existing per-row disable logic takes over). Chat thread + history are preserved (server keeps the thread row).
+- If Admin later rejects, server reopens FEEDBACK_ACTIVE and rows return to DRAFT → workspace becomes editable again with chat history intact. No client work needed beyond reading the live status.
 
-**New module — `src/lib/reports.functions.ts`** (server functions, RLS-scoped via `requireSupabaseAuth`). One handler per report; all accept a shared filter shape:
+## 2. Wire-up
+Replace the two separate triggers in `src/routes/_authenticated/operational/drafts.tsx`:
+- Drop `openThread` state and the `FeedbackChat` block.
+- Drop `openWeek` state and the `WeekTimetableDialog` block.
+- Add one `openWorkspace: { semester_id, week_num, title } | null` state and one `<WeekFeedbackWorkspace …/>`.
+- Both the "Open chat" button and the per-week tile click route through `setOpenWorkspace(...)`.
 
-```ts
-type ReportFilters = {
-  academic_year?: string;     // derived from semester_registry.start_date year
-  semester_id?: string;
-  department_id?: string;
-  trainer_registry_id?: string;
-  module_id?: string;
-  date_from?: string; date_to?: string;
-  status?: string;
-};
-```
+Also update other entry points that currently launch chat or edit dialogs:
+- `src/routes/_authenticated/operational/matrix.tsx` — swap any "Open chat" / "Edit week" buttons to open the workspace.
+- `src/routes/_authenticated/operational/index.tsx` — the Week Feedback alert row's "Open Chat" CTA opens the workspace at the right week.
 
-Reports (all derived live from current rows, no caching):
+Leave the existing `FeedbackChat` component file in place for now (it's still imported in places like `strategic/approvals.tsx`) but mark its DH-edit branch as superseded in a code comment; full removal can come in a follow-up once all call sites migrate.
 
-- Academic: `enrollment`, `attendanceSummary`, `trainerWorkload`, `timetableUtilization`, `semesterProgress`, `completionStatus`.
-- Department: `departmentPerformance`, `trainerPerformance`, `attendanceCompliance`, `approvalStatus`, `activeSessions`.
-- Admin: `institutionSummary`, `academicStatistics`, `departmentRankings`, `userActivity`, `auditActivity`, `complianceSummary`.
-- Approvals: `approvalReport` (pending/approved/returned/rejected with the same filters).
+## 3. Visual states (dashboard-wide consistency)
+Use existing tokens via `StatusBadge`:
+- `LIVE` / approved → green (`bg-emerald-…` token already in `status-badge.tsx`).
+- `PENDING_MA` → amber.
+- `DRAFT` with active feedback thread → amber "Needs edit".
+- `DRAFT` clean → neutral.
 
-**URL-driven filters — `src/routes/_authenticated/{operational,strategic}/reports.tsx`:**
-Refactor to a single tabbed report shell using `validateSearch` + `zodValidator` + `fallback()` so every filter (year/sem/dept/trainer/module/range/status/tab) lives in the URL. Filter bar uses existing shadcn Select / DatePicker. Loader uses `ensureQueryData(reportsQueryOptions(deps))`; component reads via `useSuspenseQuery`. Changing a filter rewrites search params; `useLiveTables` triggers refetch on data changes.
+Apply the same badge in: workspace header, week tiles in `drafts.tsx`, week rows in `operational/index.tsx`, and matrix week chips. No new color tokens — reuse `StatusBadge` variants only.
 
-**Drill-downs:** every row in a report links to the underlying list route with the same filters preserved in search params (matches the existing dashboard drill-down behavior).
+## 4. Responsiveness
+- `Sheet` side="right" with `w-full sm:max-w-5xl`, body `flex flex-col h-full overflow-hidden`.
+- Chat panel and Edit panel each `min-h-0 flex-1 overflow-y-auto`; composer / Resubmit button stay sticky (no growing-modal bug with long threads).
+- `<lg`: `Tabs` (single column). `lg:`: two-column grid `grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]`, chat left / editor right.
 
-## 3. Export engine (PDF + Excel + Print)
-
-Add three deps: `xlsx`, `jspdf`, `jspdf-autotable`.
-
-**New helpers — `src/lib/report-export.ts` (client-only):**
-
-- `exportToXlsx(name, columns, rows)` — SheetJS workbook with one sheet per report section, branded header row, frozen header, autosized cols.
-- `exportToPdf(name, title, filters, columns, rows)` — jsPDF + autotable with institution name header, filter summary, page numbers, landscape A4.
-- `openPrintView(reportKey, searchString)` — opens `/print/{reportKey}?...` in a new tab.
-
-**Existing CSV** (`exports.functions.ts`) stays; the unified Export menu on every report exposes CSV / Excel / PDF / Print.
-
-**Print routes — `src/routes/print/$report.tsx`:**
-Standalone, no shell, `@media print` styles already in `styles.css`. Reuses the same server fns so print output equals on-screen data.
-
-## 4. Live dashboard fixes
-
-Replace any remaining static values:
-
-- Operational + Strategic dashboards: replace any constant in `dashboard.functions.ts` that doesn't query the DB. Audit pass — every KPI must reference `schedules`, `approval_queue`, `attendance_logs`, `students`, `trainer_registry`, or `modules` directly.
-- Mount `useLiveTables` so KPI tiles, alert rows, and activity rows refresh automatically.
-- `notifications-bell.tsx`: switch from poll to `useLiveTables(["notifications"])` using existing query key.
-
-## 5. Data consistency validators
-
-**Server fn — `src/lib/consistency.functions.ts`** (`runConsistencyCheck`, MA-only). Compares aggregates:
-
-- `students` count per department vs `departments.student_count` (if stored) and per `sections`.
-- `attendance_logs` totals vs schedule-level rollups used in KPIs.
-- `approval_queue` pending count vs dashboard counter.
-- Schedules with no trainer, no venue, or no module.
-
-Returns `{ checks: [{ name, expected, actual, ok, drift }] }`. Surface on `strategic/system-data` under a new "Data Integrity" card with a "Run check" button; failed checks render as warning rows and write to `audit_logs` (`action_type='CONSISTENCY_CHECK'`).
-
-## 6. Auditable business events
-
-Audit coverage is already strong for approvals/swaps/deletes. Add missing events via lightweight wrappers in the relevant server fns:
-
-- `EXPORT_REPORT` — written when any export server fn runs (report key + filters).
-- `RUN_REPORT` — written when a report is generated (cheap, used for `userActivity`).
-- `STUDENT_ADDED` / `STUDENT_UPDATED` / `STUDENT_DELETED` — in `students.functions.ts`.
-- `TRAINER_UPDATED`, `MODULE_UPSERT` — in their CRUD fns.
-- `RESET_REPORT_FILTERS` is intentionally NOT logged (UI-only).
-
-All entries go through the existing `audit_logs` insert pattern (`actor_id`, `action_type`, `entity_type`, `entity_id`, `before_state`, `after_state`).
-
-## 7. Acceptance check
-
-- Open two browsers as DH + MA: DH submits, MA sees pending count + new row within ~1s, no refresh.
-- Trainer checks in on `/ground/$id` → operational dashboard "Active Classes" + attendance KPI updates without action.
-- Change a filter on Reports → URL updates, data updates, browser back restores prior view.
-- Export PDF/Excel of `attendanceSummary` filtered by department + date range → file contains the exact rows shown on screen.
-- Consistency check on `system-data` → 0 drift on a fresh seed; corrupting a row surfaces it.
-- All previous routes/buttons still work; no RLS or schema change touches existing tables besides the publication add.
+## What is explicitly NOT changing
+- No DB schema, RLS, RPC, or grants.
+- No server functions added or modified.
+- No changes to approval-decision logic, audit logs, notifications, or realtime tables list.
+- Existing `FeedbackChat` and `WeekTimetableDialog` files stay on disk during this pass; only their call sites in operational routes are replaced.
 
 ## Files
+**New:** `src/components/week-feedback-workspace.tsx`, `src/components/week-feedback/feedback-thread-panel.tsx`, `src/components/week-feedback/week-timetable-editor.tsx`.
+**Edited:** `src/routes/_authenticated/operational/drafts.tsx`, `src/routes/_authenticated/operational/matrix.tsx`, `src/routes/_authenticated/operational/index.tsx`.
 
-**New:**
-- `supabase/migrations/<ts>_realtime_publication.sql`
-- `src/hooks/use-live-tables.ts`
-- `src/lib/reports.functions.ts`
-- `src/lib/consistency.functions.ts`
-- `src/lib/report-export.ts`
-- `src/routes/print/$report.tsx`
-- `src/components/reports/report-filter-bar.tsx`
-- `src/components/reports/export-menu.tsx`
-
-**Edited (UI/wiring only, no behavior regressions):**
-- `src/routes/_authenticated/operational/{index,reports,drafts,matrix,attendance,live-monitor,students}.tsx`
-- `src/routes/_authenticated/strategic/{index,reports,approvals,students,trainers,modules,audit,system-data}.tsx`
-- `src/components/notifications-bell.tsx`
-- `src/lib/dashboard.functions.ts` (replace any static value with DB-derived)
-- `src/lib/students.functions.ts`, `src/lib/trainer.functions.ts`, `src/lib/modules.functions.ts` (add audit log inserts)
-- `package.json` (add `xlsx`, `jspdf`, `jspdf-autotable`)
-
-## Explicitly NOT touched
-
-Auth, RLS policies, existing RPC bodies, semester/draft/approval workflows, `client.ts`/`client.server.ts`/`auth-middleware.ts`/`auth-attacher.ts`, `types.ts`, prior migrations.
+## Acceptance check (manual, post-build)
+1. As DH, click "Open Chat" on a Week Feedback alert → workspace sheet opens with chat + edit visible (split on desktop, tabbed on mobile).
+2. Send a reply → appears instantly; realtime delivers to MA's open session.
+3. Edit a DRAFT session's time/venue/trainer → saves; row updates.
+4. Click "Resubmit to Admin" → toast, status flips to PENDING_MA, all rows lock, chat history retained.
+5. MA rejects with feedback → DH reopens workspace, sees full prior chat + new message, rows DRAFT again and editable.
+6. MA approves → status flips green LIVE, edit controls stay locked, chat remains read-only-visible.
