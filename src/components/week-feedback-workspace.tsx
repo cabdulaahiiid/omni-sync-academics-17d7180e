@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +45,9 @@ export function WeekFeedbackWorkspace({ open, onOpenChange, semesterId, weekNum,
         className="w-full p-0 sm:max-w-5xl flex flex-col h-full overflow-hidden"
       >
         <SheetTitle className="sr-only">{title ?? `Week ${weekNum} feedback`}</SheetTitle>
+        <SheetDescription className="sr-only">
+          Chat with Admin and edit draft sessions for this week.
+        </SheetDescription>
         <WorkspaceBody
           semesterId={semesterId}
           weekNum={weekNum}
@@ -63,21 +66,22 @@ function WorkspaceBody({ semesterId, weekNum, title }: { semesterId: string; wee
   const tableFn = useServerFn(getSemesterWeekTimetable);
   const resubmitFn = useServerFn(dhResubmitWeek);
 
-  const { data: rows = [] } = useQuery({
+  const { data: rows = [], isLoading: rowsLoading } = useQuery({
     queryKey: ["semester-week-timetable", semesterId, weekNum],
     queryFn: () => tableFn({ data: { semester_id: semesterId, week_num: weekNum } }),
   });
 
   // Aggregate status for the week header pill
   const aggregateStatus = (() => {
-    const statuses = new Set((rows ?? []).map((r: any) => r.status));
+    const safeRows = Array.isArray(rows) ? rows : [];
+    const statuses = new Set(safeRows.map((r: any) => r?.status).filter(Boolean));
     if (statuses.has("LIVE") || statuses.has("ACTIVE")) return "LIVE";
     if (statuses.has("PENDING_MA")) return "PENDING_MA";
     if (statuses.has("DRAFT")) return "DRAFT";
     return [...statuses][0] ?? "DRAFT";
   })();
 
-  const draftCount = (rows ?? []).filter((r: any) => r.status === "DRAFT").length;
+  const draftCount = (Array.isArray(rows) ? rows : []).filter((r: any) => r?.status === "DRAFT").length;
   const canResubmit = isDH && draftCount > 0;
 
   const resubmit = useMutation({
