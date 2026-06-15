@@ -41,15 +41,15 @@ export const Route = createFileRoute("/_authenticated/strategic/approvals")({
 });
 
 function ApprovalsPage() {
-  const search = useSearch({ from: "/_authenticated/strategic/approvals" });
+  const urlSearch = useSearch({ from: "/_authenticated/strategic/approvals" });
   const [tab, setTab] = useState<"session" | "semester">("session");
   const [decisionFilter, setDecisionFilter] = useState<"pending" | "approved" | "rejected">(
-    search.status ?? "pending",
+    urlSearch.status ?? "pending",
   );
   useEffect(() => {
-    if (search.status && search.status !== decisionFilter) setDecisionFilter(search.status);
+    if (urlSearch.status && urlSearch.status !== decisionFilter) setDecisionFilter(urlSearch.status);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.status]);
+  }, [urlSearch.status]);
   const [search, setSearch] = useState("");
   const [conflictFilter, setConflictFilter] = useState<"any" | "trainer" | "venue" | "qualification" | "load">("any");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name">("newest");
