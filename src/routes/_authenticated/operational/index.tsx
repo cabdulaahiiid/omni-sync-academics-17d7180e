@@ -29,8 +29,6 @@ import { KpiTile } from "@/components/erp/kpi-tile";
 import { DashboardSection } from "@/components/erp/dashboard-section";
 import { AlertRow } from "@/components/erp/alert-row";
 import { EmptyState } from "@/components/erp/empty-state";
-import { AIInsightsPanel, type Insight } from "@/components/erp/ai-insights-panel";
-import { ReportingStrip } from "@/components/erp/reporting-strip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/operational/")({
@@ -105,116 +103,22 @@ function DHDashboard() {
     { label: "Weekly Compliance",        value: `${kpi?.weekly_compliance ?? 0}%`, icon: ShieldCheck,   tone: "orange" as const, delta: null,                                  to: "/operational/reports",      emptyHint: "No schedule activity" },
   ];
 
-  // Derived AI insights from already-fetched data
-  const insights: Insight[] = [];
-  if (kpi) {
-    if ((kpi.pending_reviews ?? 0) >= 3) {
-      insights.push({
-        id: "pending-backlog",
-        severity: (kpi.pending_reviews ?? 0) >= 10 ? "crit" : "warn",
-        icon: "alert",
-        title: "Schedule review backlog growing",
-        detail: `${kpi.pending_reviews} weekly submission(s) awaiting your action.`,
-        to: "/operational/drafts",
-      });
-    }
-    if ((kpi.missing_attendance ?? 0) > 0) {
-      insights.push({
-        id: "missing-att",
-        severity: (kpi.missing_attendance ?? 0) >= 5 ? "crit" : "warn",
-        icon: "alert",
-        title: "Sessions missing attendance",
-        detail: `${kpi.missing_attendance} ended session(s) have no attendance log filed.`,
-        to: "/operational/attendance",
-      });
-    }
-    if ((kpi.weekly_compliance ?? 0) > 0 && (kpi.weekly_compliance ?? 0) < 70) {
-      insights.push({
-        id: "compliance-low",
-        severity: "warn",
-        icon: "trend",
-        title: "Weekly compliance below target",
-        detail: `Department compliance is ${kpi.weekly_compliance}% — target is ≥ 70%.`,
-        to: "/operational/reports",
-      });
-    }
-  }
-  if (analytics.length >= 2) {
-    const last = analytics[analytics.length - 1];
-    const prev = analytics[analytics.length - 2];
-    const drop = (prev?.attendance ?? 0) - (last?.attendance ?? 0);
-    if (drop >= 10) {
-      insights.push({
-        id: "att-drop",
-        severity: drop >= 20 ? "crit" : "warn",
-        icon: "trend",
-        title: "Attendance dropped week-over-week",
-        detail: `Attendance fell ${drop}% from ${prev.week} to ${last.week}.`,
-        to: "/operational/reports",
-      });
-    }
-    const punc = analytics.map((a: any) => a.punctuality ?? 0);
-    const avgPunc = Math.round(punc.reduce((s, v) => s + v, 0) / punc.length);
-    if (avgPunc >= 85) {
-      insights.push({
-        id: "punc-strong",
-        severity: "info",
-        icon: "trend",
-        title: "Trainer punctuality is strong",
-        detail: `8-week average punctuality at ${avgPunc}% — keep it up.`,
-        to: "/operational/live-monitor",
-      });
-    }
-  }
-  if ((active ?? []).length > 0) {
-    insights.push({
-      id: "live-now",
-      severity: "info",
-      icon: "activity",
-      title: "Classes are live right now",
-      detail: `${active.length} session(s) currently active in your department.`,
-      to: "/operational/live-monitor",
-    });
-  }
-
-  const reportingStats = [
-    { label: "Active Today",     value: kpi?.active_today ?? 0,            icon: PlayCircle,    to: "/operational/live-monitor" },
-    { label: "Pending Reviews",  value: kpi?.pending_reviews ?? 0,         icon: Inbox,         to: "/operational/drafts" },
-    { label: "Submitted",        value: kpi?.submitted_attendance ?? 0,    icon: Upload,        to: "/operational/attendance" },
-    { label: "Missing",          value: kpi?.missing_attendance ?? 0,      icon: AlertTriangle, to: "/operational/attendance" },
-    { label: "Attendance",       value: `${kpi?.attendance_pct ?? 0}%`,    icon: ClipboardCheck, to: "/operational/attendance" },
-    { label: "Compliance",       value: `${kpi?.weekly_compliance ?? 0}%`, icon: ShieldCheck,   to: "/operational/reports" },
-  ];
-
-  const QUICK_ACTIONS = [
-    { to: "/operational/drafts",          label: "Drafts",         icon: Inbox },
-    { to: "/operational/attendance",      label: "Attendance",     icon: ClipboardCheck },
-    { to: "/operational/matrix",          label: "Timetable",      icon: CalendarDays },
-    { to: "/operational/live-monitor",    label: "Live Monitor",   icon: Activity },
-    { to: "/operational/semester-upload", label: "Semester Upload", icon: Upload },
-    { to: "/operational/reports",         label: "Reports",        icon: BarChart3 },
-  ] as const;
-
   return (
     <div className="space-y-6">
-      <div className="card-elevated rounded-2xl border border-border/70 bg-gradient-to-br from-[var(--nav-bg)] to-[var(--nav-bg-2)] p-5 text-white">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/55">Department Operations Center</p>
-            <h1 className="mt-1 truncate text-[24px] font-semibold tracking-tight">
-              {greetOpDH(me?.profile?.full_name)}
-            </h1>
-            <p className="mt-1 text-[12px] text-white/65">
-              Live status for your department · Updated{" "}
-              <span className="font-medium text-white">
-                {lastUpdated ? new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
+      <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-1 border-b border-border/70 bg-background/85 px-4 py-3 backdrop-blur lg:-mx-6 lg:-mt-6 lg:px-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-[22px] font-semibold tracking-tight text-foreground">Department Operations Center</h1>
+            <p className="text-xs text-muted-foreground">
+              Live status for your department •{" "}
+              <span className="font-medium text-foreground">
+                Updated {lastUpdated ? new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
               </span>
             </p>
           </div>
           <Button
             size="sm"
-            variant="secondary"
-            className="shrink-0 bg-white/10 text-white hover:bg-white/20 border border-white/15"
+            variant="outline"
             onClick={() => {
               qc.invalidateQueries({ queryKey: ["dh-stats"] });
               qc.invalidateQueries({ queryKey: ["dh-sched"] });
@@ -226,12 +130,6 @@ function DHDashboard() {
           >
             <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
           </Button>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <DHHeaderChip label="Active Today" value={String(kpi?.active_today ?? 0)} />
-          <DHHeaderChip label="Attendance" value={`${kpi?.attendance_pct ?? 0}%`} />
-          <DHHeaderChip label="Pending Reviews" value={String(kpi?.pending_reviews ?? 0)} />
-          <DHHeaderChip label="Compliance" value={`${kpi?.weekly_compliance ?? 0}%`} />
         </div>
       </div>
 
@@ -441,45 +339,6 @@ function DHDashboard() {
           </CardContent>
         </Card>
       </DashboardSection>
-
-      <AIInsightsPanel insights={insights} />
-
-      <DashboardSection title="Quick Actions">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          {QUICK_ACTIONS.map((a) => (
-            <Button
-              key={a.to}
-              asChild
-              variant="outline"
-              className="h-auto justify-start gap-2 rounded-xl border-border/70 bg-[var(--surface-raised)] px-3 py-2.5 text-[13px]"
-            >
-              <Link to={a.to as string}>
-                <a.icon className="h-4 w-4" />
-                {a.label}
-              </Link>
-            </Button>
-          ))}
-        </div>
-      </DashboardSection>
-
-      <DashboardSection title="Department Totals" description="Click a tile to drill into the source.">
-        <ReportingStrip stats={reportingStats} />
-      </DashboardSection>
-    </div>
-  );
-}
-
-function greetOpDH(name?: string | null) {
-  const h = new Date().getHours();
-  const g = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-  return `${g}, ${name?.split(" ")[0] || "Department Head"}`;
-}
-
-function DHHeaderChip({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-white/8 px-3 py-2 ring-1 ring-white/10">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/55">{label}</p>
-      <p className="mt-0.5 truncate text-[13px] font-semibold text-white">{value}</p>
     </div>
   );
 }

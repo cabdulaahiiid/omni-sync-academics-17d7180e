@@ -1,5 +1,4 @@
-import { createFileRoute, useSearch } from "@tanstack/react-router";
-import { z } from "zod";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -33,23 +32,12 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/strategic/approvals")({
-  validateSearch: (s: Record<string, unknown>) =>
-    z.object({
-      status: z.enum(["pending", "approved", "rejected"]).optional(),
-    }).parse(s),
   component: ApprovalsPage,
 });
 
 function ApprovalsPage() {
-  const urlSearch = useSearch({ from: "/_authenticated/strategic/approvals" });
   const [tab, setTab] = useState<"session" | "semester">("session");
-  const [decisionFilter, setDecisionFilter] = useState<"pending" | "approved" | "rejected">(
-    urlSearch.status ?? "pending",
-  );
-  useEffect(() => {
-    if (urlSearch.status && urlSearch.status !== decisionFilter) setDecisionFilter(urlSearch.status);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlSearch.status]);
+  const [decisionFilter, setDecisionFilter] = useState<"pending" | "approved" | "rejected">("pending");
   const [search, setSearch] = useState("");
   const [conflictFilter, setConflictFilter] = useState<"any" | "trainer" | "venue" | "qualification" | "load">("any");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name">("newest");
