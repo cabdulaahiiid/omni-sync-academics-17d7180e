@@ -6,9 +6,8 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
 import { listWeekThreadsForDept } from "@/lib/feedback.functions";
-import { ApprovalChatDock } from "@/components/approval-chat-dock";
 import { ApprovalVersionTimeline } from "@/components/approval-version-timeline";
-import { WeekTimetableDialog } from "@/components/week-timetable-dialog";
+import { WeekFeedbackWorkspace } from "@/components/week-feedback-workspace";
 import { useMe } from "@/hooks/use-me";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,15 +42,14 @@ function DraftsPage() {
   const reqWeekFn = useServerFn(dhRequestApprovalPerWeek);
   const weekThreadsFn = useServerFn(listWeekThreadsForDept);
   const qc = useQueryClient();
-  const [openThread, setOpenThread] = useState<{ semester_id: string; week_num: number; title: string } | null>(null);
-  const [openWeek, setOpenWeek] = useState<{ semester_id: string; week_num: number; title: string } | null>(null);
+  const [openWorkspace, setOpenWorkspace] = useState<{ semester_id: string; week_num: number; title: string } | null>(null);
 
   useEffect(() => {
     if (search.chat && search.semester && search.week != null) {
-      setOpenThread({
+      setOpenWorkspace({
         semester_id: search.semester,
         week_num: search.week,
-        title: `Week ${search.week} discussion`,
+        title: `Week ${search.week}`,
       });
     }
   }, [search.chat, search.semester, search.week]);
@@ -121,12 +119,12 @@ function DraftsPage() {
             {(weekThreads ?? []).map((t: any) => (
               <div key={t.id} className="flex items-center justify-between rounded-md border p-2">
                 <button type="button" className="text-left"
-                  onClick={() => setOpenWeek({ semester_id: t.semester_id, week_num: t.week_num, title: `${t.semester_name} · Week ${t.week_num}` })}>
+                  onClick={() => setOpenWorkspace({ semester_id: t.semester_id, week_num: t.week_num, title: `${t.semester_name} · Week ${t.week_num}` })}>
                   <p className="text-sm font-medium">{t.semester_name} · Week {t.week_num}</p>
                   <p className="text-[11px] text-muted-foreground">{new Date(t.created_at).toLocaleString()}</p>
                 </button>
                 <Button size="sm" variant="outline"
-                  onClick={() => setOpenThread({ semester_id: t.semester_id, week_num: t.week_num, title: `${t.semester_name} · Week ${t.week_num}` })}>
+                  onClick={() => setOpenWorkspace({ semester_id: t.semester_id, week_num: t.week_num, title: `${t.semester_name} · Week ${t.week_num}` })}>
                   Open chat
                 </Button>
               </div>
@@ -177,7 +175,7 @@ function DraftsPage() {
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
                 {s.weeks.map((w: any) => (
                   <button key={w.week_num} type="button"
-                    onClick={() => setOpenWeek({ semester_id: s.id, week_num: w.week_num, title: `${s.name} · Week ${w.week_num}` })}
+                    onClick={() => setOpenWorkspace({ semester_id: s.id, week_num: w.week_num, title: `${s.name} · Week ${w.week_num}` })}
                     className="rounded-lg border p-2 text-center transition-colors hover:bg-accent/40">
                     <p className="text-xs font-semibold">Week {w.week_num}</p>
                     <p className="text-[11px] text-muted-foreground">{w.total} sessions</p>
@@ -194,22 +192,13 @@ function DraftsPage() {
           </Card>
         );
       })}
-      {openThread && (
-        <ApprovalChatDock
-          semesterId={openThread.semester_id}
-          weekNum={openThread.week_num}
-          title={openThread.title}
+      {openWorkspace && (
+        <WeekFeedbackWorkspace
           open
-          onOpenChange={(o) => !o && setOpenThread(null)}
-        />
-      )}
-      {openWeek && (
-        <WeekTimetableDialog
-          open={!!openWeek}
-          onOpenChange={(o) => !o && setOpenWeek(null)}
-          semesterId={openWeek.semester_id}
-          weekNum={openWeek.week_num}
-          title={openWeek.title}
+          onOpenChange={(o) => !o && setOpenWorkspace(null)}
+          semesterId={openWorkspace.semester_id}
+          weekNum={openWorkspace.week_num}
+          title={openWorkspace.title}
         />
       )}
     </div>
