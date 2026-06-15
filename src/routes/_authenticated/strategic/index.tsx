@@ -135,10 +135,6 @@ function StrategicDashboard() {
   useEffect(() => { if (health) writeHealth(health.score); }, [health?.score]);
   const weeklyDelta = health && prevScore != null ? health.score - prevScore : null;
 
-  if (meLoading) {
-    return <div className="flex min-h-64 items-center justify-center text-muted-foreground">Loading…</div>;
-  }
-
   // AI insights — pure derivations from real data
   const insights = useMemo<Insight[]>(() => {
     const out: Insight[] = [];
@@ -213,6 +209,10 @@ function StrategicDashboard() {
       { label: "Semesters",   value: semesters.length,              icon: CalendarRange, to: "/strategic/semesters" },
     ];
   }, [totals, kpi, semesters]);
+
+  if (meLoading) {
+    return <div className="flex min-h-64 items-center justify-center text-muted-foreground">Loading…</div>;
+  }
 
   const kpiTiles = [
     { label: "Active Sessions",        value: kpi?.active_sessions ?? 0,            icon: Activity,    tone: "blue" as const,   delta: null,                                       to: "/strategic/audit",        emptyHint: "No sessions live right now" },
