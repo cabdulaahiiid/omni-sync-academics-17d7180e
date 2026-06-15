@@ -701,3 +701,27 @@ export const getReportFilterOptions = createServerFn({ method: "GET" })
       academic_years: years,
     };
   });
+
+/* ------------------------------------------------------------------ */
+/*  Audit logger for client-side exports                                */
+/* ------------------------------------------------------------------ */
+
+const LogExportSchema = z.object({
+  key: z.string(),
+  format: z.enum(["csv", "xlsx", "pdf", "print"]),
+  filters: z.record(z.string(), z.any()).default({}),
+});
+
+export const logExport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => LogExportSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await context.supabase.from("audit_logs").insert({
+      actor_id: context.userId,
+      action_type: "EXPORT_REPORT",
+      entity_type: "reports",
+      entity_id: `${data.key}:${data.format}`,
+      after_state: { filters: data.filters as Record<string, string | undefined> },
+    });
+    return { ok: true };
+  });
