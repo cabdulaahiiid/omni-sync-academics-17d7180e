@@ -9,6 +9,7 @@ import {
   wipeEntireSystem,
   resetAcademicData,
 } from "@/lib/system-admin.functions";
+import { runConsistencyCheck } from "@/lib/consistency.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, ShieldAlert, Trash2, RotateCcw, Loader2 } from "lucide-react";
+import {
+  AlertTriangle, ShieldAlert, Trash2, RotateCcw, Loader2,
+  CheckCircle2, XCircle, PlayCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/strategic/system-data")({
