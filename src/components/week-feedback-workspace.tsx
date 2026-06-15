@@ -185,16 +185,20 @@ function ChatPanel({ semesterId, weekNum }: { semesterId: string; weekNum: numbe
 
   const messages = (data?.messages ?? []) as Msg[];
   const hasThread = !!data?.thread;
+  const loading = data === undefined;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
-        {!hasThread && (
+        {loading && (
+          <p className="mt-8 text-center text-xs text-muted-foreground">Loading conversation…</p>
+        )}
+        {!loading && !hasThread && (
           <p className="mt-8 text-center text-xs text-muted-foreground">
             No feedback from Admin yet for this week.
           </p>
         )}
-        {hasThread && messages.length === 0 && (
+        {!loading && hasThread && messages.length === 0 && (
           <p className="mt-8 text-center text-xs text-muted-foreground">Conversation is empty.</p>
         )}
         {messages.map((m) => {
