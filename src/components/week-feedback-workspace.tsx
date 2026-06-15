@@ -164,8 +164,9 @@ function ChatPanel({ semesterId, weekNum }: { semesterId: string; weekNum: numbe
 
   useEffect(() => {
     if (!data?.thread?.id) return;
+    const channelName = `fb-ws-${data.thread.id}-${Math.random().toString(36).slice(2, 8)}`;
     const ch = supabase
-      .channel(`fb-ws-${data.thread.id}`)
+      .channel(channelName)
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "schedule_feedback_messages", filter: `thread_id=eq.${data.thread.id}` },
         () => qc.invalidateQueries({ queryKey: ["feedback-thread", semesterId, weekNum] }))
