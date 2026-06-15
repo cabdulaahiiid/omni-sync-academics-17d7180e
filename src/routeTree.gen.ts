@@ -16,7 +16,6 @@ import { Route as AuthenticatedStrategicRouteImport } from './routes/_authentica
 import { Route as AuthenticatedOperationalRouteImport } from './routes/_authenticated/operational'
 import { Route as AuthenticatedGroundRouteImport } from './routes/_authenticated/ground'
 import { Route as AuthenticatedStrategicIndexRouteImport } from './routes/_authenticated/strategic/index'
-import { Route as AuthenticatedOperationalIndexRouteImport } from './routes/_authenticated/operational/index'
 import { Route as AuthenticatedGroundIndexRouteImport } from './routes/_authenticated/ground/index'
 import { Route as AuthenticatedStrategicVenuesRouteImport } from './routes/_authenticated/strategic/venues'
 import { Route as AuthenticatedStrategicUsersRouteImport } from './routes/_authenticated/strategic/users'
@@ -79,12 +78,6 @@ const AuthenticatedStrategicIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedStrategicRoute,
-  } as any)
-const AuthenticatedOperationalIndexRoute =
-  AuthenticatedOperationalIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedOperationalRoute,
   } as any)
 const AuthenticatedGroundIndexRoute =
   AuthenticatedGroundIndexRouteImport.update({
@@ -274,13 +267,13 @@ export interface FileRoutesByFullPath {
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/ground/': typeof AuthenticatedGroundIndexRoute
-  '/operational/': typeof AuthenticatedOperationalIndexRoute
   '/strategic/': typeof AuthenticatedStrategicIndexRoute
   '/strategic/departments/$id': typeof AuthenticatedStrategicDepartmentsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
@@ -306,7 +299,6 @@ export interface FileRoutesByTo {
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/ground': typeof AuthenticatedGroundIndexRoute
-  '/operational': typeof AuthenticatedOperationalIndexRoute
   '/strategic': typeof AuthenticatedStrategicIndexRoute
   '/strategic/departments/$id': typeof AuthenticatedStrategicDepartmentsIdRoute
 }
@@ -343,7 +335,6 @@ export interface FileRoutesById {
   '/_authenticated/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/_authenticated/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/_authenticated/ground/': typeof AuthenticatedGroundIndexRoute
-  '/_authenticated/operational/': typeof AuthenticatedOperationalIndexRoute
   '/_authenticated/strategic/': typeof AuthenticatedStrategicIndexRoute
   '/_authenticated/strategic/departments/$id': typeof AuthenticatedStrategicDepartmentsIdRoute
 }
@@ -380,13 +371,13 @@ export interface FileRouteTypes {
     | '/strategic/users'
     | '/strategic/venues'
     | '/ground/'
-    | '/operational/'
     | '/strategic/'
     | '/strategic/departments/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/operational'
     | '/ground/$scheduleId'
     | '/operational/attendance'
     | '/operational/drafts'
@@ -412,7 +403,6 @@ export interface FileRouteTypes {
     | '/strategic/users'
     | '/strategic/venues'
     | '/ground'
-    | '/operational'
     | '/strategic'
     | '/strategic/departments/$id'
   id:
@@ -448,7 +438,6 @@ export interface FileRouteTypes {
     | '/_authenticated/strategic/users'
     | '/_authenticated/strategic/venues'
     | '/_authenticated/ground/'
-    | '/_authenticated/operational/'
     | '/_authenticated/strategic/'
     | '/_authenticated/strategic/departments/$id'
   fileRoutesById: FileRoutesById
@@ -509,13 +498,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/strategic/'
       preLoaderRoute: typeof AuthenticatedStrategicIndexRouteImport
       parentRoute: typeof AuthenticatedStrategicRoute
-    }
-    '/_authenticated/operational/': {
-      id: '/_authenticated/operational/'
-      path: '/'
-      fullPath: '/operational/'
-      preLoaderRoute: typeof AuthenticatedOperationalIndexRouteImport
-      parentRoute: typeof AuthenticatedOperationalRoute
     }
     '/_authenticated/ground/': {
       id: '/_authenticated/ground/'
@@ -723,7 +705,6 @@ interface AuthenticatedOperationalRouteChildren {
   AuthenticatedOperationalReportsRoute: typeof AuthenticatedOperationalReportsRoute
   AuthenticatedOperationalSemesterUploadRoute: typeof AuthenticatedOperationalSemesterUploadRoute
   AuthenticatedOperationalStudentsRoute: typeof AuthenticatedOperationalStudentsRoute
-  AuthenticatedOperationalIndexRoute: typeof AuthenticatedOperationalIndexRoute
 }
 
 const AuthenticatedOperationalRouteChildren: AuthenticatedOperationalRouteChildren =
@@ -739,7 +720,6 @@ const AuthenticatedOperationalRouteChildren: AuthenticatedOperationalRouteChildr
       AuthenticatedOperationalSemesterUploadRoute,
     AuthenticatedOperationalStudentsRoute:
       AuthenticatedOperationalStudentsRoute,
-    AuthenticatedOperationalIndexRoute: AuthenticatedOperationalIndexRoute,
   }
 
 const AuthenticatedOperationalRouteWithChildren =
