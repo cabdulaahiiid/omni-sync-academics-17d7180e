@@ -659,9 +659,9 @@ async function approvalReport(supabase: any, f: ReportFilters, range: { from: st
 
   const summary = [
     { label: "Total", value: out.length },
-    { label: "Pending", value: out.filter((r) => r.decision === "pending").length },
-    { label: "Approved", value: out.filter((r) => r.decision === "approved").length },
-    { label: "Rejected", value: out.filter((r) => r.decision === "rejected").length },
+    { label: "Pending", value: out.filter((r: { decision: string }) => r.decision === "pending").length },
+    { label: "Approved", value: out.filter((r: { decision: string }) => r.decision === "approved").length },
+    { label: "Rejected", value: out.filter((r: { decision: string }) => r.decision === "rejected").length },
   ];
   return {
     title: `Approval report ${range.from} → ${range.to}`,
