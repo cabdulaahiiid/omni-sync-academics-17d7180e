@@ -4,10 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ShieldCheck } from "lucide-react";
-import { COLLEGE_FULL_NAME } from "@/components/erp/brand";
+import { GraduationCap, User, Lock, Eye, EyeOff, Database, Settings, BarChart3 } from "lucide-react";
+import loginBg from "@/assets/login-bg.png.asset.json";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -25,30 +25,19 @@ async function redirectByRole(navigate: ReturnType<typeof useNavigate>, userId: 
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [remember, setRemember] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        toast.success("Account created");
-        if (data.user) await redirectByRole(navigate, data.user.id);
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        if (data.user) await redirectByRole(navigate, data.user.id);
-      }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      if (data.user) await redirectByRole(navigate, data.user.id);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Invalid credentials");
     } finally {
@@ -57,44 +46,125 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--sidebar-background))] px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-3 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <ShieldCheck className="h-6 w-6" />
-          </div>
-          <CardTitle className="text-xl leading-tight">{COLLEGE_FULL_NAME}</CardTitle>
-          <CardDescription>Academic ERP — Secure Sign In</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            {mode === "signup" && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Full name</Label>
-                <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+    <div
+      className="relative min-h-screen w-full bg-cover bg-center"
+      style={{ backgroundImage: `url(${loginBg.url})` }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/25 to-transparent lg:to-black/0" />
+      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col items-stretch gap-8 px-6 py-10 lg:flex-row lg:items-center lg:px-12">
+        {/* Left marketing block */}
+        <section className="hidden flex-1 text-white lg:flex lg:flex-col lg:justify-center">
+          <h1 className="text-5xl font-light leading-tight drop-shadow-lg">
+            Welcome to
+            <br />
+            <span className="text-6xl font-extrabold tracking-tight">TVET ERP</span>
+          </h1>
+          <p className="mt-6 max-w-md text-lg text-white/90 drop-shadow">
+            Empowering TVET Institutions with Smart ERP Solutions.
+          </p>
+          <div className="mt-10 flex flex-wrap gap-3">
+            {[
+              { Icon: Database, label: "Centralize\nInstitution Data" },
+              { Icon: Settings, label: "Optimize\nResources" },
+              { Icon: BarChart3, label: "Enhance Training\nOutcomes" },
+            ].map(({ Icon, label }) => (
+              <div
+                key={label}
+                className="flex items-center gap-3 rounded-xl bg-white/95 px-4 py-3 shadow-lg backdrop-blur"
+              >
+                <Icon className="h-5 w-5 text-primary" />
+                <span className="whitespace-pre-line text-xs font-semibold leading-tight text-slate-800">
+                  {label}
+                </span>
               </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            ))}
+          </div>
+        </section>
+
+        {/* Right login card */}
+        <section className="flex flex-1 items-center justify-center lg:max-w-md">
+          <div className="w-full max-w-md rounded-2xl bg-white/85 p-8 shadow-2xl backdrop-blur-md sm:p-10">
+            <div className="mb-2 flex items-center justify-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <GraduationCap className="h-6 w-6" />
+              </span>
+              <span className="text-3xl font-bold tracking-tight text-slate-900">TVET ERP</span>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Please wait…" : mode === "signin" ? "Sign In" : "Create account"}
-            </Button>
-            <button
-              type="button"
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
-            >
-              {mode === "signin" ? "First-time setup? Create master account" : "Already have an account? Sign in"}
-            </button>
-          </form>
-        </CardContent>
-      </Card>
+            <p className="mb-8 text-center text-sm text-slate-600">Sign in to your account</p>
+
+            <form onSubmit={onSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-slate-800">
+                  Username / Email
+                </Label>
+                <div className="relative">
+                  <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="username"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="Enter your username or email"
+                    className="h-11 bg-white/80 pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-slate-800">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="password"
+                    type={showPw ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder="Enter your password"
+                    className="h-11 bg-white/80 pl-10 pr-10"
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPw ? "Hide password" : "Show password"}
+                    onClick={() => setShowPw((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <label className="flex items-center gap-2 text-slate-700">
+                  <Checkbox
+                    checked={remember}
+                    onCheckedChange={(v) => setRemember(Boolean(v))}
+                  />
+                  Remember me
+                </label>
+                <a href="#" className="font-medium text-primary hover:underline">
+                  Forgot Password?
+                </a>
+              </div>
+
+              <Button type="submit" className="h-11 w-full text-base" disabled={loading}>
+                {loading ? "Please wait…" : "Sign In"}
+              </Button>
+
+              <p className="text-center text-sm text-slate-600">
+                Don't have an account?{" "}
+                <span className="font-medium text-primary">Contact your administrator.</span>
+              </p>
+            </form>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
