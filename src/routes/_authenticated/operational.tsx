@@ -52,16 +52,6 @@ function OperationalShell() {
             <span className="text-[10px] uppercase tracking-widest text-white/60">Department Head</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
-          <Avatar className="h-10 w-10 ring-2 ring-white/10">
-            {me?.avatar_url && <AvatarImage src={me.avatar_url} alt="" />}
-            <AvatarFallback className="bg-white/10 text-white text-xs">{initials}</AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white">{me?.profile?.full_name || "Department Head"}</p>
-            <p className="truncate text-[11px] text-white/60">Department Head</p>
-          </div>
-        </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {NAV.map((item) => {
             const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
@@ -101,6 +91,24 @@ function OperationalShell() {
             </div>
           </div>
           <NotificationsBell />
+          <Link
+            to="/profile"
+            className="ml-1 flex items-center gap-2 rounded-lg border border-border/60 bg-card px-2 py-1.5 hover:bg-muted/60"
+            aria-label="My profile"
+          >
+            <Avatar className="h-7 w-7">
+              {me?.avatar_url && <AvatarImage src={me.avatar_url} alt="" />}
+              <AvatarFallback className="bg-teal/15 text-teal text-[10px] font-semibold">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="hidden min-w-0 flex-col leading-tight sm:flex">
+              <span className="max-w-[140px] truncate text-[13px] font-semibold text-foreground">
+                {me?.profile?.full_name || me?.profile?.email || "User"}
+              </span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {me?.roles?.includes("MA") ? "Master Admin" : me?.roles?.includes("DH") ? "Department Head" : "User"}
+              </span>
+            </div>
+          </Link>
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1600px] p-3 lg:p-4"><Outlet /></div>
