@@ -256,6 +256,7 @@ export type Database = {
           campus_lng: number | null
           campus_radius_m: number
           geo_fence_radius: number
+          geofence_enabled: boolean
           id: string
           updated_at: string
           updated_by: string | null
@@ -267,6 +268,7 @@ export type Database = {
           campus_lng?: number | null
           campus_radius_m?: number
           geo_fence_radius?: number
+          geofence_enabled?: boolean
           id?: string
           updated_at?: string
           updated_by?: string | null
@@ -278,6 +280,7 @@ export type Database = {
           campus_lng?: number | null
           campus_radius_m?: number
           geo_fence_radius?: number
+          geofence_enabled?: boolean
           id?: string
           updated_at?: string
           updated_by?: string | null

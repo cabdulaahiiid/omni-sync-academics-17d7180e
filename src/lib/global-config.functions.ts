@@ -7,7 +7,7 @@ export const getGlobalConfig = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("global_config")
-      .select("id, attendance_window_minutes, geo_fence_radius, allow_offline_sync, campus_lat, campus_lng, campus_radius_m, updated_at")
+      .select("id, attendance_window_minutes, geo_fence_radius, allow_offline_sync, campus_lat, campus_lng, campus_radius_m, geofence_enabled, updated_at")
       .limit(1)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -24,6 +24,7 @@ export const updateGlobalConfig = createServerFn({ method: "POST" })
       campus_lng: z.number().min(-180).max(180).nullable().optional(),
       campus_radius_m: z.number().min(10).max(5000).optional(),
       allow_offline_sync: z.boolean().optional(),
+      geofence_enabled: z.boolean().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
