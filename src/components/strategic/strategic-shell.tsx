@@ -142,21 +142,7 @@ export function StrategicShell() {
             <span className="text-[10px] uppercase tracking-widest text-white/50">Master Admin</span>
           </div>
         </div>
-        <div className="mx-3 mb-3 flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5">
-          <Avatar className="h-9 w-9 ring-2 ring-white/10">
-            {me?.avatar_url && <AvatarImage src={me.avatar_url} alt="" />}
-            <AvatarFallback className="bg-white/15 text-white text-xs">
-              {(me?.profile?.full_name || me?.profile?.email || "MA").slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <p className="truncate text-[13px] font-medium text-white">
-              {me?.profile?.full_name || "Administrator"}
-            </p>
-            <p className="truncate text-[10px] text-white/55">Master Admin</p>
-          </div>
-        </div>
-        <nav className="flex-1 overflow-y-auto px-3 pb-3">
+        <nav className="flex-1 overflow-y-auto px-3 pb-3 pt-2">
           {GROUPS.map((group) => {
             const isOpen = openGroup === group.id;
             return (
@@ -248,6 +234,32 @@ export function StrategicShell() {
             />
           </div>
           <NotificationsBell />
+          <Link
+            to="/profile"
+            className="ml-1 flex items-center gap-2 rounded-lg border border-border/60 bg-card px-2 py-1.5 hover:bg-muted/60"
+            aria-label="My profile"
+          >
+            <Avatar className="h-7 w-7">
+              {me?.avatar_url && <AvatarImage src={me.avatar_url} alt="" />}
+              <AvatarFallback className="bg-teal/15 text-teal text-[10px] font-semibold">
+                {(me?.profile?.full_name || me?.profile?.email || "U").slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="hidden min-w-0 flex-col leading-tight sm:flex">
+              <span className="max-w-[140px] truncate text-[13px] font-semibold text-foreground">
+                {me?.profile?.full_name || me?.profile?.email || "User"}
+              </span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {me?.roles?.includes("MA")
+                  ? "Master Admin"
+                  : me?.roles?.includes("DH")
+                  ? "Department Head"
+                  : me?.roles?.includes("TR")
+                  ? "Trainer"
+                  : "User"}
+              </span>
+            </div>
+          </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
