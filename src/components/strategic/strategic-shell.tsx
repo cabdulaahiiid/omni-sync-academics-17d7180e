@@ -26,7 +26,7 @@ import {
   Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -40,7 +40,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { OfflineBanner } from "@/components/offline-banner";
-import { COLLEGE_SHORT_NAME, COLLEGE_FULL_NAME } from "@/components/erp/brand";
+import { COLLEGE_SHORT_NAME, COLLEGE_FULL_NAME, COLLEGE_LOGO_URL } from "@/components/erp/brand";
 import { Breadcrumbs } from "@/components/erp/breadcrumbs";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean };
@@ -136,9 +136,7 @@ export function StrategicShell() {
         )}
       >
         <div className="flex items-center gap-3 px-5 pt-5 pb-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10">
-            <ShieldCheck className="h-5 w-5 text-white" />
-          </div>
+          <img src={COLLEGE_LOGO_URL} alt="Jigjiga Polytechnic College logo" className="h-9 w-9 rounded-lg bg-white object-contain p-0.5" />
           <div className="flex min-w-0 flex-col leading-tight">
             <span className="truncate text-[12px] font-semibold tracking-wide text-white">{COLLEGE_SHORT_NAME}</span>
             <span className="text-[10px] uppercase tracking-widest text-white/50">Master Admin</span>
@@ -146,6 +144,7 @@ export function StrategicShell() {
         </div>
         <div className="mx-3 mb-3 flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5">
           <Avatar className="h-9 w-9 ring-2 ring-white/10">
+            {me?.avatar_url && <AvatarImage src={me.avatar_url} alt="" />}
             <AvatarFallback className="bg-white/15 text-white text-xs">
               {(me?.profile?.full_name || me?.profile?.email || "MA").slice(0, 2).toUpperCase()}
             </AvatarFallback>
@@ -214,6 +213,13 @@ export function StrategicShell() {
           })}
         </nav>
         <div className="border-t border-white/10 p-3">
+          <Link
+            to="/profile"
+            onClick={() => setOpen(false)}
+            className="mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] text-white/70 hover:bg-white/5 hover:text-white"
+          >
+            <UserCog className="h-4 w-4" /> My profile
+          </Link>
           <button
             onClick={signOut}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] text-white/70 hover:bg-white/5 hover:text-white"
@@ -227,9 +233,12 @@ export function StrategicShell() {
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(!open)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="hidden min-w-0 flex-col leading-tight lg:flex">
-            <span className="truncate text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{COLLEGE_FULL_NAME}</span>
-            <Breadcrumbs />
+          <div className="hidden min-w-0 items-center gap-2 lg:flex">
+            <img src={COLLEGE_LOGO_URL} alt="" className="h-7 w-7 rounded object-contain" />
+            <div className="flex min-w-0 flex-col leading-tight">
+              <span className="truncate text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{COLLEGE_FULL_NAME}</span>
+              <Breadcrumbs />
+            </div>
           </div>
           <div className="relative ml-auto max-w-md flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

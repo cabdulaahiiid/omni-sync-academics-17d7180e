@@ -11,9 +11,17 @@ export const getMe = createServerFn({ method: "GET" })
       supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", userId),
     ]);
+    let avatar_url: string | null = null;
+    if (profile?.avatar_path) {
+      const { data: signed } = await supabase.storage
+        .from("avatars")
+        .createSignedUrl(profile.avatar_path, 60 * 60);
+      avatar_url = signed?.signedUrl ?? null;
+    }
     return {
       userId,
       profile,
+      avatar_url,
       roles: (roles ?? []).map((r) => r.role as "MA" | "DH" | "T"),
     };
   });

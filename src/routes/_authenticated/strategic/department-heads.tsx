@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, Copy } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AvatarUploader } from "@/components/avatar-uploader";
 
 export const Route = createFileRoute("/_authenticated/strategic/department-heads")({
   component: DHPage,
@@ -34,14 +35,15 @@ function DHPage() {
   const [fullName, setFullName] = useState("");
   const [deptId, setDeptId] = useState("");
   const [password, setPassword] = useState("Head@123");
+  const [avatarPath, setAvatarPath] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; temp_password: string } | null>(null);
 
   const createMut = useMutation({
-    mutationFn: () => create({ data: { email, full_name: fullName, department_id: deptId, password } }),
+    mutationFn: () => create({ data: { email, full_name: fullName, department_id: deptId, password, avatar_path: avatarPath } }),
     onSuccess: (r) => {
       toast.success("Department Head created");
       setCredentials({ email: r.email, temp_password: r.temp_password });
-      setOpen(false); setEmail(""); setFullName(""); setDeptId(""); setPassword("Head@123");
+      setOpen(false); setEmail(""); setFullName(""); setDeptId(""); setPassword("Head@123"); setAvatarPath("");
       qc.invalidateQueries({ queryKey: ["dh"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -64,6 +66,7 @@ function DHPage() {
           <DialogContent>
             <DialogHeader><DialogTitle>Create Department Head account</DialogTitle></DialogHeader>
             <div className="space-y-4">
+              <AvatarUploader ownerId="pending" required onUploaded={(p) => setAvatarPath(p)} />
               <div className="space-y-2"><Label>Full name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
               <div className="space-y-2"><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
               <div className="space-y-2"><Label>Password</Label><Input value={password} onChange={(e) => setPassword(e.target.value)} /></div>
@@ -79,7 +82,7 @@ function DHPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || !password || createMut.isPending}>
+              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || !password || !avatarPath || createMut.isPending}>
                 {createMut.isPending ? "Creating…" : "Create"}
               </Button>
             </DialogFooter>

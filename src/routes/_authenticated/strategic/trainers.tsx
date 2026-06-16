@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, Copy, Pencil, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AvatarUploader } from "@/components/avatar-uploader";
 
 export const Route = createFileRoute("/_authenticated/strategic/trainers")({
   component: TrainersPage,
@@ -39,6 +40,7 @@ function TrainersPage() {
   const [deptId, setDeptId] = useState("");
   const [password, setPassword] = useState("Trainer@123");
   const [quals, setQuals] = useState("");
+  const [avatarPath, setAvatarPath] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; temp_password: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [editQuals, setEditQuals] = useState<string[]>([]);
@@ -49,12 +51,13 @@ function TrainersPage() {
       email, full_name: fullName, department_id: deptId, password,
       phone: phone || null,
       qualifications: quals.split(",").map((q) => q.trim()).filter(Boolean),
+      avatar_path: avatarPath,
     } }),
     onSuccess: (r) => {
       toast.success("Trainer account created");
       setCredentials({ email: r.email, temp_password: r.temp_password });
       setOpen(false);
-      setEmail(""); setFullName(""); setPhone(""); setDeptId(""); setPassword("Trainer@123"); setQuals("");
+      setEmail(""); setFullName(""); setPhone(""); setDeptId(""); setPassword("Trainer@123"); setQuals(""); setAvatarPath("");
       qc.invalidateQueries({ queryKey: ["trainers"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -98,6 +101,7 @@ function TrainersPage() {
           <DialogContent>
             <DialogHeader><DialogTitle>Create trainer account</DialogTitle></DialogHeader>
             <div className="space-y-4">
+              <AvatarUploader ownerId="pending" required onUploaded={(p) => setAvatarPath(p)} />
               <div className="space-y-2"><Label>Full name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
               <div className="space-y-2"><Label>Email</Label><Input type="email" placeholder="trainerx@tvet.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
               <div className="space-y-2"><Label>Password</Label><Input value={password} onChange={(e) => setPassword(e.target.value)} /></div>
@@ -118,7 +122,7 @@ function TrainersPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || !password || createMut.isPending}>
+              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || !password || !avatarPath || createMut.isPending}>
                 {createMut.isPending ? "Creating…" : "Create"}
               </Button>
             </DialogFooter>

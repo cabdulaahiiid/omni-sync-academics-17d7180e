@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedStrategicRouteImport } from './routes/_authenticated/strategic'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOperationalRouteImport } from './routes/_authenticated/operational'
 import { Route as AuthenticatedGroundRouteImport } from './routes/_authenticated/ground'
 import { Route as AuthenticatedStrategicIndexRouteImport } from './routes/_authenticated/strategic/index'
@@ -62,6 +63,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedStrategicRoute = AuthenticatedStrategicRouteImport.update({
   id: '/strategic',
   path: '/strategic',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedOperationalRoute =
@@ -255,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/ground': typeof AuthenticatedGroundRouteWithChildren
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
+  '/profile': typeof AuthenticatedProfileRoute
   '/strategic': typeof AuthenticatedStrategicRouteWithChildren
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
@@ -289,6 +296,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
@@ -326,6 +334,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/ground': typeof AuthenticatedGroundRouteWithChildren
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/_authenticated/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
@@ -364,6 +373,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/ground'
     | '/operational'
+    | '/profile'
     | '/strategic'
     | '/ground/$scheduleId'
     | '/operational/attendance'
@@ -398,6 +408,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/profile'
     | '/ground/$scheduleId'
     | '/operational/attendance'
     | '/operational/drafts'
@@ -434,6 +445,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/ground'
     | '/_authenticated/operational'
+    | '/_authenticated/profile'
     | '/_authenticated/strategic'
     | '/_authenticated/ground/$scheduleId'
     | '/_authenticated/operational/attendance'
@@ -500,6 +512,13 @@ declare module '@tanstack/react-router' {
       path: '/strategic'
       fullPath: '/strategic'
       preLoaderRoute: typeof AuthenticatedStrategicRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/operational': {
@@ -834,6 +853,7 @@ const AuthenticatedStrategicRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedGroundRoute: typeof AuthenticatedGroundRouteWithChildren
   AuthenticatedOperationalRoute: typeof AuthenticatedOperationalRouteWithChildren
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedStrategicRoute: typeof AuthenticatedStrategicRouteWithChildren
   AuthenticatedPrintReportRoute: typeof AuthenticatedPrintReportRoute
 }
@@ -841,6 +861,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedGroundRoute: AuthenticatedGroundRouteWithChildren,
   AuthenticatedOperationalRoute: AuthenticatedOperationalRouteWithChildren,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedStrategicRoute: AuthenticatedStrategicRouteWithChildren,
   AuthenticatedPrintReportRoute: AuthenticatedPrintReportRoute,
 }
