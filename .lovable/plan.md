@@ -1,22 +1,50 @@
-## Goal
+## Problem
 
-Place the user identity chip (avatar + name + role) in the top header right side, next to the notifications bell, across all three shells — matching the strategic shell pattern that was already done.
+After signing in you land on the dashboard for a split second, then get bounced back to `/login` — and sometimes see "No role assigned — contact administrator". This is one bug with two surfaces.
 
-## Changes
+## Root cause
 
-### 1. `src/routes/_authenticated/operational.tsx` (Department Head shell)
-- **Header**: After `<NotificationsBell />`, add the same identity chip used in strategic shell — a `Link` to `/profile` containing a 28px `Avatar` (with `me.avatar_url` or initials fallback), and a stacked label showing the full name (truncated, 13px semibold) and role ("Department Head" if DH, "Master Admin" if MA, else "User"). Text block hidden on small screens (`hidden sm:flex`); avatar always visible.
-- **Sidebar**: Remove the duplicate user card (lines 55–64 — the avatar/name/"Department Head" block under the brand header). Identity lives only in the header.
+The Supabase session lives in the browser's `localStorage`. The server has no way to read it. Two route files run auth checks during SSR with no session available:
 
-### 2. `src/routes/_authenticated/ground.tsx` (Trainer mobile shell)
-- **Header**: Replace the current left-side name/role text + right-side "Profile" link with the same compact identity chip on the right next to `NotificationsBell`. Left side keeps only the college logo + short name.
-- Role label is "Trainer" (or "Master Admin" if MA). The chip wraps a `Link` to `/profile`, so the standalone "Profile" link is removed. Sign-out button stays.
-- On the small mobile viewport, keep the name visible (so use `flex` rather than `hidden sm:flex`) but cap width with `max-w-[110px] truncate` so it fits next to the bell and sign-out button.
+1. `src/routes/_authenticated.tsx` — `beforeLoad` calls `supabase.auth.getUser()`. On the server this returns no user → it throws `redirect({ to: "/login" })`. That's the "auto-logout right after login".
+2. `src/routes/index.tsx` — `beforeLoad` calls `supabase.auth.getUser()` then queries `user_roles`. Server-side has no session → `user_roles` returns `[]` under RLS → falls through to the "no_role" branch and bounces to `/login`. That's the "no role assigned" toast (it fires when a navigation to `/` happens after sign-in).
 
-### 3. `src/components/strategic/strategic-shell.tsx`
-- No change — already implements the canonical chip. Used as the visual reference for the other two shells.
+Neither route opts out of SSR, so every hard refresh / first navigation hits this.
+
+## Fix
+
+Mark both auth-touching routes as client-only so the session check actually sees the browser session.
+
+### 1. `src/routes/_authenticated.tsx`
+Add `ssr: false` to the route config. Keep the existing `beforeLoad` redirect logic.
+
+```ts
+export const Route = createFileRoute("/_authenticated")({
+  ssr: false,
+  beforeLoad: async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) throw redirect({ to: "/login" });
+  },
+  component: () => <Outlet />,
+});
+```
+
+### 2. `src/routes/index.tsx`
+Add `ssr: false` so the role lookup runs in the browser with the real session. Logic stays the same.
+
+```ts
+export const Route = createFileRoute("/")({
+  ssr: false,
+  beforeLoad: async () => { /* unchanged */ },
+  component: () => null,
+});
+```
 
 ## Out of scope
-- No backend, data, or routing changes.
-- No changes to `NotificationsBell`, sign-out, or sidebar navigation items.
-- No new components extracted; the chip is small enough to inline in each shell (3 shells, ~15 lines each).
+
+- No changes to `login.tsx`, RLS, migrations, or the role-routing logic itself — those are correct, they just weren't being reached with a valid session.
+- No changes to `useAuthSession`, `getMe`, or any server function.
+
+## Verification
+
+After the change: sign in → land on `/strategic` (MA) / `/operational` (DH) / `/ground` (T) and stay there. Hard refresh on any `_authenticated/*` page keeps you signed in instead of bouncing to `/login`.
