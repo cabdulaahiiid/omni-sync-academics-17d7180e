@@ -7,7 +7,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { OfflineBanner } from "@/components/offline-banner";
-import { COLLEGE_SHORT_NAME, COLLEGE_FULL_NAME } from "@/components/erp/brand";
+import { COLLEGE_SHORT_NAME, COLLEGE_FULL_NAME, COLLEGE_LOGO_URL } from "@/components/erp/brand";
 import { Breadcrumbs } from "@/components/erp/breadcrumbs";
 import {
   LayoutDashboard, CalendarRange,
@@ -46,9 +46,7 @@ function OperationalShell() {
         open ? "translate-x-0" : "-translate-x-full",
       )}>
         <div className="flex h-20 items-center gap-3 border-b border-white/10 px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-            <ShieldCheck className="h-5 w-5 text-white" />
-          </div>
+          <img src={COLLEGE_LOGO_URL} alt="" className="h-9 w-9 rounded-xl bg-white object-contain p-0.5" />
           <div className="flex min-w-0 flex-col leading-tight">
             <span className="truncate text-[13px] font-semibold tracking-wide text-white">{COLLEGE_SHORT_NAME}</span>
             <span className="text-[10px] uppercase tracking-widest text-white/60">Department Head</span>
@@ -90,9 +88,12 @@ function OperationalShell() {
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(!open)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{COLLEGE_FULL_NAME}</p>
-            <Breadcrumbs />
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <img src={COLLEGE_LOGO_URL} alt="" className="h-7 w-7 rounded object-contain" />
+            <div className="min-w-0">
+              <p className="truncate text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{COLLEGE_FULL_NAME}</p>
+              <Breadcrumbs />
+            </div>
           </div>
           <NotificationsBell />
         </header>
