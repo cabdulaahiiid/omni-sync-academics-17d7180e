@@ -13,10 +13,10 @@ export function useAuthSession() {
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getUser().then(({ data, error }) => {
+    supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
-      setHasSession(Boolean(data.user) && !error);
-      setUserId(error ? null : (data.user?.id ?? null));
+      setHasSession(Boolean(data.session?.access_token));
+      setUserId(data.session?.user?.id ?? null);
       setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {

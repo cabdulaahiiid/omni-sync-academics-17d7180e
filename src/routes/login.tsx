@@ -6,19 +6,16 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import loginBg from "@/assets/login-bg.png.asset.json";
+import { resolveSignedInHome } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
 async function redirectByRole(navigate: ReturnType<typeof useNavigate>, userId: string) {
-  const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  const set = new Set((roles ?? []).map((r) => r.role));
-  if (set.has("MA")) return navigate({ to: "/strategic" });
-  if (set.has("DH")) return navigate({ to: "/operational" });
-  if (set.has("T")) return navigate({ to: "/ground" });
+  const { to } = await resolveSignedInHome(userId);
+  if (to) return navigate({ to });
   toast.error("No role assigned — contact administrator");
-  await supabase.auth.signOut();
 }
 
 function LoginPage() {
