@@ -266,32 +266,97 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
     });
 
     // Intra-batch conflicts
-    const conflicts: { row_a: number; row_b: number; date: string; kind: "trainer" | "venue" | "section" }[] = [];
+    type ConflictItem = {
+      row: number;
+      kind: "trainer" | "venue" | "section";
+      date: string;
+      start_time: string;
+      end_time: string;
+      resource_name: string;
+      conflict_with: {
+        scope: "intra_batch" | "existing";
+        department_name: string | null;
+        module_code: string;
+        row_b?: number;
+      };
+      reason: string;
+      // legacy fields preserved so older UI code still renders
+      row_a: number;
+      row_b: number;
+    };
+    const conflicts: ConflictItem[] = [];
+    const hm = (t: string) => t.slice(0, 5);
+    const trainerName = (id: string) =>
+      (trainers ?? []).find((x) => x.id === id)?.full_name ?? "Trainer";
+    const venueName = (id: string) =>
+      (venues ?? []).find((x) => x.id === id)?.name ?? "Venue";
     const overlap = (a: any, b: any) => a.date === b.date && !(a.end_time <= b.start_time || b.end_time <= a.start_time);
     for (let i = 0; i < inserts.length; i++) {
       for (let j = i + 1; j < inserts.length; j++) {
         const a = inserts[i]; const b = inserts[j];
         if (!overlap(a, b)) continue;
-        if (a.trainer_registry_id === b.trainer_registry_id) conflicts.push({ row_a: a._row, row_b: b._row, date: a.date, kind: "trainer" });
-        if (a.venue_id === b.venue_id) conflicts.push({ row_a: a._row, row_b: b._row, date: a.date, kind: "venue" });
-        if (a.section_id === b.section_id) conflicts.push({ row_a: a._row, row_b: b._row, date: a.date, kind: "section" });
+        const mk = (kind: "trainer" | "venue" | "section", name: string): ConflictItem => ({
+          row: a._row, row_a: a._row, row_b: b._row, kind, date: a.date,
+          start_time: hm(a.start_time), end_time: hm(a.end_time),
+          resource_name: name,
+          conflict_with: { scope: "intra_batch", department_name: null, module_code: b.module_code, row_b: b._row },
+          reason: `${kind === "trainer" ? "Trainer" : kind === "venue" ? "Venue" : "Section"} ${name} double-booked within this upload on ${a.date} ${hm(a.start_time)}–${hm(a.end_time)} (rows ${a._row + 1} and ${b._row + 1}).`,
+        });
+        if (a.trainer_registry_id === b.trainer_registry_id) conflicts.push(mk("trainer", trainerName(a.trainer_registry_id)));
+        if (a.venue_id === b.venue_id) conflicts.push(mk("venue", venueName(a.venue_id)));
+        if (a.section_id === b.section_id) conflicts.push(mk("section", row(a) /* unused */ ?? ""));
       }
     }
 
     // DB conflicts: existing schedules on same dates that overlap (exclude this semester's own drafts)
     if (inserts.length) {
       const dates = Array.from(new Set(inserts.map((i) => i.date)));
-      const { data: existing } = await supabase
+      // Global cross-departmental read: bypass DH RLS using the admin client
+      // strictly for conflict detection. Writes below still go through the
+      // user-scoped supabase client.
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: existing } = await supabaseAdmin
         .from("schedules")
-        .select("id, date, start_time, end_time, trainer_registry_id, venue_id, section_id, semester_id, module_code")
-        .in("date", dates);
+        .select("id, date, start_time, end_time, trainer_registry_id, venue_id, section_id, semester_id, module_code, department_id")
+        .in("date", dates)
+        .in("status", ["DRAFT", "PENDING_MA", "LIVE", "ACTIVE"]);
+
+      const exTrainerIds = Array.from(new Set((existing ?? []).map((e: any) => e.trainer_registry_id).filter(Boolean)));
+      const exVenueIds = Array.from(new Set((existing ?? []).map((e: any) => e.venue_id).filter(Boolean)));
+      const exDeptIds = Array.from(new Set((existing ?? []).map((e: any) => e.department_id).filter(Boolean)));
+      const [tRes, vRes, dRes] = await Promise.all([
+        exTrainerIds.length ? supabaseAdmin.from("trainer_registry").select("id, full_name").in("id", exTrainerIds) : Promise.resolve({ data: [] as any[] }),
+        exVenueIds.length ? supabaseAdmin.from("venues").select("id, name").in("id", exVenueIds) : Promise.resolve({ data: [] as any[] }),
+        exDeptIds.length ? supabaseAdmin.from("departments").select("id, name").in("id", exDeptIds) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const exTrainer = new Map((tRes.data ?? []).map((x: any) => [x.id, x.full_name]));
+      const exVenue = new Map((vRes.data ?? []).map((x: any) => [x.id, x.name]));
+      const exDept = new Map((dRes.data ?? []).map((x: any) => [x.id, x.name]));
+
       for (const a of inserts) {
-        for (const b of existing ?? []) {
+        for (const b of (existing ?? []) as any[]) {
           if (b.semester_id === data.semester_id) continue;
           if (!overlap(a, b)) continue;
-          if (a.trainer_registry_id === b.trainer_registry_id) conflicts.push({ row_a: a._row, row_b: -1, date: a.date, kind: "trainer" });
-          if (a.venue_id === b.venue_id) conflicts.push({ row_a: a._row, row_b: -1, date: a.date, kind: "venue" });
-          if (a.section_id === b.section_id) conflicts.push({ row_a: a._row, row_b: -1, date: a.date, kind: "section" });
+          const deptName = exDept.get(b.department_id) ?? "another department";
+          const push = (kind: "trainer" | "venue" | "section", name: string) => {
+            const label = kind === "trainer" ? "Trainer" : kind === "venue" ? "Venue" : "Section";
+            conflicts.push({
+              row: a._row, row_a: a._row, row_b: -1, kind, date: a.date,
+              start_time: hm(a.start_time), end_time: hm(a.end_time),
+              resource_name: name,
+              conflict_with: { scope: "existing", department_name: deptName, module_code: b.module_code },
+              reason: `${label} ${name} is already booked by ${deptName} on ${a.date} ${hm(b.start_time)}–${hm(b.end_time)} (${b.module_code}).`,
+            });
+          };
+          if (a.trainer_registry_id === b.trainer_registry_id) {
+            push("trainer", exTrainer.get(b.trainer_registry_id) ?? trainerName(a.trainer_registry_id));
+          }
+          if (a.venue_id === b.venue_id) {
+            push("venue", exVenue.get(b.venue_id) ?? venueName(a.venue_id));
+          }
+          if (b.department_id === data.department_id && a.section_id === b.section_id) {
+            push("section", `${b.module_code}`);
+          }
         }
       }
     }
