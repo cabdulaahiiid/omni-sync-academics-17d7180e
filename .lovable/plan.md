@@ -1,54 +1,66 @@
+
 ## Goal
 
-Clicking **Open chat** on `/operational/drafts` currently throws the user into the global "This page didn't load" fallback, which means a synchronous render error inside `WeekFeedbackWorkspace` is escalating to the router's `defaultErrorComponent`. Fix the crash, contain future failures so the Drafts page itself stays usable, and surface the underlying error to the console for any remaining issues.
+Block "Save as Draft" in Semester Upload until the uploaded Excel timetable is free of **global** Trainer/Venue double-bookings — across every department in the institution — with descriptive, row-level error messages.
 
-## What to change
+## Scope
 
-### 1. Contain the failure (so the whole page never disappears again)
+Changes are confined to the Semester Upload workflow:
+- `src/lib/dh-extras.functions.ts` — `uploadSemesterSchedule` validation handler
+- `src/routes/_authenticated/operational/semester-upload.tsx` — UI error summary
+- No DB schema, RLS, or other module changes
 
-`src/routes/_authenticated/operational/drafts.tsx`
-- Wrap the `<WeekFeedbackWorkspace />` invocation in a small local `ErrorBoundary` (class component, ~20 lines) that:
-  - Catches render errors thrown anywhere inside the Sheet.
-  - Renders a compact inline fallback inside the Sheet ("Couldn't open this week's workspace — refresh to retry") and logs the real error to `console.error` so it shows up in browser dev tools.
-  - Closes cleanly when `onOpenChange(false)` runs.
-- This guarantees the Drafts page itself keeps rendering its cards, week tiles, and feedback list even if the workspace crashes.
+## Backend: descriptive global conflict check
 
-### 2. Fix the most likely crash sources in `src/components/week-feedback-workspace.tsx`
+`uploadSemesterSchedule` already overlaps new rows against the `schedules` table on shared dates. Two corrections:
 
-These are the places that can throw synchronously on first render — they will be hardened so the chat opens reliably:
+1. **Bypass RLS for the read** — under DH RLS, the cross-department schedules query returns no rows, so cross-dept conflicts are silently missed. Inside the handler (after the existing `requireSupabaseAuth` check), lazy-import `supabaseAdmin` from `@/integrations/supabase/client.server` and use it **only** for the conflict-detection SELECT (existing schedules + a join to `departments`, `trainer_registry`, `venues` for names). All writes continue to use the user-scoped `supabase` client so RLS still enforces who can save drafts.
 
-**A. Radix `Select` value handling in `EditRow`** — Radix Select crashes when controlled with an empty string. Initialize venue/trainer state with `row.venue_id ?? undefined` / `row.trainer_registry_id ?? undefined` and pass `value={venueId || undefined}` / `value={trainerId || undefined}` to `<Select>`. (Today they default to `""`, which can throw "A <Select.Item /> must have a value prop…" depending on data.)
+2. **Enrich the conflict payload.** Replace the current `{ row_a, row_b, date, kind }` items with:
+   ```ts
+   {
+     row: number;              // 0-based Excel row (matches existing _row)
+     kind: "trainer" | "venue" | "section";
+     date: string;             // YYYY-MM-DD
+     start_time: string;       // HH:MM
+     end_time: string;         // HH:MM
+     resource_name: string;    // trainer or venue name
+     conflict_with: {
+       scope: "intra_batch" | "existing";
+       department_name: string | null;   // null for intra-batch
+       module_code: string;
+       row_b?: number;                   // for intra-batch
+     };
+     reason: string;           // "Trainer Jane Doe is already booked by Mathematics on 2026-02-10 09:00–10:00 (MATH101)."
+   }
+   ```
+   The `reason` string is produced server-side using the exact template:
+   `"<Trainer|Venue> <name> is already booked by <Department> on <date> <start>–<end> (<module_code>)."`
+   For intra-batch overlaps: `"<Trainer|Venue> <name> double-booked within this upload on <date> <start>–<end> (rows X and Y)."`
 
-**B. Sheet a11y wrapper** — wrap the `sr-only` title in a real `SheetHeader` + add a `SheetDescription` so Radix Dialog's strict-mode a11y check never throws "DialogContent requires a DialogTitle/Description" on certain code paths.
+3. **`ok` gate** unchanged: `ok = errors.length === 0 && conflicts.length === 0`. `validate_only:false` is rejected the same way, so even a direct "Save as Draft" call can't bypass.
 
-**C. Defensive optional chaining**
-- `aggregateStatus`: guard against `rows` being `undefined` (the query starts in `pending`).
-- `EditorPanel`: guard `venues ?? []` and `deptTrainers ?? []` already exist; also guard `me?.roles?.includes?.("DH")` — keep as-is but pass `isDH={!!isDH}` from the parent so the editor panel never sees `undefined`.
-- `ChatPanel`: when `data` is still loading, render a small "Loading conversation…" placeholder instead of going straight into the message list / textarea logic (avoids reading `data!.thread!.id` in any edge case).
+4. Trainer/Venue checks always run globally. Section overlap stays department-scoped (sections are department-local).
 
-**D. Make `useEffect` for the realtime channel resilient** — only subscribe when `data?.thread?.id` exists (already true), but also drop the channel synchronously when `semesterId` / `weekNum` change, not just on unmount.
+## Frontend: red-highlighted error summary
 
-### 3. Diagnostic logging
+In `semester-upload.tsx`:
 
-In the new `ErrorBoundary.componentDidCatch`, also send the error message to `toast.error("Workspace error: <message>")` so the user sees an explicit reason instead of the generic "Something went wrong on our end".
+- Compute `conflictRows = new Set(conflicts.map(c => c.row))`.
+- Replace the current "Conflicts" badge list in the Validation report card with two stacked blocks:
+  - **Conflict summary** — a `border-destructive` panel listing each conflict's `reason` string, grouped by Excel row. One row per conflict, prefixed with `Row {row+1}` and a red dot.
+  - **Affected rows preview** — a small table of the offending rows from the parsed `rows` array (module_code, trainer_name, venue_name, day, start_time), each `<tr>` styled with `bg-destructive/10 text-destructive` so the user can see exactly which Excel rows to fix.
+- Keep the existing toast message but add a count: `"Validation failed: N global conflicts. Save is blocked."`
+- "Save as Draft" stays disabled while `validated === false`. After any file change or re-validation that produces conflicts, force `setValidated(false)` (already happens).
 
-## What is NOT changing
+## Technical notes
 
-- No DB / RLS / RPC / server-function changes.
-- No edits to `feedback.functions.ts`, `semester-drafts.functions.ts`, audit logs, notifications, or the resubmit workflow.
-- No changes to the entry points (`drafts.tsx` thread list, week tile grid, `matrix.tsx`, `index.tsx`) beyond wrapping the Sheet in the new `ErrorBoundary`.
+- `supabaseAdmin` must be imported inside the handler (`await import(...)`) per the server-functions-modern rule — never at module scope of `*.functions.ts`.
+- The admin read is limited to: `schedules` (date in batch dates, status in `DRAFT/PENDING_MA/LIVE/ACTIVE`), plus a single batched lookup for department/trainer/venue names by id. No user PII is exposed beyond names already visible in DH dashboards.
+- Existing same-semester exclusion (`b.semester_id === data.semester_id`) is preserved so re-validating a draft semester doesn't conflict with itself.
+- Overlap formula is the existing `!(a.end <= b.start || b.end <= a.start)` on `HH:MM:SS` strings — equivalent to `(NewStart < ExistingEnd) AND (NewEnd > ExistingStart)`.
 
-## Files touched
+## Out of scope
 
-- **Updated** `src/routes/_authenticated/operational/drafts.tsx` — add local `ErrorBoundary`, wrap `WeekFeedbackWorkspace`.
-- **Updated** `src/components/week-feedback-workspace.tsx` — Select value hardening, SheetHeader + SheetDescription, loading states, defensive guards.
-
-## Verification
-
-1. Typecheck/build clean.
-2. With Playwright (in build mode): navigate to `/operational/drafts` as a DH, click a **Week N** tile and an **Open chat** entry. Confirm the Sheet opens with both Chat and Edit timetable panels visible, no console exceptions, and the Drafts page underneath remains intact.
-3. Confirm that if a transient error is forced (temporarily throw in `WorkspaceBody`), the inline fallback appears inside the Sheet and the rest of the Drafts page stays interactive.
-
-## Open question
-
-If the crash persists after these fixes, the next step is to read the exact `console.error` message that the new `ErrorBoundary` logs and patch the specific call site it points at — please share the console output if so.
+- No changes to the draft editor, week feedback workspace, approval flow, or any non-upload validation.
+- No new DB tables, RPCs, or migrations.

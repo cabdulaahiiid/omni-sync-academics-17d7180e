@@ -77,7 +77,7 @@ function SemesterUpload() {
       }}),
     onSuccess: (r) => {
       if (r.ok) { setValidated(true); toast.success("Validation passed. No conflicts detected."); }
-      else { setValidated(false); toast.error(`Validation failed: ${r.errors.length} errors, ${r.conflicts.length} conflicts.`); }
+      else { setValidated(false); toast.error(`Validation failed: ${r.conflicts.length} global conflict(s). Save is blocked.`); }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -227,14 +227,50 @@ function SemesterUpload() {
             )}
             {lastResult.conflicts?.length > 0 && (
               <div className="space-y-1">
-                <p className="flex items-center gap-2 font-medium"><AlertTriangle className="h-4 w-4 text-amber" /> Conflicts ({lastResult.conflicts.length})</p>
-                <div className="flex flex-wrap gap-1">
-                  {lastResult.conflicts.slice(0, 40).map((c: any, i: number) => (
-                    <Badge key={i} variant="destructive" className="text-[10px]">
-                      {c.kind} · {c.date} · row {c.row_a + 1}{c.row_b >= 0 ? ` vs ${c.row_b + 1}` : " vs existing"}
-                    </Badge>
+                <p className="flex items-center gap-2 font-medium text-destructive">
+                  <AlertTriangle className="h-4 w-4" /> Global resource conflicts ({lastResult.conflicts.length}) — Save is blocked
+                </p>
+                <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 space-y-1.5 max-h-72 overflow-auto">
+                  {lastResult.conflicts.map((c: any, i: number) => (
+                    <div key={i} className="flex items-start gap-2 text-xs">
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                      <span><b>Row {(c.row ?? c.row_a) + 1}:</b> {c.reason ?? `${c.kind} conflict on ${c.date}`}</span>
+                    </div>
                   ))}
                 </div>
+                {(() => {
+                  const conflictRows = new Set<number>(lastResult.conflicts.map((c: any) => c.row ?? c.row_a));
+                  const affected = Array.from(conflictRows).sort((a, b) => a - b).map((idx) => ({ idx, row: rows[idx] })).filter((x) => x.row);
+                  if (!affected.length) return null;
+                  return (
+                    <div className="mt-3 overflow-hidden rounded-lg border border-destructive/40">
+                      <table className="w-full text-xs">
+                        <thead className="bg-destructive/10 text-destructive">
+                          <tr>
+                            <th className="p-2 text-left">Excel Row</th>
+                            <th className="p-2 text-left">Module</th>
+                            <th className="p-2 text-left">Trainer</th>
+                            <th className="p-2 text-left">Venue</th>
+                            <th className="p-2 text-left">Day</th>
+                            <th className="p-2 text-left">Start</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {affected.map(({ idx, row }) => (
+                            <tr key={idx} className="bg-destructive/10 text-destructive border-t border-destructive/30">
+                              <td className="p-2 font-medium">{idx + 1}</td>
+                              <td className="p-2">{row.module_code}</td>
+                              <td className="p-2">{row.trainer_name}</td>
+                              <td className="p-2">{row.venue_name}</td>
+                              <td className="p-2">{row.day}</td>
+                              <td className="p-2">{row.start_time}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </CardContent>
