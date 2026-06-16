@@ -1,46 +1,24 @@
-## Login page cleanup — solid two-column layout
+## Plan: Simplify Login Page to Match Reference Image
 
-**File:** `src/routes/login.tsx` (single file edit)
+Rewrite `src/routes/login.tsx` to remove all the duplicate/extra UI built in earlier turns and match the uploaded reference exactly.
 
-### Problems being fixed
-- Left side currently renders directly over the background image with a dark gradient overlay, producing the "ghost text / blurry layer" effect.
-- Left marketing block has no container — text and pills float over the photo causing low legibility.
-- Only 3 feature pills exist; spec requires 4.
+### Replace background asset
+- Upload the new `Gemini_Generated_Image_2xvojn2xvojn2xvo.png` via `lovable-assets` as `src/assets/login-bg.png.asset.json` (overwrites the existing pointer). The image already contains the "Welcome to TVET ERP" text, subtitle, and 3 feature icon pills baked in — we do not re-render them in HTML.
+- Delete nothing else; the old asset pointer is simply replaced.
 
-### Layout (final)
-Two solid columns side-by-side, background photo only visible in the center gap and far edges.
-
-```text
-[ photo ][ SOLID WHITE LEFT COLUMN ][ photo gap ][ FROSTED RIGHT CARD ][ photo ]
-```
-
-- Remove the full-bleed `bg-gradient-to-r from-black/50 ...` overlay div entirely (source of the "ghost" darker layer).
-- Page root keeps `backgroundImage: url(loginBg)` with `bg-cover bg-center` so the photo shows through the central gap.
-- Container becomes a centered flex row with `gap-8` and `max-w-6xl`, vertically centered.
-
-### Left column (new solid white card)
-- Wrap the entire left content in: `bg-white rounded-2xl shadow-2xl p-10 lg:p-12 w-full lg:max-w-xl`
-- Content inside (single clean layer, dark text on white):
-  1. **Primary header:** "Welcome to" (light weight, `text-slate-700`) + "TVET ERP" (extrabold, `text-primary`, large).
-  2. **Sub-header:** "Empowering TVET Institutions with Smart ERP Solutions." (`text-slate-600`).
-  3. **Feature cards grid** (`grid grid-cols-2 gap-3`) — 4 cards, each `bg-gray-100 rounded-xl p-4` with lucide icon (primary color) + label:
-     - Database → "Centralize Institution Data"
-     - Settings → "Optimize Resources"
-     - BarChart3 → "Enhance Training Outcomes"
-     - CalendarCheck → "Finalize Schedule Design"
-  4. **Secondary header (lower):** "Welcome to TVET ERP" (`text-slate-800 font-semibold`) as a small footer line inside the card.
-- Hidden below `lg` breakpoint (mobile shows only the login card over the photo).
-
-### Right column (unchanged behavior, minor cleanup)
-- Keep existing frosted login card: `bg-white/85 backdrop-blur-md rounded-2xl shadow-2xl`.
-- Keep all form logic (email, password, show/hide, remember me, Forgot Password, Sign In, admin footer).
-- No auth logic changes.
-
-### Tokens / classes
-- Solid white left = `bg-white` (per spec).
-- Feature card bg = `bg-gray-100` (per spec).
-- Remove the dark gradient overlay div entirely so no darker text layer can show through.
+### Rewrite `src/routes/login.tsx`
+Strip the page down to:
+- Full-viewport `div` with `background-image: url(loginBg.url)`, `bg-cover bg-center`.
+- **No left panel.** No "Welcome" text, no feature cards, no headings, no footer text, no logo, no "Sign in to your account" subtitle, no "Remember me", no "Forgot Password?", no "Don't have an account" line, no GraduationCap icon — all removed.
+- **Single minimalist login box on the right**, vertically centered, positioned over the plaza area:
+  - Container: `bg-white/90 backdrop-blur-md rounded-xl shadow-2xl p-6 w-full max-w-sm`
+  - Positioned via `flex justify-end items-center` on the outer wrapper with right-side padding (`pr-8 lg:pr-24`)
+  - Contents (in order):
+    1. Email/username `<Input>` (with `User` icon prefix)
+    2. Password `<Input>` (with `Lock` icon prefix + `Eye`/`EyeOff` toggle)
+    3. "Sign In" `<Button>` (full width, primary)
+- Auth logic preserved: same `signInWithPassword` + `redirectByRole` flow, same loading/error toasts.
+- Drop unused imports (`Checkbox`, `Label`, `Database`, `Settings`, `BarChart3`, `CalendarCheck`, `GraduationCap`).
 
 ### Out of scope
-- No backend, no route, no auth changes.
-- No new assets (reuses existing `login-bg.png`).
+No route, auth, or backend changes. No new components. Single-file edit + one asset replacement.
