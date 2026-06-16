@@ -176,7 +176,7 @@ function SessionDetail() {
           data={data}
           progress={progress}
           mode={mode}
-          setMode={(m) => modeMut.mutate(m)}
+          setMode={(m: Mode) => modeMut.mutate(m)}
           lessonPlan={lessonPlan} setLessonPlan={setLessonPlan}
           outcome={outcome} setOutcome={setOutcome}
           onProceed={() => setStepOverride("checkin")}
