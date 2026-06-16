@@ -1,34 +1,46 @@
-## Redesign Login Page to match TVET ERP mockup
+## Login page cleanup — solid two-column layout
 
-**File:** `src/routes/login.tsx` (single file edit). Signup mode removed from UI (admin-provisioned accounts per "Contact your administrator").
+**File:** `src/routes/login.tsx` (single file edit)
 
-### Layout
-Full-viewport split with the uploaded campus photo as background:
-- Upload `login.png` as a Lovable Asset (`src/assets/login-bg.png.asset.json`) and apply as `background-image` on the page root with `bg-cover bg-center`.
-- Left panel (~55% width on `lg+`): white "Welcome to **TVET ERP**" headline, subtitle "Empowering TVET Institutions with Smart ERP Solutions.", and a row of 3 small white feature pills with lucide icons:
-  - Database → "Centralize Institution Data"
-  - Settings → "Optimize Resources"
-  - BarChart3 → "Enhance Training Outcomes"
-- Right panel (~440px card on `lg+`, full width on mobile): frosted glass card (`bg-white/85 backdrop-blur-md rounded-2xl shadow-2xl`) containing:
-  - Graduation cap icon + "TVET ERP" wordmark
-  - "Sign in to your account" subtitle
-  - **Username / Email** input with user icon prefix
-  - **Password** input with lock icon prefix + eye toggle (show/hide)
-  - Row: "Remember me" checkbox (left) + "Forgot Password?" link (right, primary color)
-  - Solid blue "Sign In" button (full width)
-  - Footer text: "Don't have an account? **Contact your administrator.**" (link styled)
+### Problems being fixed
+- Left side currently renders directly over the background image with a dark gradient overlay, producing the "ghost text / blurry layer" effect.
+- Left marketing block has no container — text and pills float over the photo causing low legibility.
+- Only 3 feature pills exist; spec requires 4.
 
-### Behavior (preserved from current)
-- `signInWithPassword` → `redirectByRole` (unchanged).
-- "Forgot Password?" link → `/forgot-password` route (link only; no new page in this change — uses existing handler if present, else navigates to `mailto:` admin fallback). Confirm scope: link target only.
-- "Remember me" is visual only (Supabase session persists by default).
-- Show/hide password toggles input `type` between `password`/`text`.
-- Signup flow removed from this screen.
+### Layout (final)
+Two solid columns side-by-side, background photo only visible in the center gap and far edges.
 
-### Styling
-- Tailwind only, semantic tokens where available; brand blue `#2563eb`-ish via `bg-primary`.
-- Mobile: stack — background image dimmed with overlay, card centered, left marketing block hidden below `lg`.
-- Accessible labels, `aria-label` on eye toggle, `autoComplete` on inputs.
+```text
+[ photo ][ SOLID WHITE LEFT COLUMN ][ photo gap ][ FROSTED RIGHT CARD ][ photo ]
+```
+
+- Remove the full-bleed `bg-gradient-to-r from-black/50 ...` overlay div entirely (source of the "ghost" darker layer).
+- Page root keeps `backgroundImage: url(loginBg)` with `bg-cover bg-center` so the photo shows through the central gap.
+- Container becomes a centered flex row with `gap-8` and `max-w-6xl`, vertically centered.
+
+### Left column (new solid white card)
+- Wrap the entire left content in: `bg-white rounded-2xl shadow-2xl p-10 lg:p-12 w-full lg:max-w-xl`
+- Content inside (single clean layer, dark text on white):
+  1. **Primary header:** "Welcome to" (light weight, `text-slate-700`) + "TVET ERP" (extrabold, `text-primary`, large).
+  2. **Sub-header:** "Empowering TVET Institutions with Smart ERP Solutions." (`text-slate-600`).
+  3. **Feature cards grid** (`grid grid-cols-2 gap-3`) — 4 cards, each `bg-gray-100 rounded-xl p-4` with lucide icon (primary color) + label:
+     - Database → "Centralize Institution Data"
+     - Settings → "Optimize Resources"
+     - BarChart3 → "Enhance Training Outcomes"
+     - CalendarCheck → "Finalize Schedule Design"
+  4. **Secondary header (lower):** "Welcome to TVET ERP" (`text-slate-800 font-semibold`) as a small footer line inside the card.
+- Hidden below `lg` breakpoint (mobile shows only the login card over the photo).
+
+### Right column (unchanged behavior, minor cleanup)
+- Keep existing frosted login card: `bg-white/85 backdrop-blur-md rounded-2xl shadow-2xl`.
+- Keep all form logic (email, password, show/hide, remember me, Forgot Password, Sign In, admin footer).
+- No auth logic changes.
+
+### Tokens / classes
+- Solid white left = `bg-white` (per spec).
+- Feature card bg = `bg-gray-100` (per spec).
+- Remove the dark gradient overlay div entirely so no darker text layer can show through.
 
 ### Out of scope
-No backend changes, no new routes, no auth logic changes.
+- No backend, no route, no auth changes.
+- No new assets (reuses existing `login-bg.png`).

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { GraduationCap, User, Lock, Eye, EyeOff, Database, Settings, BarChart3 } from "lucide-react";
+import { GraduationCap, User, Lock, Eye, EyeOff, Database, Settings, BarChart3, CalendarCheck } from "lucide-react";
 import loginBg from "@/assets/login-bg.png.asset.json";
 
 export const Route = createFileRoute("/login")({
@@ -50,39 +50,42 @@ function LoginPage() {
       className="relative min-h-screen w-full bg-cover bg-center"
       style={{ backgroundImage: `url(${loginBg.url})` }}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/25 to-transparent lg:to-black/0" />
-      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col items-stretch gap-8 px-6 py-10 lg:flex-row lg:items-center lg:px-12">
-        {/* Left marketing block */}
-        <section className="hidden flex-1 text-white lg:flex lg:flex-col lg:justify-center">
-          <h1 className="text-5xl font-light leading-tight drop-shadow-lg">
+      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col items-stretch justify-center gap-8 px-6 py-10 lg:flex-row lg:items-center lg:px-12">
+        {/* Left solid white panel */}
+        <section className="hidden w-full rounded-2xl bg-white p-10 shadow-2xl lg:block lg:max-w-xl lg:p-12">
+          <h1 className="text-4xl font-light leading-tight text-slate-700">
             Welcome to
             <br />
-            <span className="text-6xl font-extrabold tracking-tight">TVET ERP</span>
+            <span className="text-5xl font-extrabold tracking-tight text-primary">TVET ERP</span>
           </h1>
-          <p className="mt-6 max-w-md text-lg text-white/90 drop-shadow">
+          <p className="mt-5 text-base text-slate-600">
             Empowering TVET Institutions with Smart ERP Solutions.
           </p>
-          <div className="mt-10 flex flex-wrap gap-3">
+          <div className="mt-8 grid grid-cols-2 gap-3">
             {[
-              { Icon: Database, label: "Centralize\nInstitution Data" },
-              { Icon: Settings, label: "Optimize\nResources" },
-              { Icon: BarChart3, label: "Enhance Training\nOutcomes" },
+              { Icon: Database, label: "Centralize Institution Data" },
+              { Icon: Settings, label: "Optimize Resources" },
+              { Icon: BarChart3, label: "Enhance Training Outcomes" },
+              { Icon: CalendarCheck, label: "Finalize Schedule Design" },
             ].map(({ Icon, label }) => (
               <div
                 key={label}
-                className="flex items-center gap-3 rounded-xl bg-white/95 px-4 py-3 shadow-lg backdrop-blur"
+                className="flex items-center gap-3 rounded-xl bg-gray-100 px-4 py-3"
               >
-                <Icon className="h-5 w-5 text-primary" />
-                <span className="whitespace-pre-line text-xs font-semibold leading-tight text-slate-800">
+                <Icon className="h-5 w-5 shrink-0 text-primary" />
+                <span className="text-xs font-semibold leading-tight text-slate-800">
                   {label}
                 </span>
               </div>
             ))}
           </div>
+          <p className="mt-8 border-t border-slate-200 pt-5 text-sm font-semibold text-slate-800">
+            Welcome to TVET ERP
+          </p>
         </section>
 
         {/* Right login card */}
-        <section className="flex flex-1 items-center justify-center lg:max-w-md">
+        <section className="flex w-full items-center justify-center lg:max-w-md">
           <div className="w-full max-w-md rounded-2xl bg-white/85 p-8 shadow-2xl backdrop-blur-md sm:p-10">
             <div className="mb-2 flex items-center justify-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground">
