@@ -254,7 +254,7 @@ export function StrategicShell() {
                   ? "Master Admin"
                   : me?.roles?.includes("DH")
                   ? "Department Head"
-                  : me?.roles?.includes("TR")
+                  : me?.roles?.includes("T")
                   ? "Trainer"
                   : "User"}
               </span>
