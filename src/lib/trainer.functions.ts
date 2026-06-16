@@ -92,18 +92,30 @@ export const getScheduleDetail = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: schedule, error: sErr } = await supabase
       .from("schedules")
-      .select("id, module_code, module_name, start_time, end_time, date, section_id, venue_id, level_id, department_id, trainer_registry_id")
+      .select("id, module_code, module_name, start_time, end_time, date, section_id, venue_id, level_id, department_id, trainer_registry_id, mode, checkin_at, ended_at, status")
       .eq("id", data.schedule_id)
       .single();
     if (sErr) throw new Error(sErr.message);
 
-    const [{ data: venue }, { data: students }, { data: existingLog }, { data: existingAtt }] =
+    const [{ data: venue }, { data: students }, { data: existingLog }, { data: existingAtt }, { data: dept }, { data: level }, { data: moduleRow }, { data: section }] =
       await Promise.all([
         supabase.from("venues").select("id, name, latitude, longitude, geo_radius").eq("id", schedule.venue_id).maybeSingle(),
         supabase.from("students").select("id, full_name, registration_number").eq("section_id", schedule.section_id).order("full_name"),
         supabase.from("session_logs").select("lesson_plan, learning_outcome, session_status").eq("schedule_id", data.schedule_id).maybeSingle(),
         supabase.from("attendance_logs").select("student_id, present").eq("schedule_id", data.schedule_id),
+        supabase.from("departments").select("id, name").eq("id", schedule.department_id).maybeSingle(),
+        supabase.from("levels").select("id, name, display_name").eq("id", schedule.level_id).maybeSingle(),
+        supabase.from("modules").select("code, total_hours, total_sessions").eq("code", schedule.module_code).maybeSingle(),
+        supabase.from("sections").select("id, name").eq("id", schedule.section_id).maybeSingle(),
       ]);
+
+    // Session number = count of this trainer's COMPLETED session_logs for this module up to/including today + 1 for the in-progress one
+    const { count: completedForModule } = await supabase
+      .from("session_logs")
+      .select("id, schedules!inner(module_code, trainer_registry_id)", { count: "exact", head: true })
+      .eq("session_status", "COMPLETED")
+      .eq("schedules.module_code", schedule.module_code)
+      .eq("schedules.trainer_registry_id", schedule.trainer_registry_id);
 
     return {
       schedule,
@@ -111,6 +123,11 @@ export const getScheduleDetail = createServerFn({ method: "POST" })
       students: students ?? [],
       existingLog,
       existingAttendance: existingAtt ?? [],
+      department: dept,
+      level,
+      module: moduleRow,
+      section,
+      session_number: (completedForModule ?? 0) + (schedule.status === "ENDED" ? 0 : 1),
     };
   });
 
