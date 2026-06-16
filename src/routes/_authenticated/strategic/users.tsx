@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listAllUsers, createUserAccount, toggleBypassGeofence } from "@/lib/users-admin.functions";
 import { listDepartments } from "@/lib/data.functions";
+import { getGlobalConfig } from "@/lib/global-config.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,10 +30,13 @@ function UsersPage() {
   const createFn = useServerFn(createUserAccount);
   const toggleFn = useServerFn(toggleBypassGeofence);
   const deptsFn = useServerFn(listDepartments);
+  const cfgFn = useServerFn(getGlobalConfig);
   const setAvatarFn = useServerFn(adminSetUserAvatar);
   const setPasswordFn = useServerFn(adminChangeUserPassword);
   const { data: users, isLoading } = useQuery({ queryKey: ["all-users"], queryFn: () => listFn() });
   const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => deptsFn() });
+  const { data: cfg } = useQuery({ queryKey: ["global-config"], queryFn: () => cfgFn() });
+  const geoEnabled = cfg?.geofence_enabled ?? true;
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "T" as "MA" | "DH" | "T", department_id: "" });
@@ -142,8 +146,11 @@ function UsersPage() {
                   </TableCell>
                   <TableCell className="text-sm">{u.department_name}</TableCell>
                   <TableCell>
-                    <Switch checked={!!u.bypass_geofence}
-                      onCheckedChange={(v) => toggle.mutate({ user_id: u.id, bypass: v })} />
+                    <div className="flex items-center gap-2">
+                      <Switch checked={geoEnabled ? !!u.bypass_geofence : true} disabled={!geoEnabled}
+                        onCheckedChange={(v) => toggle.mutate({ user_id: u.id, bypass: v })} />
+                      {!geoEnabled && <span className="text-xs text-muted-foreground">global off</span>}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => { setManage({ id: u.id, name: u.full_name || u.email, email: u.email, avatar_url: u.avatar_url }); setNewAvatarPath(""); setNewPassword(""); }}>
