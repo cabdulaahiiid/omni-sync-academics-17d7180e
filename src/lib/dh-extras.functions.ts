@@ -304,7 +304,7 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
         });
         if (a.trainer_registry_id === b.trainer_registry_id) conflicts.push(mk("trainer", trainerName(a.trainer_registry_id)));
         if (a.venue_id === b.venue_id) conflicts.push(mk("venue", venueName(a.venue_id)));
-        if (a.section_id === b.section_id) conflicts.push(mk("section", row(a) /* unused */ ?? ""));
+        if (a.section_id === b.section_id) conflicts.push(mk("section", `${a.module_code}`));
       }
     }
 
