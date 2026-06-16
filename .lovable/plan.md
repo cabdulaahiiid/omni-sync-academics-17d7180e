@@ -1,66 +1,98 @@
-
 ## Goal
 
-Block "Save as Draft" in Semester Upload until the uploaded Excel timetable is free of **global** Trainer/Venue double-bookings — across every department in the institution — with descriptive, row-level error messages.
+Convert `/operational/drafts` into a 4-quadrant "Single-Pane-of-Glass" Schedule Manager so the DH manages the entire timetable lifecycle (Draft → Pending → Feedback → Approved) without leaving the page. Approvals already flow server-side via `decide_approval` / `ma_decide_week` (status flips to `LIVE` + `is_published=true`); the realtime channel already invalidates on `schedules` and `semester_registry` changes, so the "state-driven automation" surfaces automatically once the UI buckets by status.
 
-## Scope
+## Scope (single page, frontend-only)
 
-Changes are confined to the Semester Upload workflow:
-- `src/lib/dh-extras.functions.ts` — `uploadSemesterSchedule` validation handler
-- `src/routes/_authenticated/operational/semester-upload.tsx` — UI error summary
-- No DB schema, RLS, or other module changes
+File touched: `src/routes/_authenticated/operational/drafts.tsx` only. No DB, RPC, or server-fn changes — the existing `listSemesterDrafts` already returns per-week counts (`total`, `pending`, `published`) which is enough to derive every bucket. Existing realtime subscription stays; it already invalidates the query on any schedule/semester/feedback change so an admin approval auto-moves a week from Pending → Approved without user action.
 
-## Backend: descriptive global conflict check
+## Bucketing rules (per semester+week)
 
-`uploadSemesterSchedule` already overlaps new rows against the `schedules` table on shared dates. Two corrections:
+Each semester row from `listSemesterDrafts` exposes weeks with `{ total, pending, published }`. Derive status per week:
 
-1. **Bypass RLS for the read** — under DH RLS, the cross-department schedules query returns no rows, so cross-dept conflicts are silently missed. Inside the handler (after the existing `requireSupabaseAuth` check), lazy-import `supabaseAdmin` from `@/integrations/supabase/client.server` and use it **only** for the conflict-detection SELECT (existing schedules + a join to `departments`, `trainer_registry`, `venues` for names). All writes continue to use the user-scoped `supabase` client so RLS still enforces who can save drafts.
+- **Approved** — `published === total` (every session in week is LIVE)
+- **Pending** — `pending > 0`
+- **Feedback** — week appears in `weekThreads` (the `listWeekThreadsForDept` result) AND not fully approved
+- **Draft** — everything else (`published === 0 && pending === 0`)
 
-2. **Enrich the conflict payload.** Replace the current `{ row_a, row_b, date, kind }` items with:
-   ```ts
-   {
-     row: number;              // 0-based Excel row (matches existing _row)
-     kind: "trainer" | "venue" | "section";
-     date: string;             // YYYY-MM-DD
-     start_time: string;       // HH:MM
-     end_time: string;         // HH:MM
-     resource_name: string;    // trainer or venue name
-     conflict_with: {
-       scope: "intra_batch" | "existing";
-       department_name: string | null;   // null for intra-batch
-       module_code: string;
-       row_b?: number;                   // for intra-batch
-     };
-     reason: string;           // "Trainer Jane Doe is already booked by Mathematics on 2026-02-10 09:00–10:00 (MATH101)."
-   }
-   ```
-   The `reason` string is produced server-side using the exact template:
-   `"<Trainer|Venue> <name> is already booked by <Department> on <date> <start>–<end> (<module_code>)."`
-   For intra-batch overlaps: `"<Trainer|Venue> <name> double-booked within this upload on <date> <start>–<end> (rows X and Y)."`
+A week is rendered in exactly one quadrant based on this priority: Feedback > Pending > Approved > Draft. Semester-level status (`distribution_status`) is shown as a sub-badge inside the relevant card.
 
-3. **`ok` gate** unchanged: `ok = errors.length === 0 && conflicts.length === 0`. `validate_only:false` is rejected the same way, so even a direct "Save as Draft" call can't bypass.
+## Layout
 
-4. Trainer/Venue checks always run globally. Section overlap stays department-scoped (sections are department-local).
+Replace the current vertical stack with:
 
-## Frontend: red-highlighted error summary
+```text
+┌─────────────────────────┬─────────────────────────┐
+│ 1. Drafts               │ 2. Pending Admin        │
+│   (h-[45vh], scroll)    │   (h-[45vh], scroll)    │
+│   high-contrast accent  │   muted/read-only       │
+├─────────────────────────┼─────────────────────────┤
+│ 3. Feedback Hub         │ 4. Approved & Current   │
+│   destructive border    │   timeline strip on top │
+│   (h-[45vh], scroll)    │   (h-[45vh], scroll)    │
+└─────────────────────────┴─────────────────────────┘
+```
 
-In `semester-upload.tsx`:
+- Outer container: `grid grid-cols-1 lg:grid-cols-2 gap-4`; each card uses `h-[45vh] flex flex-col` with `CardContent` `flex-1 overflow-y-auto`.
+- Page wrapper drops outer scrolling for `lg:` and up; on mobile it falls back to single column stacking (the "no vertical scroll" rule only holds for desktop viewports — call this out so the user knows).
+- Header row collapses to a compact title + legend strip (one line).
 
-- Compute `conflictRows = new Set(conflicts.map(c => c.row))`.
-- Replace the current "Conflicts" badge list in the Validation report card with two stacked blocks:
-  - **Conflict summary** — a `border-destructive` panel listing each conflict's `reason` string, grouped by Excel row. One row per conflict, prefixed with `Row {row+1}` and a red dot.
-  - **Affected rows preview** — a small table of the offending rows from the parsed `rows` array (module_code, trainer_name, venue_name, day, start_time), each `<tr>` styled with `bg-destructive/10 text-destructive` so the user can see exactly which Excel rows to fix.
-- Keep the existing toast message but add a count: `"Validation failed: N global conflicts. Save is blocked."`
-- "Save as Draft" stays disabled while `validated === false`. After any file change or re-validation that produces conflicts, force `setValidated(false)` (already happens).
+## Quadrants
 
-## Technical notes
+### Part 1 — Drafts (top-left, high-contrast)
+- Card style: `border-primary/40 bg-primary/5`.
+- Lists each semester that has any Draft weeks. For each: semester title + `start_date → end_date`, then a grid of Draft-week chips.
+- Two semester-level actions (preserved from current page):
+  - `[Submit by Week]` → `dhRequestApprovalPerWeek`
+  - `[Submit by Semester]` → `requestSemesterApproval`
+- Empty state: "No drafts. Upload a semester to get started." with a link to `/operational/semester-upload`.
 
-- `supabaseAdmin` must be imported inside the handler (`await import(...)`) per the server-functions-modern rule — never at module scope of `*.functions.ts`.
-- The admin read is limited to: `schedules` (date in batch dates, status in `DRAFT/PENDING_MA/LIVE/ACTIVE`), plus a single batched lookup for department/trainer/venue names by id. No user PII is exposed beyond names already visible in DH dashboards.
-- Existing same-semester exclusion (`b.semester_id === data.semester_id`) is preserved so re-validating a draft semester doesn't conflict with itself.
-- Overlap formula is the existing `!(a.end <= b.start || b.end <= a.start)` on `HH:MM:SS` strings — equivalent to `(NewStart < ExistingEnd) AND (NewEnd > ExistingStart)`.
+### Part 2 — Pending Admin Approval (top-right, read-only)
+- Card style: `border-amber/40 bg-amber/5`.
+- Lists every week chip with amber "Pending" badge. No buttons — click opens the week in `WeekFeedbackWorkspace` (read-only mode is already how it renders without a thread).
+- Shows count summary `N week(s) waiting on Admin`.
+
+### Part 3 — Feedback Hub (bottom-left, destructive border)
+- Card style: `border-2 border-destructive/60`.
+- Driven by `weekThreads` (already fetched). Each row: semester · week, last-message timestamp, `[Open Chat]` button (opens `WeekFeedbackWorkspace`) and `[Resubmit for Approval]` button.
+- Resubmit wiring: reuse `dhRequestApprovalPerWeek` (which already promotes DRAFT weeks of that semester to PENDING_MA). For per-week granularity we already have `dh_resubmit_week` RPC exposed via `dhResubmitWeek` in `feedback.functions.ts` — call that with `{ semester_id, week_num }` so only the affected week resets to Pending. On success: toast + the realtime listener auto-removes it from Feedback and adds it to Pending.
+
+### Part 4 — Approved & Current (bottom-right, timeline)
+- Card style: `border-emerald/40 bg-emerald/5`.
+- Top strip: simple horizontal timeline of the semester's weeks (W1…Wn) with each week dot colored by status (green=approved, amber=pending, red=feedback, grey=draft). Pure CSS dots, no chart lib.
+- Body: list grouped by semester (chronological by `start_date` desc — "archive by semester/year"), each with the list of approved week chips. Clicking a week opens the read-only workspace.
+
+## Status badges (shared component)
+
+Add a local helper in the same file:
+
+```ts
+const STATUS_PILL = {
+  APPROVED:  "bg-emerald/15 text-emerald border-emerald/40",
+  PENDING:   "bg-amber/15 text-amber-fg border-amber/40",
+  FEEDBACK:  "border-2 border-destructive text-destructive bg-transparent",
+  DRAFT:     "bg-muted text-muted-foreground border-border",
+};
+```
+
+Rendered via the existing `StatusBadge` styling pattern (`rounded-full px-2 py-0.5 text-[10px] uppercase`).
+
+## State-driven automation (already in place — confirm)
+
+The existing realtime channel on `schedules` + `semester_registry` + `schedule_feedback_threads/messages` invalidates the two queries powering all four quadrants. When MA calls `decide_approval` (or `ma_decide_week`) with `approved`, schedules flip to `LIVE`/`is_published=true`, `listSemesterDrafts` refetches, the per-week derivation moves the chip from quadrant 2 → 4 automatically. No new listener needed — note this in code comments so it isn't re-added.
+
+## Performance
+
+- Both queries (`semester-drafts`, `week-feedback-threads`) stay shared at the page level; each quadrant is a memoized child component (`DraftsQuadrant`, `PendingQuadrant`, `FeedbackQuadrant`, `ApprovedQuadrant`) receiving pre-filtered slices via `useMemo`. React only re-renders the two quadrants whose slice referentially changed.
+- `WeekFeedbackWorkspace` and `WorkspaceErrorBoundary` mount logic preserved as-is.
 
 ## Out of scope
 
-- No changes to the draft editor, week feedback workspace, approval flow, or any non-upload validation.
-- No new DB tables, RPCs, or migrations.
+- No DB/RPC/migration changes.
+- No edits to `WeekFeedbackWorkspace`, semester upload, or approval engine.
+- No mobile-specific redesign beyond column collapse.
+- No archive pagination — Approved quadrant scrolls; archival = sort order only.
+
+## Files
+
+- `src/routes/_authenticated/operational/drafts.tsx` — rewrite layout, add 4 memoized quadrant components, wire `dhResubmitWeek` for per-week resubmit, replace badges with pill helper.
