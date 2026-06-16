@@ -58,8 +58,8 @@ function TrainerGround() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">My Schedule</h1>
-        <p className="text-sm text-muted-foreground">Tap a session to start check-in.</p>
+        <h1 className="text-xl font-semibold tracking-tight">Today's Schedule</h1>
+        <p className="text-sm text-muted-foreground">Tap a session to open the context setup.</p>
       </div>
       <div className="grid grid-cols-3 gap-2">
         <button type="button" onClick={() => setScope("today")} className="text-left">
