@@ -14,7 +14,7 @@ export const listAllUsers = createServerFn({ method: "GET" })
     await assertMA(context.supabase, context.userId);
     const { data: profiles, error } = await supabaseAdmin
       .from("profiles")
-      .select("id, full_name, email, department_id, bypass_geofence, active, created_at")
+      .select("id, full_name, email, department_id, bypass_geofence, active, created_at, avatar_path")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const ids = (profiles ?? []).map((p) => p.id);
@@ -27,11 +27,22 @@ export const listAllUsers = createServerFn({ method: "GET" })
       (roleMap[r.user_id] = roleMap[r.user_id] ?? []).push(r.role as string);
     }
     const dMap = Object.fromEntries((depts ?? []).map((d) => [d.id, d.name]));
-    return (profiles ?? []).map((p) => ({
-      ...p,
-      roles: roleMap[p.id] ?? [],
-      department_name: p.department_id ? dMap[p.department_id] ?? "—" : "—",
-    }));
+    const withAvatars = await Promise.all(
+      (profiles ?? []).map(async (p) => {
+        let avatar_url: string | null = null;
+        if (p.avatar_path) {
+          const { data: signed } = await supabaseAdmin.storage.from("avatars").createSignedUrl(p.avatar_path, 60 * 60);
+          avatar_url = signed?.signedUrl ?? null;
+        }
+        return {
+          ...p,
+          avatar_url,
+          roles: roleMap[p.id] ?? [],
+          department_name: p.department_id ? dMap[p.department_id] ?? "—" : "—",
+        };
+      }),
+    );
+    return withAvatars;
   });
 
 export const createUserAccount = createServerFn({ method: "POST" })
