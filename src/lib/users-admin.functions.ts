@@ -43,6 +43,7 @@ export const createUserAccount = createServerFn({ method: "POST" })
       password: z.string().min(8).max(72),
       role: z.enum(["MA", "DH", "T"]),
       department_id: z.string().uuid().nullable().optional(),
+      avatar_path: z.string().min(1).max(300),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -55,11 +56,19 @@ export const createUserAccount = createServerFn({ method: "POST" })
     });
     if (cErr || !created.user) throw new Error(cErr?.message ?? "Failed to create user");
     const uid = created.user.id;
+    let finalAvatar = data.avatar_path;
+    if (data.avatar_path.startsWith("pending/")) {
+      const ext = data.avatar_path.split(".").pop() || "jpg";
+      finalAvatar = `${uid}/avatar-${Date.now()}.${ext}`;
+      const { error: mvErr } = await supabaseAdmin.storage.from("avatars").move(data.avatar_path, finalAvatar);
+      if (mvErr) throw new Error(mvErr.message);
+    }
     await supabaseAdmin.from("profiles").upsert({
       id: uid,
       full_name: data.full_name,
       email: data.email,
       department_id: data.department_id ?? null,
+      avatar_path: finalAvatar,
     });
     await supabaseAdmin.from("user_roles").insert({ user_id: uid, role: data.role });
     if (data.role === "DH" && data.department_id) {

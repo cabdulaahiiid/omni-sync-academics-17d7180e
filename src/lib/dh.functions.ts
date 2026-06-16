@@ -47,6 +47,7 @@ export const createDepartmentHead = createServerFn({ method: "POST" })
       full_name: z.string().min(1).max(120),
       department_id: z.string().uuid(),
       password: z.string().min(6).max(72),
+      avatar_path: z.string().min(1).max(300),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -60,8 +61,16 @@ export const createDepartmentHead = createServerFn({ method: "POST" })
     });
     if (cErr || !created.user) throw new Error(cErr?.message ?? "Failed to create user");
     const newId = created.user.id;
+    // Move pending avatar into the new user's folder
+    let finalAvatar = data.avatar_path;
+    if (data.avatar_path.startsWith("pending/")) {
+      const ext = data.avatar_path.split(".").pop() || "jpg";
+      finalAvatar = `${newId}/avatar-${Date.now()}.${ext}`;
+      const { error: mvErr } = await supabaseAdmin.storage.from("avatars").move(data.avatar_path, finalAvatar);
+      if (mvErr) throw new Error(mvErr.message);
+    }
     await supabaseAdmin.from("profiles").upsert({
-      id: newId, full_name: data.full_name, email: data.email, department_id: data.department_id,
+      id: newId, full_name: data.full_name, email: data.email, department_id: data.department_id, avatar_path: finalAvatar,
     });
     await supabaseAdmin.from("user_roles").insert({ user_id: newId, role: "DH" });
     const { data: dh, error: dhErr } = await supabaseAdmin.from("department_heads")
@@ -120,6 +129,7 @@ export const createTrainer = createServerFn({ method: "POST" })
       password: z.string().min(6).max(72),
       phone: z.string().max(40).optional().nullable(),
       qualifications: z.array(z.string().min(1).max(60)).default([]),
+      avatar_path: z.string().min(1).max(300),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -132,6 +142,13 @@ export const createTrainer = createServerFn({ method: "POST" })
     });
     if (cErr || !created.user) throw new Error(cErr?.message ?? "Failed to create user");
     const newId = created.user.id;
+    let finalAvatar = data.avatar_path;
+    if (data.avatar_path.startsWith("pending/")) {
+      const ext = data.avatar_path.split(".").pop() || "jpg";
+      finalAvatar = `${newId}/avatar-${Date.now()}.${ext}`;
+      const { error: mvErr } = await supabaseAdmin.storage.from("avatars").move(data.avatar_path, finalAvatar);
+      if (mvErr) throw new Error(mvErr.message);
+    }
     const { data: tr, error: trErr } = await supabaseAdmin.from("trainer_registry")
       .insert({
         full_name: data.full_name,
@@ -143,7 +160,7 @@ export const createTrainer = createServerFn({ method: "POST" })
     if (trErr) throw new Error(trErr.message);
     await supabaseAdmin.from("profiles").upsert({
       id: newId, full_name: data.full_name, email: data.email,
-      department_id: data.department_id, trainer_registry_id: tr.id,
+      department_id: data.department_id, trainer_registry_id: tr.id, avatar_path: finalAvatar,
     });
     await supabaseAdmin.from("user_roles").insert({ user_id: newId, role: "T" });
     await context.supabase.from("audit_logs").insert({
