@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tansta
 import { useMe } from "@/hooks/use-me";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -54,6 +54,7 @@ function OperationalShell() {
         </div>
         <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
           <Avatar className="h-10 w-10 ring-2 ring-white/10">
+            {me?.avatar_url && <AvatarImage src={me.avatar_url} alt="" />}
             <AvatarFallback className="bg-white/10 text-white text-xs">{initials}</AvatarFallback>
           </Avatar>
           <div className="min-w-0">
@@ -77,6 +78,10 @@ function OperationalShell() {
           })}
         </nav>
         <div className="border-t border-white/10 p-3">
+          <Link to="/profile" onClick={() => setOpen(false)}
+            className="mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/70 hover:bg-white/5 hover:text-white">
+            <ShieldCheck className="h-4 w-4" /> My profile
+          </Link>
           <button onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/login" }); }}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/70 hover:bg-white/5 hover:text-white">
             <LogOut className="h-4 w-4" /> Sign out

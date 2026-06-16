@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useMe } from "@/hooks/use-me";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ function GroundShell() {
         </div>
         <div className="flex items-center gap-1">
           <NotificationsBell />
+          <Link to="/profile" className="text-xs font-medium text-muted-foreground hover:text-foreground px-2">Profile</Link>
           <Button variant="ghost" size="sm" onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/login" }); }}>Sign out</Button>
         </div>
       </header>

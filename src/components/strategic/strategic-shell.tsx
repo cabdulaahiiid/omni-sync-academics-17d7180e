@@ -26,7 +26,7 @@ import {
   Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -144,6 +144,7 @@ export function StrategicShell() {
         </div>
         <div className="mx-3 mb-3 flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5">
           <Avatar className="h-9 w-9 ring-2 ring-white/10">
+            {me?.avatar_url && <AvatarImage src={me.avatar_url} alt="" />}
             <AvatarFallback className="bg-white/15 text-white text-xs">
               {(me?.profile?.full_name || me?.profile?.email || "MA").slice(0, 2).toUpperCase()}
             </AvatarFallback>
@@ -212,6 +213,13 @@ export function StrategicShell() {
           })}
         </nav>
         <div className="border-t border-white/10 p-3">
+          <Link
+            to="/profile"
+            onClick={() => setOpen(false)}
+            className="mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] text-white/70 hover:bg-white/5 hover:text-white"
+          >
+            <UserCog className="h-4 w-4" /> My profile
+          </Link>
           <button
             onClick={signOut}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] text-white/70 hover:bg-white/5 hover:text-white"
