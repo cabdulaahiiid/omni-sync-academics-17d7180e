@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRole } from "@/lib/auth/require-role";
 
 // ===== Current user role + profile =====
 export const getMe = createServerFn({ method: "GET" })
@@ -30,6 +31,7 @@ export const getMe = createServerFn({ method: "GET" })
 export const getStrategicStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    await requireRole(context, ["MA"], "getStrategicStats");
     const { supabase } = context;
     const today = new Date().toISOString().slice(0, 10);
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();

@@ -1,11 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-async function assertMA(supabase: any, userId: string) {
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "MA").maybeSingle();
-  if (!data) throw new Error("Master Admin only");
-}
+import { requireRole } from "@/lib/auth/require-role";
 
 // Update own avatar_path; the upload itself happens client-side via the supabase storage client.
 export const updateMyAvatar = createServerFn({ method: "POST" })
@@ -25,7 +21,7 @@ export const adminSetUserAvatar = createServerFn({ method: "POST" })
     z.object({ user_id: z.string().uuid(), avatar_path: z.string().min(1).max(300) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "adminSetUserAvatar");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let finalPath = data.avatar_path;
     if (data.avatar_path.startsWith("pending/")) {
@@ -50,7 +46,7 @@ export const adminChangeUserPassword = createServerFn({ method: "POST" })
     z.object({ user_id: z.string().uuid(), new_password: z.string().min(8).max(72) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "adminResetPassword");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, { password: data.new_password });
     if (error) throw new Error(error.message);
