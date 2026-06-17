@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRole } from "@/lib/auth/require-role";
 
 export const listApprovalQueue = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -11,6 +12,7 @@ export const listApprovalQueue = createServerFn({ method: "POST" })
     }).parse(d ?? {}),
   )
   .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA", "DH"], "listApprovalQueue");
     let q = context.supabase
       .from("approval_queue")
       .select("id, type, target_id, decision, comment, created_at, decided_at, submitted_by, schedule_id, conflict_trainer, conflict_venue, invalid_qualification, excessive_load")
@@ -58,6 +60,7 @@ export const decideApproval = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "decideApproval");
     const { error } = await context.supabase.rpc("decide_approval", {
       _id: data.id,
       _decision: data.decision,
@@ -76,6 +79,7 @@ export const submitForApproval = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA", "DH"], "submitForApproval");
     const { data: count, error } = await context.supabase.rpc("submit_for_approval", {
       _type: data.type,
       _target_ids: data.target_ids,

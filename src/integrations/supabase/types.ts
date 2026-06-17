@@ -195,6 +195,42 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_events: {
+        Row: {
+          attempts: number | null
+          created_at: string
+          duration_ms: number | null
+          id: string
+          kind: string
+          meta: Json | null
+          ok: boolean | null
+          reason: string | null
+          user_id: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          kind: string
+          meta?: Json | null
+          ok?: boolean | null
+          reason?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          kind?: string
+          meta?: Json | null
+          ok?: boolean | null
+          reason?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       department_heads: {
         Row: {
           created_at: string

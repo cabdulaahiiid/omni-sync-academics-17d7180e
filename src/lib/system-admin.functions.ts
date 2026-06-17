@@ -1,16 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-async function assertMA(supabase: any, userId: string) {
-  const { data } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("role", "MA")
-    .maybeSingle();
-  if (!data) throw new Error("Master Admin only");
-}
+import { requireRole } from "@/lib/auth/require-role";
 
 const FULL_TABLES = [
   "attendance_overrides",
@@ -59,7 +50,7 @@ const ACADEMIC_TABLES = [
 export const getWipePreview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "getWipePreview");
     const counts: Record<string, number> = {};
     await Promise.all(
       FULL_TABLES.map(async (t) => {
@@ -84,7 +75,7 @@ export const wipeEntireSystem = createServerFn({ method: "POST" })
     z.object({ confirm_phrase: z.string() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "wipeEntireSystem");
     if (data.confirm_phrase !== "WIPE ENTIRE SYSTEM") {
       throw new Error("Confirmation phrase did not match.");
     }
@@ -119,7 +110,7 @@ export const resetAcademicData = createServerFn({ method: "POST" })
     z.object({ confirm_phrase: z.string() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "resetAcademicData");
     if (data.confirm_phrase !== "RESET ACADEMIC DATA") {
       throw new Error("Confirmation phrase did not match.");
     }

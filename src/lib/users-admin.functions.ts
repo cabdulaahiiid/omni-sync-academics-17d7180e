@@ -2,16 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
-async function assertMA(supabase: any, userId: string) {
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "MA").maybeSingle();
-  if (!data) throw new Error("Master Admin only");
-}
+import { requireRole } from "@/lib/auth/require-role";
 
 export const listAllUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "listAllUsers");
     const { data: profiles, error } = await supabaseAdmin
       .from("profiles")
       .select("id, full_name, email, department_id, bypass_geofence, active, created_at, avatar_path")
@@ -58,7 +54,7 @@ export const createUserAccount = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "createUserAccount");
     const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -108,7 +104,7 @@ export const toggleBypassGeofence = createServerFn({ method: "POST" })
     z.object({ user_id: z.string().uuid(), bypass: z.boolean() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "toggleBypassGeofence");
     const { error } = await supabaseAdmin.from("profiles")
       .update({ bypass_geofence: data.bypass }).eq("id", data.user_id);
     if (error) throw new Error(error.message);

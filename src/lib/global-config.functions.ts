@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRole } from "@/lib/auth/require-role";
 
 export const getGlobalConfig = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -28,6 +29,7 @@ export const updateGlobalConfig = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "updateGlobalConfig");
     const { id, ...patch } = data;
     if (id) {
       const { error } = await context.supabase.from("global_config").update({ ...patch, updated_by: context.userId }).eq("id", id);

@@ -7,16 +7,11 @@ import { toast } from "sonner";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import loginBg from "@/assets/login-bg.png.asset.json";
 import { resolveSignedInHome } from "@/lib/auth-routing";
+import { logAuthEvent } from "@/lib/auth/telemetry";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
-
-async function redirectByRole(navigate: ReturnType<typeof useNavigate>, userId: string) {
-  const { to } = await resolveSignedInHome(userId);
-  if (to) return navigate({ to });
-  toast.error("No role assigned — contact administrator");
-}
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -24,16 +19,41 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage(null);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      if (data.user) await redirectByRole(navigate, data.user.id);
+      if (error) {
+        void logAuthEvent(supabase, {
+          kind: "sign_in_fail",
+          ok: false,
+          reason: error.message,
+        });
+        throw error;
+      }
+      if (data.user) {
+        void logAuthEvent(supabase, {
+          kind: "sign_in_success",
+          userId: data.user.id,
+          ok: true,
+        });
+        const { to } = await resolveSignedInHome(data.user.id);
+        if (to) {
+          await navigate({ to });
+        } else {
+          setErrorMessage(
+            "No role assigned to this account. Please contact your administrator.",
+          );
+        }
+      }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Invalid credentials");
+      const msg = err instanceof Error ? err.message : "Invalid credentials";
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -87,6 +107,15 @@ function LoginPage() {
           <Button type="submit" className="h-11 w-full text-base" disabled={loading}>
             {loading ? "Please wait…" : "Sign In"}
           </Button>
+          {errorMessage ? (
+            <p
+              role="alert"
+              className="text-center text-sm text-red-600"
+              data-testid="login-error"
+            >
+              {errorMessage}
+            </p>
+          ) : null}
         </form>
       </div>
     </div>

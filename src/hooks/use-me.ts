@@ -16,5 +16,6 @@ export function useMe() {
   return {
     ...query,
     isLoading: !authReady || (hasSession && query.isLoading),
+    rolesReady: authReady && hasSession && !query.isLoading && !query.isFetching,
   };
 }

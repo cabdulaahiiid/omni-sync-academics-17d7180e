@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { logAuthEvent } from "@/lib/auth/telemetry";
 
 type AppRole = "MA" | "DH" | "T";
 export type RoleHome = "/strategic" | "/operational" | "/ground";
@@ -29,9 +30,12 @@ export function getHomeForRoles(roles: AppRole[]): RoleHome | null {
 
 export async function loadRolesAfterAuthReady(userId: string): Promise<AppRole[]> {
   let lastError: Error | null = null;
+  const startedAt = Date.now();
+  let attempts = 0;
 
   for (const delay of ROLE_RETRY_DELAYS_MS) {
     if (delay > 0) await wait(delay);
+    attempts += 1;
     const { data, error } = await supabase
       .from("user_roles")
       .select("role")
@@ -46,8 +50,27 @@ export async function loadRolesAfterAuthReady(userId: string): Promise<AppRole[]
       .map((row) => row.role)
       .filter((role): role is AppRole => role === "MA" || role === "DH" || role === "T");
 
-    if (roles.length > 0) return roles;
+    if (roles.length > 0) {
+      void logAuthEvent(supabase, {
+        kind: "role_resolve_ok",
+        userId,
+        attempts,
+        durationMs: Date.now() - startedAt,
+        ok: true,
+        meta: { roles },
+      });
+      return roles;
+    }
   }
+
+  void logAuthEvent(supabase, {
+    kind: "role_resolve_empty",
+    userId,
+    attempts,
+    durationMs: Date.now() - startedAt,
+    ok: false,
+    reason: lastError?.message,
+  });
 
   if (lastError) throw lastError;
   return [];
