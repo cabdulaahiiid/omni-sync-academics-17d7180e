@@ -4,11 +4,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireRole } from "@/lib/auth/require-role";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-async function _assertMA_unused(_s: any, _u: string) { return; }
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "MA").maybeSingle();
-  if (!data) throw new Error("Forbidden: Master Admin only");
-}
-
 export const listDepartmentHeads = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
