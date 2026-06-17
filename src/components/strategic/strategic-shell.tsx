@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/hooks/use-me";
+import { pickHome } from "@/lib/auth/roles";
 import {
   LayoutDashboard,
   Building2,
@@ -94,7 +95,7 @@ function isItemActive(pathname: string, item: NavItem) {
 }
 
 export function StrategicShell() {
-  const { data: me, isLoading } = useMe();
+  const { data: me, isLoading, rolesReady } = useMe();
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
@@ -107,19 +108,17 @@ export function StrategicShell() {
     setOpenGroup(activeGroupId);
   }, [activeGroupId]);
 
-  if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
-  }
+  const allowed = !!me && me.roles.includes("MA");
+  useEffect(() => {
+    if (!rolesReady || !me) return;
+    if (!allowed) {
+      const home = pickHome(me.roles);
+      void navigate({ to: home ?? "/login", replace: true });
+    }
+  }, [rolesReady, allowed, me, navigate]);
 
-  if (!me?.roles.includes("MA")) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-6 text-center">
-        <div>
-          <h1 className="text-2xl font-semibold">Access denied</h1>
-          <p className="mt-2 text-muted-foreground">This area is for Master Administrators only.</p>
-        </div>
-      </div>
-    );
+  if (isLoading || !rolesReady || (me && !allowed)) {
+    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
   }
 
   async function signOut() {
