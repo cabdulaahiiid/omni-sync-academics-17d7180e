@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRole } from "@/lib/auth/require-role";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-async function assertMA(supabase: any, userId: string) {
+async function _assertMA_unused(_s: any, _u: string) { return; }
   const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "MA").maybeSingle();
   if (!data) throw new Error("Forbidden: Master Admin only");
 }
@@ -51,7 +52,7 @@ export const createDepartmentHead = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "dh.functions");
     const tempPassword = data.password;
     const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
@@ -133,7 +134,7 @@ export const createTrainer = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "dh.functions");
     const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -174,7 +175,7 @@ export const revokeTrainer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "dh.functions");
     const { data: profile } = await supabaseAdmin
       .from("profiles").select("id").eq("trainer_registry_id", data.id).maybeSingle();
     await supabaseAdmin.from("trainer_registry").update({ status: "SUSPENDED" }).eq("id", data.id);
@@ -196,7 +197,7 @@ export const updateTrainerQualifications = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "dh.functions");
     const cleaned = Array.from(new Set(data.qualifications.map((q) => q.trim()).filter(Boolean)));
     const { data: before } = await context.supabase
       .from("trainer_registry").select("qualifications").eq("id", data.id).maybeSingle();
