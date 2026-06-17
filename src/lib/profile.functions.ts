@@ -46,7 +46,7 @@ export const adminChangeUserPassword = createServerFn({ method: "POST" })
     z.object({ user_id: z.string().uuid(), new_password: z.string().min(8).max(72) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertMA(context.supabase, context.userId);
+    await requireRole(context, ["MA"], "adminResetPassword");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, { password: data.new_password });
     if (error) throw new Error(error.message);
