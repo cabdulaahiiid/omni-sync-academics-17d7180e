@@ -1,5 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useMe } from "@/hooks/use-me";
+import { pickHome } from "@/lib/auth/roles";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,11 +14,18 @@ export const Route = createFileRoute("/_authenticated/ground")({
 });
 
 function GroundShell() {
-  const { data: me, isLoading } = useMe();
+  const { data: me, isLoading, rolesReady } = useMe();
   const navigate = useNavigate();
-  if (isLoading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
-  if (!me?.roles.includes("T") && !me?.roles.includes("MA")) {
-    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Trainer access only.</div>;
+  const allowed = !!me && (me.roles.includes("T") || me.roles.includes("DH") || me.roles.includes("MA"));
+  useEffect(() => {
+    if (!rolesReady || !me) return;
+    if (!allowed) {
+      const home = pickHome(me.roles);
+      void navigate({ to: home ?? "/login", replace: true });
+    }
+  }, [rolesReady, allowed, me, navigate]);
+  if (isLoading || !rolesReady || !allowed) {
+    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
   }
   const initials = (me?.profile?.full_name || me?.profile?.email || "TR").slice(0, 2).toUpperCase();
   const roleLabel = me?.roles?.includes("MA") ? "Master Admin" : "Trainer";
