@@ -10,19 +10,29 @@ export const listAllUsers = createServerFn({ method: "GET" })
     await requireRole(context, ["MA"], "listAllUsers");
     const { data: profiles, error } = await supabaseAdmin
       .from("profiles")
-      .select("id, full_name, email, department_id, bypass_geofence, active, created_at, avatar_path")
+      .select("id, full_name, email, department_id, trainer_registry_id, bypass_geofence, active, created_at, avatar_path")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const ids = (profiles ?? []).map((p) => p.id);
-    const [{ data: roles }, { data: depts }] = await Promise.all([
+    const trIds = (profiles ?? []).map((p: any) => p.trainer_registry_id).filter(Boolean);
+    const [{ data: roles }, { data: depts }, { data: trDepts }] = await Promise.all([
       ids.length ? supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", ids) : Promise.resolve({ data: [] as any[] }),
       supabaseAdmin.from("departments").select("id, name"),
+      trIds.length
+        ? supabaseAdmin.from("trainer_departments").select("trainer_registry_id, department_id, is_primary").in("trainer_registry_id", trIds)
+        : Promise.resolve({ data: [] as any[] }),
     ]);
     const roleMap: Record<string, string[]> = {};
     for (const r of roles ?? []) {
       (roleMap[r.user_id] = roleMap[r.user_id] ?? []).push(r.role as string);
     }
     const dMap = Object.fromEntries((depts ?? []).map((d) => [d.id, d.name]));
+    const trDeptMap: Record<string, { department_id: string; is_primary: boolean }[]> = {};
+    for (const row of trDepts ?? []) {
+      (trDeptMap[(row as any).trainer_registry_id] = trDeptMap[(row as any).trainer_registry_id] ?? []).push({
+        department_id: (row as any).department_id, is_primary: (row as any).is_primary,
+      });
+    }
     const withAvatars = await Promise.all(
       (profiles ?? []).map(async (p) => {
         let avatar_url: string | null = null;
@@ -30,11 +40,14 @@ export const listAllUsers = createServerFn({ method: "GET" })
           const { data: signed } = await supabaseAdmin.storage.from("avatars").createSignedUrl(p.avatar_path, 60 * 60);
           avatar_url = signed?.signedUrl ?? null;
         }
+        const tDepts = (p as any).trainer_registry_id ? (trDeptMap[(p as any).trainer_registry_id] ?? []) : [];
         return {
           ...p,
           avatar_url,
           roles: roleMap[p.id] ?? [],
           department_name: p.department_id ? dMap[p.department_id] ?? "—" : "—",
+          department_ids: tDepts.map((t) => t.department_id),
+          primary_department_id: tDepts.find((t) => t.is_primary)?.department_id ?? p.department_id ?? null,
         };
       }),
     );
