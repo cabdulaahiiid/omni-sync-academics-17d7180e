@@ -54,41 +54,59 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
       deptId
         ? supabase.from("modules").select("id, code, name, type, total_hours, total_sessions, department_id, level_id").eq("department_id", deptId).order("code")
         : supabase.from("modules").select("id, code, name, type, total_hours, total_sessions, department_id, level_id").order("code"),
-      // Only trainers that have a usable login (profile + role 'T'). Two-step
-      // query because profiles<->user_roles isn't an embeddable FK.
+      // Every trainer registered for the department — union of primary
+      // department (trainer_registry.department_id) and multi-dept assignments
+      // (trainer_departments). Login/profile is optional: trainers without a
+      // login still appear by their registry name; trainers with a login show
+      // their login email when available.
       (async () => {
-        const { data: tRoles } = await supabase.from("user_roles").select("user_id").eq("role", "T");
-        const trainerUserIds = (tRoles ?? []).map((r: any) => r.user_id);
-        if (!trainerUserIds.length) return { data: [] as any[] };
+        let trs: any[] = [];
+        if (deptId) {
+          const [{ data: primary }, { data: tdRows }] = await Promise.all([
+            supabase
+              .from("trainer_registry")
+              .select("id, hidden_staff_id, full_name, department_id, sessions_target")
+              .eq("department_id", deptId),
+            supabase
+              .from("trainer_departments")
+              .select("trainer_registry_id")
+              .eq("department_id", deptId),
+          ]);
+          const byId = new Map<string, any>();
+          for (const t of primary ?? []) byId.set(t.id, t);
+          const extraIds = (tdRows ?? [])
+            .map((r: any) => r.trainer_registry_id)
+            .filter((id: string) => id && !byId.has(id));
+          if (extraIds.length) {
+            const { data: extras } = await supabase
+              .from("trainer_registry")
+              .select("id, hidden_staff_id, full_name, department_id, sessions_target")
+              .in("id", extraIds);
+            for (const t of extras ?? []) byId.set(t.id, t);
+          }
+          trs = Array.from(byId.values());
+        } else {
+          const { data: all } = await supabase
+            .from("trainer_registry")
+            .select("id, hidden_staff_id, full_name, department_id, sessions_target");
+          trs = all ?? [];
+        }
+        if (!trs.length) return { data: [] as any[] };
+        // Left-join profile data for login email + canonical display name.
         const { data: profs } = await supabase
           .from("profiles")
           .select("id, full_name, email, trainer_registry_id")
-          .in("id", trainerUserIds)
-          .not("trainer_registry_id", "is", null);
-        const trIds = (profs ?? []).map((p: any) => p.trainer_registry_id).filter(Boolean);
-        if (!trIds.length) return { data: [] as any[] };
-        // Filter by trainer_departments so multi-dept trainers appear in every dept they belong to.
-        let allowedTrIds = trIds;
-        if (deptId) {
-          const { data: tdRows } = await supabase
-            .from("trainer_departments")
-            .select("trainer_registry_id")
-            .eq("department_id", deptId)
-            .in("trainer_registry_id", trIds);
-          const tdSet = new Set((tdRows ?? []).map((r: any) => r.trainer_registry_id));
-          allowedTrIds = trIds.filter((id: string) => tdSet.has(id));
-          if (!allowedTrIds.length) return { data: [] as any[] };
-        }
-        const { data: trs } = await supabase
-          .from("trainer_registry")
-          .select("id, hidden_staff_id, full_name, department_id, sessions_target")
-          .in("id", allowedTrIds);
-        const profById = new Map((profs ?? []).map((p: any) => [p.trainer_registry_id, p]));
-        return { data: (trs ?? []).map((t: any) => ({
-          ...t,
-          full_name: profById.get(t.id)?.full_name || t.full_name,
-          email: profById.get(t.id)?.email,
-        })) };
+          .in("trainer_registry_id", trs.map((t) => t.id));
+        const profByTr = new Map(
+          (profs ?? []).map((p: any) => [p.trainer_registry_id, p]),
+        );
+        return {
+          data: trs.map((t: any) => ({
+            ...t,
+            full_name: profByTr.get(t.id)?.full_name || t.full_name,
+            email: profByTr.get(t.id)?.email,
+          })),
+        };
       })(),
       deptId
         ? supabase.from("levels").select("id, name, department_id").eq("department_id", deptId).order("name")
