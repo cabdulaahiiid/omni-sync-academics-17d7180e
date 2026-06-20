@@ -67,11 +67,22 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
           .not("trainer_registry_id", "is", null);
         const trIds = (profs ?? []).map((p: any) => p.trainer_registry_id).filter(Boolean);
         if (!trIds.length) return { data: [] as any[] };
-        const trQuery = supabase
+        // Filter by trainer_departments so multi-dept trainers appear in every dept they belong to.
+        let allowedTrIds = trIds;
+        if (deptId) {
+          const { data: tdRows } = await supabase
+            .from("trainer_departments")
+            .select("trainer_registry_id")
+            .eq("department_id", deptId)
+            .in("trainer_registry_id", trIds);
+          const tdSet = new Set((tdRows ?? []).map((r: any) => r.trainer_registry_id));
+          allowedTrIds = trIds.filter((id: string) => tdSet.has(id));
+          if (!allowedTrIds.length) return { data: [] as any[] };
+        }
+        const { data: trs } = await supabase
           .from("trainer_registry")
           .select("id, hidden_staff_id, full_name, department_id, sessions_target")
-          .in("id", trIds);
-        const { data: trs } = deptId ? await trQuery.eq("department_id", deptId) : await trQuery;
+          .in("id", allowedTrIds);
         const profById = new Map((profs ?? []).map((p: any) => [p.trainer_registry_id, p]));
         return { data: (trs ?? []).map((t: any) => ({
           ...t,
