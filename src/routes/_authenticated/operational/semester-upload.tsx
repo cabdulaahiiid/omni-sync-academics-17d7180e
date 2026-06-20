@@ -273,7 +273,7 @@ function SemesterBuilderPage() {
       qc.invalidateQueries({ queryKey: ["trainer-load"] });
       qc.invalidateQueries({ queryKey: ["schedules"] });
       qc.invalidateQueries({ queryKey: ["drafts"] });
-      setPublishOpen(true);
+      setDraftCount((n) => n + r.created);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -311,18 +311,12 @@ function SemesterBuilderPage() {
   }
 
   return (
-    <div className="space-y-4 pb-28">
-      {/* Hero */}
-      <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-card p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold tracking-tight">Semester Schedule Builder</h1>
-            <p className="text-sm text-muted-foreground">Database-driven, conflict-checked in real time. Saved drafts feed Drafts, Approvals, Trainer Hub, Live Monitoring, Reports, and Notifications instantly.</p>
-          </div>
-        </div>
+    <div className="space-y-3 pb-20">
+      {/* Compact hero */}
+      <div className="flex items-center gap-2.5 rounded-xl border bg-card/60 px-3 py-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+        <h1 className="text-sm font-semibold tracking-tight">Semester Schedule Builder</h1>
+        <span className="hidden text-xs text-muted-foreground sm:inline">— database-driven, real-time conflict checks.</span>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
