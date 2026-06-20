@@ -127,3 +127,59 @@ export const toggleBypassGeofence = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+export const updateUserRoles = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      user_id: z.string().uuid(),
+      roles: z.array(z.enum(["MA", "DH", "T"])).min(1),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "updateUserRoles");
+    const { error } = await context.supabase.rpc("admin_update_user_roles", {
+      _user_id: data.user_id,
+      _roles: data.roles,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setTrainerDepartments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      user_id: z.string().uuid(),
+      department_ids: z.array(z.string().uuid()).min(1),
+      primary_department_id: z.string().uuid(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "setTrainerDepartments");
+    const { error } = await context.supabase.rpc("admin_set_trainer_departments", {
+      _user_id: data.user_id,
+      _department_ids: data.department_ids,
+      _primary_id: data.primary_department_id,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setDHDepartment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      user_id: z.string().uuid(),
+      department_id: z.string().uuid(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "setDHDepartment");
+    const { error } = await context.supabase.rpc("admin_set_dh_department", {
+      _user_id: data.user_id,
+      _department_id: data.department_id,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
