@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/operational")({
 const NAV = [
   { to: "/operational", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/operational/matrix", label: "Schedules", icon: CalendarRange },
-  { to: "/operational/semester-upload", label: "Semester Upload", icon: Upload },
+  { to: "/operational/semester-upload", label: "Schedule Builder", icon: Upload },
   { to: "/operational/drafts", label: "Drafts", icon: FileClock },
   { to: "/operational/students", label: "Students Hub", icon: GraduationCap },
   { to: "/operational/attendance", label: "Attendance", icon: ClipboardCheck },
