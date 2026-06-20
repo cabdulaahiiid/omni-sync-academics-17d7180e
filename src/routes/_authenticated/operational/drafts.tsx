@@ -317,7 +317,7 @@ function DraftsQuadrant({
         <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
           <UploadIcon className="h-6 w-6 opacity-40" />
           <p>No drafts.</p>
-          <Link to="/operational/semester-upload" className="text-primary underline">Upload a semester</Link>
+          <Link to="/operational/semester-upload" className="text-primary underline">Build a semester schedule</Link>
         </div>
       ) : (
         <div className="space-y-3">
