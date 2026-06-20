@@ -22,7 +22,7 @@ const LABELS: Record<string, string> = {
   reports: "Reports",
   settings: "Settings",
   matrix: "Schedules",
-  "semester-upload": "Semester Upload",
+  "semester-upload": "Schedule Builder",
   drafts: "Drafts",
   attendance: "Attendance",
   "live-monitor": "Live Monitoring",
