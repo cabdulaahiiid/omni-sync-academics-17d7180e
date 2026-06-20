@@ -1180,6 +1180,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      link_trainer_login: {
+        Args: { _department_id?: string; _profile_id: string }
+        Returns: string
+      }
       ma_decide_week: {
         Args: {
           _decision: Database["public"]["Enums"]["approval_decision"]

@@ -44,7 +44,7 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
     const [
       { data: semesters },
       { data: modules },
-      { data: trainers },
+      { data: linkedProfiles },
       { data: levels },
       { data: sections },
       { data: venues },
@@ -54,9 +54,31 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
       deptId
         ? supabase.from("modules").select("id, code, name, type, total_hours, total_sessions, department_id, level_id").eq("department_id", deptId).order("code")
         : supabase.from("modules").select("id, code, name, type, total_hours, total_sessions, department_id, level_id").order("code"),
-      deptId
-        ? supabase.from("trainer_registry").select("id, hidden_staff_id, full_name, department_id, sessions_target").eq("department_id", deptId).order("full_name")
-        : supabase.from("trainer_registry").select("id, hidden_staff_id, full_name, department_id, sessions_target").order("full_name"),
+      // Only trainers that have a usable login (profile + role 'T'). Two-step
+      // query because profiles<->user_roles isn't an embeddable FK.
+      (async () => {
+        const { data: tRoles } = await supabase.from("user_roles").select("user_id").eq("role", "T");
+        const trainerUserIds = (tRoles ?? []).map((r: any) => r.user_id);
+        if (!trainerUserIds.length) return { data: [] as any[] };
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, trainer_registry_id")
+          .in("id", trainerUserIds)
+          .not("trainer_registry_id", "is", null);
+        const trIds = (profs ?? []).map((p: any) => p.trainer_registry_id).filter(Boolean);
+        if (!trIds.length) return { data: [] as any[] };
+        const trQuery = supabase
+          .from("trainer_registry")
+          .select("id, hidden_staff_id, full_name, department_id, sessions_target")
+          .in("id", trIds);
+        const { data: trs } = deptId ? await trQuery.eq("department_id", deptId) : await trQuery;
+        const profById = new Map((profs ?? []).map((p: any) => [p.trainer_registry_id, p]));
+        return { data: (trs ?? []).map((t: any) => ({
+          ...t,
+          full_name: profById.get(t.id)?.full_name || t.full_name,
+          email: profById.get(t.id)?.email,
+        })) };
+      })(),
       deptId
         ? supabase.from("levels").select("id, name, department_id").eq("department_id", deptId).order("name")
         : supabase.from("levels").select("id, name, department_id").order("name"),
@@ -66,6 +88,18 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
       supabase.from("venues").select("id, name, type, capacity").order("name"),
       supabase.from("departments").select("id, name").order("name"),
     ]);
+
+    type TrainerRow = { id: string; hidden_staff_id: string; full_name: string; department_id: string; sessions_target: number; email?: string };
+    const trainers: TrainerRow[] = ((linkedProfiles as any)?.data ?? linkedProfiles ?? [])
+      .map((t: any) => ({
+        id: t.id,
+        hidden_staff_id: t.email ?? t.hidden_staff_id,
+        full_name: t.full_name,
+        department_id: t.department_id,
+        sessions_target: t.sessions_target ?? 0,
+        email: t.email,
+      }))
+      .sort((a: TrainerRow, b: TrainerRow) => a.full_name.localeCompare(b.full_name));
 
     return {
       department_id: deptId,

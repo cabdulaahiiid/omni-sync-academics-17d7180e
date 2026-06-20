@@ -13,6 +13,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Check, ChevronsUpDown, Send, ShieldCheck, Save, X, CalendarRange, AlertTriangle, CheckCircle2,
   Sparkles, Building2, Users, BookOpen, MapPin, Clock, Eye,
@@ -102,20 +104,22 @@ function StatusBadge({ kind }: { kind: "green" | "yellow" | "red" | "neutral" })
   </span>;
 }
 
-function SectionCard({ step, title, icon: Icon, children }: { step: number; title: string; icon: any; children: React.ReactNode }) {
+function SectionItem({ step, title, icon: Icon, value, complete, children }: { step: number; title: string; icon: any; value: string; complete?: boolean; children: React.ReactNode }) {
   return (
-    <Card className="rounded-2xl border-border/60 bg-card/80 backdrop-blur">
-      <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon className="h-4 w-4" />
+    <AccordionItem value={value} className="rounded-xl border bg-card/80 px-3">
+      <AccordionTrigger className="py-2.5 hover:no-underline">
+        <div className="flex flex-1 items-center gap-2.5">
+          <div className={cn("flex h-7 w-7 items-center justify-center rounded-lg", complete ? "bg-emerald-500/15 text-emerald-600" : "bg-primary/10 text-primary")}>
+            {complete ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+          </div>
+          <div className="flex flex-col items-start text-left">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Section {step}</span>
+            <span className="text-sm font-semibold leading-tight">{title}</span>
+          </div>
         </div>
-        <div className="flex-1">
-          <div className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Section {step}</div>
-          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">{children}</CardContent>
-    </Card>
+      </AccordionTrigger>
+      <AccordionContent className="space-y-2 pb-3">{children}</AccordionContent>
+    </AccordionItem>
   );
 }
 
@@ -163,6 +167,7 @@ function SemesterBuilderPage() {
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("08:00");
   const [publishOpen, setPublishOpen] = useState(false);
+  const [draftCount, setDraftCount] = useState<number>(0);
 
   // Derived
   const semesters = opts?.semesters ?? [];
@@ -269,7 +274,7 @@ function SemesterBuilderPage() {
       qc.invalidateQueries({ queryKey: ["trainer-load"] });
       qc.invalidateQueries({ queryKey: ["schedules"] });
       qc.invalidateQueries({ queryKey: ["drafts"] });
-      setPublishOpen(true);
+      setDraftCount((n) => n + r.created);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -307,24 +312,18 @@ function SemesterBuilderPage() {
   }
 
   return (
-    <div className="space-y-4 pb-28">
-      {/* Hero */}
-      <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-card p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold tracking-tight">Semester Schedule Builder</h1>
-            <p className="text-sm text-muted-foreground">Database-driven, conflict-checked in real time. Saved drafts feed Drafts, Approvals, Trainer Hub, Live Monitoring, Reports, and Notifications instantly.</p>
-          </div>
-        </div>
+    <div className="space-y-3 pb-20">
+      {/* Compact hero */}
+      <div className="flex items-center gap-2.5 rounded-xl border bg-card/60 px-3 py-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+        <h1 className="text-sm font-semibold tracking-tight">Semester Schedule Builder</h1>
+        <span className="hidden text-xs text-muted-foreground sm:inline">— database-driven, real-time conflict checks.</span>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         {/* LEFT: form */}
-        <div className="space-y-4">
-          <SectionCard step={1} title="Semester Information" icon={CalendarRange}>
+        <Accordion type="multiple" defaultValue={["s1","s2","s3"]} className="space-y-2">
+          <SectionItem step={1} title="Semester Information" icon={CalendarRange} value="s1" complete={!!semesterId}>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Academic Year</Label>
@@ -352,9 +351,9 @@ function SemesterBuilderPage() {
                 <div><span className="text-muted-foreground">Total weeks:</span> <b>{totalWeeks}</b></div>
               </div>
             )}
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={2} title="Module Information" icon={BookOpen}>
+          <SectionItem step={2} title="Module Information" icon={BookOpen} value="s2" complete={!!moduleId}>
             <Combobox value={moduleId} onChange={setModuleId}
               placeholder="Search module by code or name"
               items={opts.modules}
@@ -368,9 +367,9 @@ function SemesterBuilderPage() {
                 <div><span className="text-muted-foreground">Type:</span> <b>{selectedModule.type}</b></div>
               </div>
             )}
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={3} title="Trainer Assignment" icon={Users}>
+          <SectionItem step={3} title="Trainer Assignment" icon={Users} value="s3" complete={!!trainerId}>
             <Combobox value={trainerId} onChange={setTrainerId}
               placeholder="Search trainer by name or ID"
               items={opts.trainers}
@@ -386,9 +385,9 @@ function SemesterBuilderPage() {
                 </div>
               </div>
             )}
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={4} title="Schedule Information" icon={Clock}>
+          <SectionItem step={4} title="Schedule Information" icon={Clock} value="s4" complete={durationMin>0}>
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Sessions per week</Label>
@@ -409,9 +408,9 @@ function SemesterBuilderPage() {
               <div><span className="text-muted-foreground">Weekly:</span> <b>{(weeklyMins / 60).toFixed(2)} h</b></div>
               <div><span className="text-muted-foreground">Semester total:</span> <b>{(totalContactMins / 60).toFixed(1)} h</b></div>
             </div>
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={5} title="Class Assignment" icon={Building2}>
+          <SectionItem step={5} title="Class Assignment" icon={Building2} value="s5" complete={!!(levelId && sectionId && venueId)}>
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Level</Label>
@@ -441,9 +440,9 @@ function SemesterBuilderPage() {
                 </div>
               </div>
             )}
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={6} title="Delivery Type" icon={MapPin}>
+          <SectionItem step={6} title="Delivery Type" icon={MapPin} value="s6" complete={daysSelected.length>0}>
             <RadioGroup value={delivery} onValueChange={(v) => setDelivery(v as any)} className="flex flex-wrap gap-4">
               {(["Theory", "Practical", "Both"] as const).map((opt) => (
                 <label key={opt} className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm">
@@ -488,9 +487,9 @@ function SemesterBuilderPage() {
                 <Input placeholder="Practical session name (e.g. Workshop)" value={practicalSessionName} onChange={(e) => setPracticalSessionName(e.target.value)} />
               </div>
             )}
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={7} title="Schedule Timing" icon={Clock}>
+          <SectionItem step={7} title="Schedule Timing" icon={Clock} value="s7" complete={!!(startDate && startTime)}>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Start Date</Label>
@@ -508,83 +507,83 @@ function SemesterBuilderPage() {
               <div><span className="text-muted-foreground">Last session date:</span> <b>{validation?.summary.end_date ?? "—"}</b></div>
               <div><span className="text-muted-foreground">Semester completion:</span> <b>{selectedSem?.end_date ?? "—"}</b></div>
             </div>
-          </SectionCard>
-        </div>
+          </SectionItem>
+        </Accordion>
 
-        {/* RIGHT: live preview + validation */}
-        <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-          <Card className="rounded-2xl border-primary/20 bg-card/95 backdrop-blur">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Eye className="h-4 w-4 text-primary" /> Live Preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1.5 text-xs">
-              <PreviewRow k="Module" v={selectedModule ? `${selectedModule.code} — ${selectedModule.name}` : "—"} />
-              <PreviewRow k="Trainer" v={selectedTrainer ? selectedTrainer.full_name : "—"} />
-              <PreviewRow k="Section" v={selectedSection?.name ?? "—"} />
-              <PreviewRow k="Level" v={selectedLevel?.name ?? "—"} />
-              <PreviewRow k="Venue" v={selectedVenue ? `${selectedVenue.name} (${selectedVenue.type})` : "—"} />
-              <PreviewRow k="Class type" v={delivery} />
-              <PreviewRow k="Session days" v={daysSelected.length ? daysSelected.join(", ") : "—"} />
-              <PreviewRow k="Frequency" v={`${daysSelected.length}/week`} />
-              <PreviewRow k="Duration" v={durationMin ? `${(durationMin / 60).toFixed(2)} h` : "—"} />
-              <PreviewRow k="Start" v={startDate ? `${startDate} ${startTime}` : "—"} />
-              <PreviewRow k="End date" v={validation?.summary.end_date ?? "—"} />
-              <PreviewRow k="Weekly contact hours" v={`${(weeklyMins / 60).toFixed(2)} h`} />
-              <PreviewRow k="Total semester hours" v={`${(totalContactMins / 60).toFixed(1)} h`} />
-              <PreviewRow k="Occurrences" v={validation?.summary.occurrences != null ? String(validation.summary.occurrences) : "—"} />
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl">
-            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-primary" /> Validation</CardTitle></CardHeader>
-            <CardContent className="space-y-2 text-xs">
-              {!formComplete && <p className="text-muted-foreground">Fill every section to run validation.</p>}
-              {formComplete && validateMut.isPending && <p className="text-muted-foreground">Checking conflicts…</p>}
-              {formComplete && !validateMut.isPending && validation && (
-                <>
-                  <div className="flex items-center gap-2">
-                    {validationOk
-                      ? <><CheckCircle2 className="h-4 w-4 text-emerald-500" /> <span>No conflicts detected.</span></>
-                      : <><AlertTriangle className="h-4 w-4 text-destructive" /> <span>{conflicts.length} conflict(s) block save.</span></>}
-                  </div>
-                  {conflicts.slice(0, 6).map((c, i) => (
-                    <div key={i} className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-destructive">
-                      <b className="capitalize">{c.kind}</b>: {c.reason}
+        {/* RIGHT: combined preview + validation as tabs (fits viewport, no extra scroll) */}
+        <Card className="rounded-2xl border-primary/20 bg-card/95 backdrop-blur lg:sticky lg:top-20 lg:self-start">
+          <CardContent className="p-3">
+            <Tabs defaultValue="preview" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="preview" className="text-xs"><Eye className="mr-1.5 h-3.5 w-3.5" /> Preview</TabsTrigger>
+                <TabsTrigger value="validate" className="text-xs">
+                  <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> Validation
+                  {validation && !validationOk && <span className="ml-1.5 rounded-full bg-destructive px-1.5 text-[10px] text-destructive-foreground">{conflicts.length}</span>}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="preview" className="mt-3 space-y-1 text-xs">
+                <PreviewRow k="Module" v={selectedModule ? `${selectedModule.code} — ${selectedModule.name}` : "—"} />
+                <PreviewRow k="Trainer" v={selectedTrainer ? selectedTrainer.full_name : "—"} />
+                <PreviewRow k="Section" v={selectedSection?.name ?? "—"} />
+                <PreviewRow k="Level" v={selectedLevel?.name ?? "—"} />
+                <PreviewRow k="Venue" v={selectedVenue ? `${selectedVenue.name} (${selectedVenue.type})` : "—"} />
+                <PreviewRow k="Class type" v={delivery} />
+                <PreviewRow k="Session days" v={daysSelected.length ? daysSelected.join(", ") : "—"} />
+                <PreviewRow k="Duration" v={durationMin ? `${(durationMin / 60).toFixed(2)} h` : "—"} />
+                <PreviewRow k="Start" v={startDate ? `${startDate} ${startTime}` : "—"} />
+                <PreviewRow k="End date" v={validation?.summary.end_date ?? "—"} />
+                <PreviewRow k="Weekly hours" v={`${(weeklyMins / 60).toFixed(2)} h`} />
+                <PreviewRow k="Total hours" v={`${(totalContactMins / 60).toFixed(1)} h`} />
+                <PreviewRow k="Occurrences" v={validation?.summary.occurrences != null ? String(validation.summary.occurrences) : "—"} />
+              </TabsContent>
+              <TabsContent value="validate" className="mt-3 space-y-2 text-xs">
+                {!formComplete && <p className="text-muted-foreground">Complete every section to run validation.</p>}
+                {formComplete && validateMut.isPending && <p className="text-muted-foreground">Checking conflicts…</p>}
+                {formComplete && !validateMut.isPending && validation && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      {validationOk
+                        ? <><CheckCircle2 className="h-4 w-4 text-emerald-500" /> <span>No conflicts.</span></>
+                        : <><AlertTriangle className="h-4 w-4 text-destructive" /> <span>{conflicts.length} conflict(s) block save.</span></>}
                     </div>
-                  ))}
-                  {warnings.slice(0, 6).map((w, i) => (
-                    <div key={`w${i}`} className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-amber-700 dark:text-amber-400">
-                      ⚠ {w.reason}
-                    </div>
-                  ))}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    {conflicts.slice(0, 6).map((c, i) => (
+                      <div key={i} className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-destructive">
+                        <b className="capitalize">{c.kind}</b>: {c.reason}
+                      </div>
+                    ))}
+                    {warnings.slice(0, 6).map((w, i) => (
+                      <div key={`w${i}`} className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-amber-700 dark:text-amber-400">
+                        ⚠ {w.reason}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Sticky action bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background/95 px-4 py-3 backdrop-blur lg:pl-72">
+      {/* Sticky action bar — Save and Submit are distinct paths per system rules */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background/95 px-4 py-2.5 backdrop-blur lg:pl-72">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-end gap-2">
           <div className="mr-auto text-xs text-muted-foreground">
-            {formComplete
-              ? validationOk ? <span className="text-emerald-600">Ready to save.</span>
-                : <span className="text-destructive">Resolve conflicts before saving.</span>
-              : <span>Complete all sections to enable actions.</span>}
+            {draftCount > 0
+              ? <span className="text-emerald-600">{draftCount} draft session(s) saved this semester.</span>
+              : formComplete
+                ? validationOk ? <span className="text-emerald-600">Ready to save.</span>
+                  : <span className="text-destructive">Resolve conflicts before saving.</span>
+                : <span>Complete all sections to enable actions.</span>}
           </div>
-          <Button variant="ghost" onClick={resetForm}><X className="mr-2 h-4 w-4" /> Cancel</Button>
-          <Button variant="outline" onClick={() => validateMut.mutate()} disabled={!formComplete || validateMut.isPending}>
-            <ShieldCheck className="mr-2 h-4 w-4" /> {validateMut.isPending ? "Validating…" : "Validate Schedule"}
+          <Button variant="ghost" size="sm" onClick={() => { resetForm(); setDraftCount(0); }}><X className="mr-1.5 h-4 w-4" /> Cancel</Button>
+          <Button variant="outline" size="sm" onClick={() => validateMut.mutate()} disabled={!formComplete || validateMut.isPending}>
+            <ShieldCheck className="mr-1.5 h-4 w-4" /> {validateMut.isPending ? "Validating…" : "Validate"}
           </Button>
-          <Button variant="secondary" onClick={() => saveMut.mutate()} disabled={!formComplete || !validationOk || saveMut.isPending}>
-            <Save className="mr-2 h-4 w-4" /> {saveMut.isPending ? "Saving…" : "Save as Draft"}
+          <Button variant="secondary" size="sm" onClick={() => saveMut.mutate()} disabled={!formComplete || !validationOk || saveMut.isPending}>
+            <Save className="mr-1.5 h-4 w-4" /> {saveMut.isPending ? "Saving…" : "Save as Draft"}
           </Button>
-          <Button onClick={async () => { if (!saveMut.data) await saveMut.mutateAsync(); else setPublishOpen(true); }}
-            disabled={!formComplete || !validationOk || saveMut.isPending}>
-            <Send className="mr-2 h-4 w-4" /> Submit & Publish
+          <Button size="sm" onClick={() => setPublishOpen(true)} disabled={draftCount === 0 || !semesterId}>
+            <Send className="mr-1.5 h-4 w-4" /> Submit for Approval
           </Button>
         </div>
       </div>
