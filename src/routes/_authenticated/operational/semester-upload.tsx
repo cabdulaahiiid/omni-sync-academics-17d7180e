@@ -510,80 +510,80 @@ function SemesterBuilderPage() {
           </SectionItem>
         </Accordion>
 
-        {/* RIGHT: live preview + validation */}
-        <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-          <Card className="rounded-2xl border-primary/20 bg-card/95 backdrop-blur">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Eye className="h-4 w-4 text-primary" /> Live Preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1.5 text-xs">
-              <PreviewRow k="Module" v={selectedModule ? `${selectedModule.code} — ${selectedModule.name}` : "—"} />
-              <PreviewRow k="Trainer" v={selectedTrainer ? selectedTrainer.full_name : "—"} />
-              <PreviewRow k="Section" v={selectedSection?.name ?? "—"} />
-              <PreviewRow k="Level" v={selectedLevel?.name ?? "—"} />
-              <PreviewRow k="Venue" v={selectedVenue ? `${selectedVenue.name} (${selectedVenue.type})` : "—"} />
-              <PreviewRow k="Class type" v={delivery} />
-              <PreviewRow k="Session days" v={daysSelected.length ? daysSelected.join(", ") : "—"} />
-              <PreviewRow k="Frequency" v={`${daysSelected.length}/week`} />
-              <PreviewRow k="Duration" v={durationMin ? `${(durationMin / 60).toFixed(2)} h` : "—"} />
-              <PreviewRow k="Start" v={startDate ? `${startDate} ${startTime}` : "—"} />
-              <PreviewRow k="End date" v={validation?.summary.end_date ?? "—"} />
-              <PreviewRow k="Weekly contact hours" v={`${(weeklyMins / 60).toFixed(2)} h`} />
-              <PreviewRow k="Total semester hours" v={`${(totalContactMins / 60).toFixed(1)} h`} />
-              <PreviewRow k="Occurrences" v={validation?.summary.occurrences != null ? String(validation.summary.occurrences) : "—"} />
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl">
-            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-primary" /> Validation</CardTitle></CardHeader>
-            <CardContent className="space-y-2 text-xs">
-              {!formComplete && <p className="text-muted-foreground">Fill every section to run validation.</p>}
-              {formComplete && validateMut.isPending && <p className="text-muted-foreground">Checking conflicts…</p>}
-              {formComplete && !validateMut.isPending && validation && (
-                <>
-                  <div className="flex items-center gap-2">
-                    {validationOk
-                      ? <><CheckCircle2 className="h-4 w-4 text-emerald-500" /> <span>No conflicts detected.</span></>
-                      : <><AlertTriangle className="h-4 w-4 text-destructive" /> <span>{conflicts.length} conflict(s) block save.</span></>}
-                  </div>
-                  {conflicts.slice(0, 6).map((c, i) => (
-                    <div key={i} className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-destructive">
-                      <b className="capitalize">{c.kind}</b>: {c.reason}
+        {/* RIGHT: combined preview + validation as tabs (fits viewport, no extra scroll) */}
+        <Card className="rounded-2xl border-primary/20 bg-card/95 backdrop-blur lg:sticky lg:top-20 lg:self-start">
+          <CardContent className="p-3">
+            <Tabs defaultValue="preview" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="preview" className="text-xs"><Eye className="mr-1.5 h-3.5 w-3.5" /> Preview</TabsTrigger>
+                <TabsTrigger value="validate" className="text-xs">
+                  <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> Validation
+                  {validation && !validationOk && <span className="ml-1.5 rounded-full bg-destructive px-1.5 text-[10px] text-destructive-foreground">{conflicts.length}</span>}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="preview" className="mt-3 space-y-1 text-xs">
+                <PreviewRow k="Module" v={selectedModule ? `${selectedModule.code} — ${selectedModule.name}` : "—"} />
+                <PreviewRow k="Trainer" v={selectedTrainer ? selectedTrainer.full_name : "—"} />
+                <PreviewRow k="Section" v={selectedSection?.name ?? "—"} />
+                <PreviewRow k="Level" v={selectedLevel?.name ?? "—"} />
+                <PreviewRow k="Venue" v={selectedVenue ? `${selectedVenue.name} (${selectedVenue.type})` : "—"} />
+                <PreviewRow k="Class type" v={delivery} />
+                <PreviewRow k="Session days" v={daysSelected.length ? daysSelected.join(", ") : "—"} />
+                <PreviewRow k="Duration" v={durationMin ? `${(durationMin / 60).toFixed(2)} h` : "—"} />
+                <PreviewRow k="Start" v={startDate ? `${startDate} ${startTime}` : "—"} />
+                <PreviewRow k="End date" v={validation?.summary.end_date ?? "—"} />
+                <PreviewRow k="Weekly hours" v={`${(weeklyMins / 60).toFixed(2)} h`} />
+                <PreviewRow k="Total hours" v={`${(totalContactMins / 60).toFixed(1)} h`} />
+                <PreviewRow k="Occurrences" v={validation?.summary.occurrences != null ? String(validation.summary.occurrences) : "—"} />
+              </TabsContent>
+              <TabsContent value="validate" className="mt-3 space-y-2 text-xs">
+                {!formComplete && <p className="text-muted-foreground">Complete every section to run validation.</p>}
+                {formComplete && validateMut.isPending && <p className="text-muted-foreground">Checking conflicts…</p>}
+                {formComplete && !validateMut.isPending && validation && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      {validationOk
+                        ? <><CheckCircle2 className="h-4 w-4 text-emerald-500" /> <span>No conflicts.</span></>
+                        : <><AlertTriangle className="h-4 w-4 text-destructive" /> <span>{conflicts.length} conflict(s) block save.</span></>}
                     </div>
-                  ))}
-                  {warnings.slice(0, 6).map((w, i) => (
-                    <div key={`w${i}`} className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-amber-700 dark:text-amber-400">
-                      ⚠ {w.reason}
-                    </div>
-                  ))}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    {conflicts.slice(0, 6).map((c, i) => (
+                      <div key={i} className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-destructive">
+                        <b className="capitalize">{c.kind}</b>: {c.reason}
+                      </div>
+                    ))}
+                    {warnings.slice(0, 6).map((w, i) => (
+                      <div key={`w${i}`} className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-amber-700 dark:text-amber-400">
+                        ⚠ {w.reason}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Sticky action bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background/95 px-4 py-3 backdrop-blur lg:pl-72">
+      {/* Sticky action bar — Save and Submit are distinct paths per system rules */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background/95 px-4 py-2.5 backdrop-blur lg:pl-72">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-end gap-2">
           <div className="mr-auto text-xs text-muted-foreground">
-            {formComplete
-              ? validationOk ? <span className="text-emerald-600">Ready to save.</span>
-                : <span className="text-destructive">Resolve conflicts before saving.</span>
-              : <span>Complete all sections to enable actions.</span>}
+            {draftCount > 0
+              ? <span className="text-emerald-600">{draftCount} draft session(s) saved this semester.</span>
+              : formComplete
+                ? validationOk ? <span className="text-emerald-600">Ready to save.</span>
+                  : <span className="text-destructive">Resolve conflicts before saving.</span>
+                : <span>Complete all sections to enable actions.</span>}
           </div>
-          <Button variant="ghost" onClick={resetForm}><X className="mr-2 h-4 w-4" /> Cancel</Button>
-          <Button variant="outline" onClick={() => validateMut.mutate()} disabled={!formComplete || validateMut.isPending}>
-            <ShieldCheck className="mr-2 h-4 w-4" /> {validateMut.isPending ? "Validating…" : "Validate Schedule"}
+          <Button variant="ghost" size="sm" onClick={() => { resetForm(); setDraftCount(0); }}><X className="mr-1.5 h-4 w-4" /> Cancel</Button>
+          <Button variant="outline" size="sm" onClick={() => validateMut.mutate()} disabled={!formComplete || validateMut.isPending}>
+            <ShieldCheck className="mr-1.5 h-4 w-4" /> {validateMut.isPending ? "Validating…" : "Validate"}
           </Button>
-          <Button variant="secondary" onClick={() => saveMut.mutate()} disabled={!formComplete || !validationOk || saveMut.isPending}>
-            <Save className="mr-2 h-4 w-4" /> {saveMut.isPending ? "Saving…" : "Save as Draft"}
+          <Button variant="secondary" size="sm" onClick={() => saveMut.mutate()} disabled={!formComplete || !validationOk || saveMut.isPending}>
+            <Save className="mr-1.5 h-4 w-4" /> {saveMut.isPending ? "Saving…" : "Save as Draft"}
           </Button>
-          <Button onClick={async () => { if (!saveMut.data) await saveMut.mutateAsync(); else setPublishOpen(true); }}
-            disabled={!formComplete || !validationOk || saveMut.isPending}>
-            <Send className="mr-2 h-4 w-4" /> Submit & Publish
+          <Button size="sm" onClick={() => setPublishOpen(true)} disabled={draftCount === 0 || !semesterId}>
+            <Send className="mr-1.5 h-4 w-4" /> Submit for Approval
           </Button>
         </div>
       </div>
