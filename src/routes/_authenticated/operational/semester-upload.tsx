@@ -104,20 +104,22 @@ function StatusBadge({ kind }: { kind: "green" | "yellow" | "red" | "neutral" })
   </span>;
 }
 
-function SectionCard({ step, title, icon: Icon, children }: { step: number; title: string; icon: any; children: React.ReactNode }) {
+function SectionItem({ step, title, icon: Icon, value, complete, children }: { step: number; title: string; icon: any; value: string; complete?: boolean; children: React.ReactNode }) {
   return (
-    <Card className="rounded-2xl border-border/60 bg-card/80 backdrop-blur">
-      <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon className="h-4 w-4" />
+    <AccordionItem value={value} className="rounded-xl border bg-card/80 px-3">
+      <AccordionTrigger className="py-2.5 hover:no-underline">
+        <div className="flex flex-1 items-center gap-2.5">
+          <div className={cn("flex h-7 w-7 items-center justify-center rounded-lg", complete ? "bg-emerald-500/15 text-emerald-600" : "bg-primary/10 text-primary")}>
+            {complete ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+          </div>
+          <div className="flex flex-col items-start text-left">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Section {step}</span>
+            <span className="text-sm font-semibold leading-tight">{title}</span>
+          </div>
         </div>
-        <div className="flex-1">
-          <div className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Section {step}</div>
-          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">{children}</CardContent>
-    </Card>
+      </AccordionTrigger>
+      <AccordionContent className="space-y-2 pb-3">{children}</AccordionContent>
+    </AccordionItem>
   );
 }
 
