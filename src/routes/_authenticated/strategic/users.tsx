@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listAllUsers, createUserAccount, toggleBypassGeofence } from "@/lib/users-admin.functions";
+import { listAllUsers, createUserAccount, toggleBypassGeofence, updateUserRoles, setTrainerDepartments, setDHDepartment } from "@/lib/users-admin.functions";
 import { listDepartments } from "@/lib/data.functions";
 import { getGlobalConfig } from "@/lib/global-config.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -33,6 +35,9 @@ function UsersPage() {
   const cfgFn = useServerFn(getGlobalConfig);
   const setAvatarFn = useServerFn(adminSetUserAvatar);
   const setPasswordFn = useServerFn(adminChangeUserPassword);
+  const rolesFn = useServerFn(updateUserRoles);
+  const trDeptFn = useServerFn(setTrainerDepartments);
+  const dhDeptFn = useServerFn(setDHDepartment);
   const { data: users, isLoading } = useQuery({ queryKey: ["all-users"], queryFn: () => listFn() });
   const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => deptsFn() });
   const { data: cfg } = useQuery({ queryKey: ["global-config"], queryFn: () => cfgFn() });
@@ -42,9 +47,13 @@ function UsersPage() {
   const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "T" as "MA" | "DH" | "T", department_id: "" });
   const [avatarPath, setAvatarPath] = useState("");
 
-  const [manage, setManage] = useState<null | { id: string; name: string; email: string; avatar_url: string | null }>(null);
+  const [manage, setManage] = useState<null | { id: string; name: string; email: string; avatar_url: string | null; roles: string[]; department_ids: string[]; primary_department_id: string | null; department_id: string | null }>(null);
   const [newAvatarPath, setNewAvatarPath] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [editRoles, setEditRoles] = useState<("MA" | "DH" | "T")[]>([]);
+  const [editTrainerDepts, setEditTrainerDepts] = useState<string[]>([]);
+  const [editPrimary, setEditPrimary] = useState<string>("");
+  const [editDHDept, setEditDHDept] = useState<string>("");
 
   const create = useMutation({
     mutationFn: () => createFn({ data: { ...form, department_id: form.department_id || null, avatar_path: avatarPath } }),
@@ -72,6 +81,28 @@ function UsersPage() {
   const savePassword = useMutation({
     mutationFn: (vars: { user_id: string; new_password: string }) => setPasswordFn({ data: vars }),
     onSuccess: () => { toast.success("Password reset"); setNewPassword(""); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const saveAccess = useMutation({
+    mutationFn: async () => {
+      if (!manage) return;
+      await rolesFn({ data: { user_id: manage.id, roles: editRoles } });
+      if (editRoles.includes("T") && editTrainerDepts.length) {
+        await trDeptFn({ data: {
+          user_id: manage.id,
+          department_ids: editTrainerDepts,
+          primary_department_id: editPrimary || editTrainerDepts[0],
+        }});
+      }
+      if (editRoles.includes("DH") && editDHDept) {
+        await dhDeptFn({ data: { user_id: manage.id, department_id: editDHDept } });
+      }
+    },
+    onSuccess: () => {
+      toast.success("Roles & departments updated");
+      qc.invalidateQueries({ queryKey: ["all-users"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -153,7 +184,19 @@ function UsersPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => { setManage({ id: u.id, name: u.full_name || u.email, email: u.email, avatar_url: u.avatar_url }); setNewAvatarPath(""); setNewPassword(""); }}>
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      setManage({
+                        id: u.id, name: u.full_name || u.email, email: u.email, avatar_url: u.avatar_url,
+                        roles: u.roles ?? [], department_ids: u.department_ids ?? [],
+                        primary_department_id: u.primary_department_id ?? null,
+                        department_id: u.department_id ?? null,
+                      });
+                      setNewAvatarPath(""); setNewPassword("");
+                      setEditRoles((u.roles ?? []).filter((r: string) => r === "MA" || r === "DH" || r === "T") as any);
+                      setEditTrainerDepts(u.department_ids?.length ? u.department_ids : (u.department_id ? [u.department_id] : []));
+                      setEditPrimary(u.primary_department_id ?? u.department_id ?? "");
+                      setEditDHDept(u.department_id ?? "");
+                    }}>
                       <Settings2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -187,6 +230,76 @@ function UsersPage() {
                 <Button size="sm" disabled={newPassword.length < 8 || savePassword.isPending}
                   onClick={() => savePassword.mutate({ user_id: manage.id, new_password: newPassword })}>
                   {savePassword.isPending ? "Updating…" : "Reset password"}
+                </Button>
+              </div>
+
+              <div className="space-y-3 border-t pt-4">
+                <Label>Roles</Label>
+                <div className="flex flex-wrap gap-4">
+                  {(["MA", "DH", "T"] as const).map((r) => (
+                    <label key={r} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={editRoles.includes(r)}
+                        onCheckedChange={(v) => {
+                          setEditRoles((prev) => v ? Array.from(new Set([...prev, r])) : prev.filter((x) => x !== r));
+                        }}
+                      />
+                      {r === "MA" ? "Master Admin" : r === "DH" ? "Department Head" : "Trainer"}
+                    </label>
+                  ))}
+                </div>
+
+                {editRoles.includes("DH") && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">DH Department</Label>
+                    <Select value={editDHDept} onValueChange={setEditDHDept}>
+                      <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                      <SelectContent>
+                        {(depts ?? []).map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {editRoles.includes("T") && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Trainer departments (check all that apply, pick one primary)</Label>
+                    <RadioGroup value={editPrimary} onValueChange={setEditPrimary} className="space-y-1">
+                      {(depts ?? []).map((d) => {
+                        const checked = editTrainerDepts.includes(d.id);
+                        return (
+                          <div key={d.id} className="flex items-center gap-3 rounded border px-3 py-2">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(v) => {
+                                setEditTrainerDepts((prev) => {
+                                  const next = v ? Array.from(new Set([...prev, d.id])) : prev.filter((x) => x !== d.id);
+                                  if (!v && editPrimary === d.id) setEditPrimary(next[0] ?? "");
+                                  if (v && !editPrimary) setEditPrimary(d.id);
+                                  return next;
+                                });
+                              }}
+                            />
+                            <span className="flex-1 text-sm">{d.name}</span>
+                            <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <RadioGroupItem value={d.id} disabled={!checked} /> Primary
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </RadioGroup>
+                  </div>
+                )}
+
+                <Button size="sm"
+                  disabled={
+                    editRoles.length === 0 ||
+                    (editRoles.includes("DH") && !editDHDept) ||
+                    (editRoles.includes("T") && (editTrainerDepts.length === 0 || !editPrimary)) ||
+                    saveAccess.isPending
+                  }
+                  onClick={() => saveAccess.mutate()}>
+                  {saveAccess.isPending ? "Saving…" : "Save roles & departments"}
                 </Button>
               </div>
             </div>
