@@ -990,6 +990,42 @@ export type Database = {
           },
         ]
       }
+      trainer_departments: {
+        Row: {
+          created_at: string
+          department_id: string
+          is_primary: boolean
+          trainer_registry_id: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          is_primary?: boolean
+          trainer_registry_id: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          is_primary?: boolean
+          trainer_registry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_departments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trainer_departments_trainer_registry_id_fkey"
+            columns: ["trainer_registry_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_registry"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainer_registry: {
         Row: {
           created_at: string
@@ -1131,6 +1167,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_set_dh_department: {
+        Args: { _department_id: string; _user_id: string }
+        Returns: undefined
+      }
+      admin_set_trainer_departments: {
+        Args: {
+          _department_ids: string[]
+          _primary_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      admin_update_user_roles: {
+        Args: {
+          _roles: Database["public"]["Enums"]["app_role"][]
+          _user_id: string
+        }
+        Returns: undefined
+      }
       current_department_id: { Args: never; Returns: string }
       current_trainer_registry_id: { Args: never; Returns: string }
       decide_approval: {

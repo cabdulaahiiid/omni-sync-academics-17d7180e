@@ -10,19 +10,29 @@ export const listAllUsers = createServerFn({ method: "GET" })
     await requireRole(context, ["MA"], "listAllUsers");
     const { data: profiles, error } = await supabaseAdmin
       .from("profiles")
-      .select("id, full_name, email, department_id, bypass_geofence, active, created_at, avatar_path")
+      .select("id, full_name, email, department_id, trainer_registry_id, bypass_geofence, active, created_at, avatar_path")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const ids = (profiles ?? []).map((p) => p.id);
-    const [{ data: roles }, { data: depts }] = await Promise.all([
+    const trIds = (profiles ?? []).map((p: any) => p.trainer_registry_id).filter(Boolean);
+    const [{ data: roles }, { data: depts }, { data: trDepts }] = await Promise.all([
       ids.length ? supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", ids) : Promise.resolve({ data: [] as any[] }),
       supabaseAdmin.from("departments").select("id, name"),
+      trIds.length
+        ? supabaseAdmin.from("trainer_departments").select("trainer_registry_id, department_id, is_primary").in("trainer_registry_id", trIds)
+        : Promise.resolve({ data: [] as any[] }),
     ]);
     const roleMap: Record<string, string[]> = {};
     for (const r of roles ?? []) {
       (roleMap[r.user_id] = roleMap[r.user_id] ?? []).push(r.role as string);
     }
     const dMap = Object.fromEntries((depts ?? []).map((d) => [d.id, d.name]));
+    const trDeptMap: Record<string, { department_id: string; is_primary: boolean }[]> = {};
+    for (const row of trDepts ?? []) {
+      (trDeptMap[(row as any).trainer_registry_id] = trDeptMap[(row as any).trainer_registry_id] ?? []).push({
+        department_id: (row as any).department_id, is_primary: (row as any).is_primary,
+      });
+    }
     const withAvatars = await Promise.all(
       (profiles ?? []).map(async (p) => {
         let avatar_url: string | null = null;
@@ -30,11 +40,14 @@ export const listAllUsers = createServerFn({ method: "GET" })
           const { data: signed } = await supabaseAdmin.storage.from("avatars").createSignedUrl(p.avatar_path, 60 * 60);
           avatar_url = signed?.signedUrl ?? null;
         }
+        const tDepts = (p as any).trainer_registry_id ? (trDeptMap[(p as any).trainer_registry_id] ?? []) : [];
         return {
           ...p,
           avatar_url,
           roles: roleMap[p.id] ?? [],
           department_name: p.department_id ? dMap[p.department_id] ?? "—" : "—",
+          department_ids: tDepts.map((t) => t.department_id),
+          primary_department_id: tDepts.find((t) => t.is_primary)?.department_id ?? p.department_id ?? null,
         };
       }),
     );
@@ -112,5 +125,61 @@ export const toggleBypassGeofence = createServerFn({ method: "POST" })
       actor_id: context.userId, action_type: "TOGGLE_BYPASS", entity_type: "profiles", entity_id: data.user_id,
       after_state: { bypass_geofence: data.bypass },
     });
+    return { ok: true };
+  });
+
+export const updateUserRoles = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      user_id: z.string().uuid(),
+      roles: z.array(z.enum(["MA", "DH", "T"])).min(1),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "updateUserRoles");
+    const { error } = await context.supabase.rpc("admin_update_user_roles", {
+      _user_id: data.user_id,
+      _roles: data.roles,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setTrainerDepartments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      user_id: z.string().uuid(),
+      department_ids: z.array(z.string().uuid()).min(1),
+      primary_department_id: z.string().uuid(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "setTrainerDepartments");
+    const { error } = await context.supabase.rpc("admin_set_trainer_departments", {
+      _user_id: data.user_id,
+      _department_ids: data.department_ids,
+      _primary_id: data.primary_department_id,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setDHDepartment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      user_id: z.string().uuid(),
+      department_id: z.string().uuid(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "setDHDepartment");
+    const { error } = await context.supabase.rpc("admin_set_dh_department", {
+      _user_id: data.user_id,
+      _department_id: data.department_id,
+    });
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
