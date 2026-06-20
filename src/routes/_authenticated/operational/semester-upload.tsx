@@ -327,8 +327,8 @@ function SemesterBuilderPage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         {/* LEFT: form */}
-        <div className="space-y-4">
-          <SectionCard step={1} title="Semester Information" icon={CalendarRange}>
+        <Accordion type="multiple" defaultValue={["s1","s2","s3"]} className="space-y-2">
+          <SectionItem step={1} title="Semester Information" icon={CalendarRange} value="s1" complete={!!semesterId}>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Academic Year</Label>
@@ -356,9 +356,9 @@ function SemesterBuilderPage() {
                 <div><span className="text-muted-foreground">Total weeks:</span> <b>{totalWeeks}</b></div>
               </div>
             )}
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={2} title="Module Information" icon={BookOpen}>
+          <SectionItem step={2} title="Module Information" icon={BookOpen} value="s2" complete={!!moduleId}>
             <Combobox value={moduleId} onChange={setModuleId}
               placeholder="Search module by code or name"
               items={opts.modules}
@@ -372,9 +372,9 @@ function SemesterBuilderPage() {
                 <div><span className="text-muted-foreground">Type:</span> <b>{selectedModule.type}</b></div>
               </div>
             )}
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={3} title="Trainer Assignment" icon={Users}>
+          <SectionItem step={3} title="Trainer Assignment" icon={Users} value="s3" complete={!!trainerId}>
             <Combobox value={trainerId} onChange={setTrainerId}
               placeholder="Search trainer by name or ID"
               items={opts.trainers}
@@ -390,9 +390,9 @@ function SemesterBuilderPage() {
                 </div>
               </div>
             )}
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={4} title="Schedule Information" icon={Clock}>
+          <SectionItem step={4} title="Schedule Information" icon={Clock} value="s4" complete={durationMin>0}>
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Sessions per week</Label>
@@ -413,9 +413,9 @@ function SemesterBuilderPage() {
               <div><span className="text-muted-foreground">Weekly:</span> <b>{(weeklyMins / 60).toFixed(2)} h</b></div>
               <div><span className="text-muted-foreground">Semester total:</span> <b>{(totalContactMins / 60).toFixed(1)} h</b></div>
             </div>
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={5} title="Class Assignment" icon={Building2}>
+          <SectionItem step={5} title="Class Assignment" icon={Building2} value="s5" complete={!!(levelId && sectionId && venueId)}>
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Level</Label>
@@ -445,9 +445,9 @@ function SemesterBuilderPage() {
                 </div>
               </div>
             )}
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={6} title="Delivery Type" icon={MapPin}>
+          <SectionItem step={6} title="Delivery Type" icon={MapPin} value="s6" complete={daysSelected.length>0}>
             <RadioGroup value={delivery} onValueChange={(v) => setDelivery(v as any)} className="flex flex-wrap gap-4">
               {(["Theory", "Practical", "Both"] as const).map((opt) => (
                 <label key={opt} className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm">
@@ -492,9 +492,9 @@ function SemesterBuilderPage() {
                 <Input placeholder="Practical session name (e.g. Workshop)" value={practicalSessionName} onChange={(e) => setPracticalSessionName(e.target.value)} />
               </div>
             )}
-          </SectionCard>
+          </SectionItem>
 
-          <SectionCard step={7} title="Schedule Timing" icon={Clock}>
+          <SectionItem step={7} title="Schedule Timing" icon={Clock} value="s7" complete={!!(startDate && startTime)}>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Start Date</Label>
@@ -512,8 +512,8 @@ function SemesterBuilderPage() {
               <div><span className="text-muted-foreground">Last session date:</span> <b>{validation?.summary.end_date ?? "—"}</b></div>
               <div><span className="text-muted-foreground">Semester completion:</span> <b>{selectedSem?.end_date ?? "—"}</b></div>
             </div>
-          </SectionCard>
-        </div>
+          </SectionItem>
+        </Accordion>
 
         {/* RIGHT: live preview + validation */}
         <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
