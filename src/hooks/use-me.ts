@@ -10,8 +10,13 @@ export function useMe() {
     queryKey: ["me", userId],
     queryFn: () => fn(),
     enabled: authReady && hasSession && Boolean(userId),
-    retry: false,
+    // Retry on transient failures (network blips, auth-token race right after
+    // sign-in). Up to 4 attempts with backoff so we never flash "No role
+    // assigned" because of a single failed request.
+    retry: 4,
+    retryDelay: (attempt) => Math.min(300 * 2 ** attempt, 2000),
     throwOnError: false,
+    staleTime: 30_000,
   });
   return {
     ...query,

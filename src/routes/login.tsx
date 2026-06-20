@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import loginBg from "@/assets/login-bg.png.asset.json";
-import { resolveSignedInHome } from "@/lib/auth-routing";
 import { logAuthEvent } from "@/lib/auth/telemetry";
 
 export const Route = createFileRoute("/login")({
@@ -41,14 +40,11 @@ function LoginPage() {
           userId: data.user.id,
           ok: true,
         });
-        const { to } = await resolveSignedInHome(data.user.id);
-        if (to) {
-          await navigate({ to });
-        } else {
-          setErrorMessage(
-            "No role assigned to this account. Please contact your administrator.",
-          );
-        }
+        // Delegate routing to "/" — HomeRedirect resolves the role via the
+        // authenticated server fn (with retries) and routes to the correct
+        // workspace. This avoids the client-side race that intermittently
+        // produced false "No role assigned" errors right after sign-in.
+        await navigate({ to: "/", replace: true });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Invalid credentials";
