@@ -167,6 +167,7 @@ function SemesterBuilderPage() {
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("08:00");
   const [publishOpen, setPublishOpen] = useState(false);
+  const [draftCount, setDraftCount] = useState<number>(0);
 
   // Derived
   const semesters = opts?.semesters ?? [];
