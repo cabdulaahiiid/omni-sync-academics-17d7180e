@@ -44,7 +44,7 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
     const [
       { data: semesters },
       { data: modules },
-      { data: trainers },
+      { data: linkedProfiles },
       { data: levels },
       { data: sections },
       { data: venues },
@@ -54,9 +54,17 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
       deptId
         ? supabase.from("modules").select("id, code, name, type, total_hours, total_sessions, department_id, level_id").eq("department_id", deptId).order("code")
         : supabase.from("modules").select("id, code, name, type, total_hours, total_sessions, department_id, level_id").order("code"),
-      deptId
-        ? supabase.from("trainer_registry").select("id, hidden_staff_id, full_name, department_id, sessions_target").eq("department_id", deptId).order("full_name")
-        : supabase.from("trainer_registry").select("id, hidden_staff_id, full_name, department_id, sessions_target").order("full_name"),
+      // Only trainers that have a usable login (profile + role 'T'). Linkage is
+      // created automatically by handle_new_user / link_trainer_login, so this
+      // is the source of truth for "trainers users can pick in the builder".
+      (async () => {
+        const q = supabase
+          .from("profiles")
+          .select("id, full_name, email, department_id, trainer_registry_id, user_roles!inner(role), trainer_registry!inner(id, hidden_staff_id, full_name, department_id, sessions_target)")
+          .eq("user_roles.role", "T")
+          .not("trainer_registry_id", "is", null);
+        return deptId ? await q.eq("trainer_registry.department_id", deptId) : await q;
+      })(),
       deptId
         ? supabase.from("levels").select("id, name, department_id").eq("department_id", deptId).order("name")
         : supabase.from("levels").select("id, name, department_id").order("name"),
@@ -66,6 +74,15 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
       supabase.from("venues").select("id, name, type, capacity").order("name"),
       supabase.from("departments").select("id, name").order("name"),
     ]);
+
+    type TrainerRow = { id: string; hidden_staff_id: string; full_name: string; department_id: string; sessions_target: number };
+    const trainers: TrainerRow[] = (linkedProfiles ?? []).map((p: any) => ({
+      id: p.trainer_registry.id,
+      hidden_staff_id: p.email ?? p.trainer_registry.hidden_staff_id,
+      full_name: p.full_name || p.trainer_registry.full_name,
+      department_id: p.trainer_registry.department_id,
+      sessions_target: p.trainer_registry.sessions_target ?? 0,
+    })).sort((a, b) => a.full_name.localeCompare(b.full_name));
 
     return {
       department_id: deptId,
