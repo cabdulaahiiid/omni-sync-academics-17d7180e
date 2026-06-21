@@ -11,12 +11,13 @@ export function useMe() {
     queryFn: () => fn(),
     enabled: authReady && hasSession && Boolean(userId),
     // Retry on transient failures (network blips, auth-token race right after
-    // sign-in). Up to 4 attempts with backoff so we never flash "No role
-    // assigned" because of a single failed request.
-    retry: 4,
-    retryDelay: (attempt) => Math.min(300 * 2 ** attempt, 2000),
+    // sign-in, or RLS replication lag). Up to 5 attempts with backoff so we
+    // never flash "No role assigned" because of a single failed request.
+    retry: 5,
+    retryDelay: (attempt) => Math.min(300 * 2 ** attempt, 2500),
     throwOnError: false,
-    staleTime: 30_000,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
   return {
     ...query,
