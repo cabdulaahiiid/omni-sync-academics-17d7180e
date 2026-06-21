@@ -8,10 +8,30 @@ export const getMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const [{ data: profile }, { data: roles }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", userId),
-    ]);
+    // Session is already validated by requireSupabaseAuth. Load profile
+    // first, then roles — sequential so we can surface a precise error
+    // instead of silently returning an empty roles array on RLS hiccups.
+    const profileRes = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profileRes.error) {
+      console.error("[getMe] profile query failed:", profileRes.error);
+      throw new Error(`profile_query_failed: ${profileRes.error.message}`);
+    }
+    const profile = profileRes.data;
+
+    const rolesRes = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    if (rolesRes.error) {
+      console.error("[getMe] roles query failed:", rolesRes.error);
+      throw new Error(`roles_query_failed: ${rolesRes.error.message}`);
+    }
+    const roles = rolesRes.data ?? [];
+
     let avatar_url: string | null = null;
     if (profile?.avatar_path) {
       const { data: signed } = await supabase.storage
@@ -23,7 +43,9 @@ export const getMe = createServerFn({ method: "GET" })
       userId,
       profile,
       avatar_url,
-      roles: (roles ?? []).map((r) => r.role as "MA" | "DH" | "T"),
+      roles: roles.map((r) => r.role as "MA" | "DH" | "T"),
+      profileFound: Boolean(profile),
+      roleCount: roles.length,
     };
   });
 

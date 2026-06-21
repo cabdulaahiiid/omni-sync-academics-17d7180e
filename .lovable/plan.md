@@ -1,43 +1,70 @@
-## Scope
+## Plan: Fix authentication stability only
 
-Two small fixes, both UI-facing. No schema changes.
+### Scope
+- Preserve all ERP modules and UI.
+- Change only authentication/session/role initialization code and, if needed, a small database policy/diagnostic migration.
 
-### 1. Login page — remove duplicate welcome block
+### What I found
+- There are currently **two auth listeners**:
+  - `src/hooks/use-auth-session.ts`
+  - `src/routes/__root.tsx`
+- Multiple components call `useAuthSession()`, so the listener in that hook can be mounted more than once.
+- `getMe` currently queries profile and roles in parallel and does not validate/throw on profile/role query errors, which can turn temporary auth/RLS failures into an empty role result.
+- RLS already allows authenticated users to read their own `profiles` and `user_roles` rows.
+- Data check found one user with **one profile but zero role records**. That account should continue showing a real “No role assigned” error after retries, but valid users should not see false errors.
 
-The "Welcome to TVET ERP / Empowering TVET Institutions with Smart ERP Solutions" text is **baked into the background image** `src/assets/login-bg.png` (it appears twice in the PNG itself — once above the three feature cards and once below them). Nothing in the React code renders that text, so the fix is to the image asset, not to `login.tsx`.
+### Implementation steps
+1. **Add a centralized `AuthProvider`**
+   - Create a React auth context/provider.
+   - On app start, call `supabase.auth.getSession()` first and wait for restoration.
+   - Then validate the session user with `supabase.auth.getUser()` when a session exists.
+   - Maintain a single source of truth: `authReady`, `session`, `user`, `hasSession`, `userId`, auth errors.
+   - Add detailed console logging for session restoration and auth state transitions.
 
-Approach:
-- Open the current PNG (1333 × 800).
-- Keep top band `y = 0 … 540` (sky, building, flags, first "Welcome to TVET ERP" headline, tagline, and the three feature cards: Centralize Institution Data / Optimize Resources / Enhance Training Outcomes).
-- Drop the duplicate band `y = 540 … 740` (second "Welcome to TVET ERP" + repeated tagline).
-- Keep the bottom band `y = 740 … 800` (the "Developed by Talosan IT Consultant" credit line + Lovable badge area).
-- Stitch the two kept bands into a new 1333 × 600 PNG and overwrite `src/assets/login-bg.png` (asset JSON stays the same — same `asset_id`, same URL, just new bytes).
-- No code change in `src/routes/login.tsx`; existing `bg-cover bg-center` styling still works.
+2. **Use exactly one auth listener**
+   - Move `supabase.auth.onAuthStateChange` into the new `AuthProvider`.
+   - Remove the root `AuthSync` listener from `src/routes/__root.tsx`.
+   - Update `useAuthSession()` to read the provider context only, with no listener of its own.
+   - Keep query/router invalidation behavior inside the provider for `SIGNED_IN`, `SIGNED_OUT`, and `USER_UPDATED`; ignore noisy token refresh events except for session state updates.
 
-### 2. DH Semester Schedule Builder — Section 3 trainer list must show every trainer of the department
+3. **Enforce load order: Session → Profile → Role → Dashboard**
+   - Update `getMe` to load the profile first, then roles.
+   - Check query errors explicitly.
+   - Return diagnostic status such as `profileStatus`, `roleStatus`, and `roleCount`.
+   - Log role/profile resolution failures to the existing `auth_events` table when possible.
 
-Today `getBuilderOptions` in `src/lib/semester-builder.functions.ts` only returns trainers that satisfy **all** of:
-1. a row in `user_roles` with `role = 'T'`,
-2. a `profiles` row whose `trainer_registry_id` is not null,
-3. a `trainer_departments` row for the selected department.
+4. **Make role/profile loading resilient**
+   - Add retry/backoff around `getMe` in `useMe`.
+   - Do not show “No role assigned” until:
+     - session restoration is complete,
+     - a valid session exists,
+     - profile/role queries have completed and retried,
+     - the final role result is truly empty.
+   - Never call `signOut()` because a profile or role query failed.
 
-That excludes trainers who were registered for the department in `trainer_registry` but haven't logged in yet or aren't linked through `trainer_departments`. DH users see an empty / partial trainer pool.
+5. **Gate redirects safely**
+   - `AuthGate` will redirect to `/login` only after auth restoration completes and there is definitely no valid session.
+   - `/` will navigate to the correct dashboard only after `getMe` finishes successfully and roles are initialized.
+   - `/login` will navigate to `/` after sign-in and let the centralized flow resolve the dashboard.
 
-Fix (server-only, no UI change):
-- Build the candidate trainer set from `trainer_registry` for the chosen department as the **union** of:
-  - `trainer_registry.department_id = deptId` (primary department fallback), and
-  - `trainer_departments.department_id = deptId` (multi-department assignments).
-- Drop the "must have role T + linked profile" gate; instead, **left-join** profile data (full_name, email) when present so trainers with a login still show their login email, and trainers without a login still appear by `trainer_registry.full_name` / `hidden_staff_id`.
-- Keep the MA "no department" branch behaving as today (returns all trainers).
-- No change to `saveBuilderDraft` validation — it already checks `trainer.department_id === data.department_id`, which still holds for primary-dept trainers; for multi-dept trainers it will continue to pass via the existing `trainer_departments` membership check path used elsewhere. (If a regression is observed for multi-dept saves, relax the equality check to "primary dept OR member of `trainer_departments` for that dept" in the same edit.)
+6. **Verify profile/role integrity and RLS**
+   - Add a read-only diagnostic server function for current-user auth health, or improve logging in `getMe`, so admins can debug profile/role problems without exposing secrets.
+   - If database constraints are missing, add a migration only for safe integrity/RLS guarantees already implied by the app:
+     - ensure profile id uniqueness via existing primary key,
+     - preserve existing `user_roles` uniqueness,
+     - keep/repair self-read policies if needed.
+   - I will not auto-assign roles to the user that currently has zero roles, because that is a data/admin decision.
 
-## Files touched
+### Verification
+- Confirm codebase has only one `onAuthStateChange` call.
+- Confirm no auth flow signs users out on role/profile failure.
+- Verify RLS policies still allow users to read their own profile and role.
+- Use the preview/browser to test refresh and reload behavior where possible.
+- Confirm dashboard routing waits for role initialization before navigation.
 
-- `src/assets/login-bg.png` — overwrite with cropped PNG (binary only).
-- `src/lib/semester-builder.functions.ts` — rewrite the trainer-loading branch inside `getBuilderOptions`.
-
-## Out of scope
-
-- No DB migration, no RLS change, no route changes.
-- No changes to Users & Roles, attendance, approvals, or other modules.
-- Login form layout, copy, and styling stay exactly as they are.
+### Expected result
+- Stable login and refresh behavior.
+- No random automatic logouts.
+- No false “No role assigned” errors for valid users.
+- A real no-role account still gets a clear error after retries.
+- Existing ERP modules and UI remain unchanged.
