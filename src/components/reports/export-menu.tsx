@@ -11,6 +11,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { logExport, type ReportResult, type ReportFilters } from "@/lib/reports.functions";
 import { downloadCsv, downloadXlsx, downloadPdf, openPrintView } from "@/lib/report-export";
+import { useMe } from "@/hooks/use-me";
 
 export function ExportMenu({
   report,
@@ -22,6 +23,11 @@ export function ExportMenu({
   filters: ReportFilters;
 }) {
   const log = useServerFn(logExport);
+  const me = useMe();
+  const ctx = {
+    userName: me.data?.profile?.full_name ?? me.data?.profile?.email ?? null,
+    userRole: me.data?.roles?.[0] ?? null,
+  };
   const audit = useMutation({ mutationFn: (format: "csv" | "xlsx" | "pdf" | "print") =>
     log({ data: { key: report?.key ?? "unknown", format, filters: filters as unknown as Record<string, string | undefined> } }) });
 
@@ -29,8 +35,8 @@ export function ExportMenu({
     if (!report) { toast.error("Report still loading"); return; }
     try {
       if (format === "csv") downloadCsv(report);
-      else if (format === "xlsx") await downloadXlsx(report);
-      else if (format === "pdf") await downloadPdf(report);
+      else if (format === "xlsx") await downloadXlsx(report, ctx);
+      else if (format === "pdf") await downloadPdf(report, ctx);
       else openPrintView(report.key, currentSearch);
       audit.mutate(format);
       toast.success(`Exported as ${format.toUpperCase()}`);
