@@ -14,6 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { OfflineBanner } from "@/components/offline-banner";
+import { AuthProvider } from "@/lib/auth/auth-provider";
 
 function NotFoundComponent() {
   return (
@@ -122,37 +123,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthSync />
-      <Outlet />
-      <Toaster richColors position="top-right" />
-      <OfflineBanner />
+      <AuthProvider>
+        <Outlet />
+        <Toaster richColors position="top-right" />
+        <OfflineBanner />
+      </AuthProvider>
     </QueryClientProvider>
   );
-}
-
-function AuthSync() {
-  const router = useRouter();
-  const qc = useQueryClient();
-  useEffect(() => {
-    let lastUserId: string | null | undefined;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Ignore noisy events that don't change identity. Invalidating on
-      // TOKEN_REFRESHED races with in-flight server-fn calls and dispatches
-      // them with no Bearer header → "Unauthorized: No authorization header".
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
-      const nextUserId = session?.user?.id ?? null;
-      if (lastUserId === nextUserId) return;
-      lastUserId = nextUserId;
-      if (event === "SIGNED_OUT") {
-        qc.cancelQueries();
-        qc.clear();
-        router.invalidate();
-        return;
-      }
-      router.invalidate();
-      qc.invalidateQueries();
-    });
-    return () => subscription.unsubscribe();
-  }, [router, qc]);
-  return null;
 }
