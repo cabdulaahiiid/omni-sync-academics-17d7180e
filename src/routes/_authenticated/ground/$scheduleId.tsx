@@ -54,7 +54,8 @@ function SessionDetail() {
   const campusTarget = cfg?.campus_lat != null && cfg?.campus_lng != null
     ? { latitude: cfg.campus_lat, longitude: cfg.campus_lng, geo_radius: cfg.campus_radius_m ?? 150 }
     : data?.venue;
-  const geo = useGeoGatekeeper(campusTarget, true, { minRadius: 150, bypass: bypass || !geofenceEnabled });
+  const geoInactive = bypass || !geofenceEnabled;
+  const geo = useGeoGatekeeper(campusTarget, !geoInactive, { minRadius: 150, bypass: geoInactive });
 
   const startMs = data?.schedule?.date && data?.schedule?.start_time
     ? new Date(`${data.schedule.date}T${data.schedule.start_time}`).getTime() : 0;
@@ -107,7 +108,11 @@ function SessionDetail() {
 
   const checkInMut = useMutation({
     mutationFn: () =>
-      checkInFn({ data: { schedule_id: scheduleId, latitude: geo.coords!.lat, longitude: geo.coords!.lng } }),
+      checkInFn({ data: {
+        schedule_id: scheduleId,
+        latitude: geo.coords?.lat ?? 0,
+        longitude: geo.coords?.lng ?? 0,
+      } }),
     onSuccess: (res) => {
       setCheckInAt(res.checkin_at);
       setRosterUntil(res.roster_unlock_until);
