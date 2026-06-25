@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 /** Display a mm:ss countdown to a target time. */
-export function CountdownTimer({ until, label = "Time remaining", variant = "bar" }: { until: string | Date | null; label?: string; variant?: "bar" | "ring" }) {
+export function CountdownTimer({ until, label = "Time remaining", variant = "bar", offsetMs = 0, totalMs }: { until: string | Date | null; label?: string; variant?: "bar" | "ring"; offsetMs?: number; totalMs?: number }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!until) return;
@@ -9,14 +9,14 @@ export function CountdownTimer({ until, label = "Time remaining", variant = "bar
     return () => window.clearInterval(id);
   }, [until]);
   if (!until) return null;
-  const ms = Math.max(0, new Date(until).getTime() - now);
+  const ms = Math.max(0, new Date(until).getTime() - (now + offsetMs));
   const mm = Math.floor(ms / 60000);
   const ss = Math.floor((ms % 60000) / 1000);
   const expired = ms <= 0;
   if (variant === "ring") {
-    // Assume 50-minute attendance window for the ring fill; clamp 0..1.
-    const totalMs = 50 * 60_000;
-    const pct = Math.max(0, Math.min(1, ms / totalMs));
+    // Ring fill: caller can override totalMs (defaults to 50 minutes).
+    const total = totalMs ?? 50 * 60_000;
+    const pct = Math.max(0, Math.min(1, ms / total));
     const size = 180;
     const stroke = 12;
     const r = (size - stroke) / 2;
