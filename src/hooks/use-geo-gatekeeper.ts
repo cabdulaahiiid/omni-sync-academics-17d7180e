@@ -28,9 +28,17 @@ export function useGeoGatekeeper(
   const [coords, setCoords] = useState<GeoState["coords"]>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // When geofence is bypassed or fully disabled, do not request GPS at all.
+  const inactive = !enabled || !!options?.bypass;
+
   useEffect(() => {
-    if (!enabled || typeof navigator === "undefined" || !navigator.geolocation) {
-      if (enabled) setError("Geolocation is unavailable on this device");
+    if (inactive) {
+      setError(null);
+      setCoords(null);
+      return;
+    }
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setError("Geolocation is unavailable on this device");
       return;
     }
     let cancelled = false;
@@ -48,13 +56,13 @@ export function useGeoGatekeeper(
     read();
     const id = window.setInterval(read, 10000);
     return () => { cancelled = true; window.clearInterval(id); };
-  }, [enabled]);
+  }, [inactive]);
 
   const radius = Math.max(Number(target?.geo_radius ?? 0), options?.minRadius ?? 0);
   let distance: number | null = null;
   if (coords && target?.latitude != null && target?.longitude != null) {
     distance = haversine(coords.lat, coords.lng, Number(target.latitude), Number(target.longitude));
   }
-  const inRadius = options?.bypass ? true : (distance != null && distance <= radius);
+  const inRadius = inactive ? true : (distance != null && distance <= radius);
   return { coords, error, distance, inRadius };
 }
