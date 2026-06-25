@@ -1,70 +1,74 @@
-## Plan: Fix authentication stability only
+## Goal
 
-### Scope
-- Preserve all ERP modules and UI.
-- Change only authentication/session/role initialization code and, if needed, a small database policy/diagnostic migration.
+Change the trainer "Session Started / Check-In" step so:
 
-### What I found
-- There are currently **two auth listeners**:
-  - `src/hooks/use-auth-session.ts`
-  - `src/routes/__root.tsx`
-- Multiple components call `useAuthSession()`, so the listener in that hook can be mounted more than once.
-- `getMe` currently queries profile and roles in parallel and does not validate/throw on profile/role query errors, which can turn temporary auth/RLS failures into an empty role result.
-- RLS already allows authenticated users to read their own `profiles` and `user_roles` rows.
-- Data check found one user with **one profile but zero role records**. That account should continue showing a real “No role assigned” error after retries, but valid users should not see false errors.
+1. The attendance check-in window opens during the **last 10 minutes of the scheduled session** (e.g. a 90-minute class → window opens at minute 80, closes at minute 90).
+2. The countdown ring uses **server-supplied time**, not the trainer's device clock, so a wrong device clock cannot let a trainer check in early/late.
 
-### Implementation steps
-1. **Add a centralized `AuthProvider`**
-   - Create a React auth context/provider.
-   - On app start, call `supabase.auth.getSession()` first and wait for restoration.
-   - Then validate the session user with `supabase.auth.getUser()` when a session exists.
-   - Maintain a single source of truth: `authReady`, `session`, `user`, `hasSession`, `userId`, auth errors.
-   - Add detailed console logging for session restoration and auth state transitions.
+The geofence behavior, roster step, and end-session step are untouched.
 
-2. **Use exactly one auth listener**
-   - Move `supabase.auth.onAuthStateChange` into the new `AuthProvider`.
-   - Remove the root `AuthSync` listener from `src/routes/__root.tsx`.
-   - Update `useAuthSession()` to read the provider context only, with no listener of its own.
-   - Keep query/router invalidation behavior inside the provider for `SIGNED_IN`, `SIGNED_OUT`, and `USER_UPDATED`; ignore noisy token refresh events except for session state updates.
+## Files
 
-3. **Enforce load order: Session → Profile → Role → Dashboard**
-   - Update `getMe` to load the profile first, then roles.
-   - Check query errors explicitly.
-   - Return diagnostic status such as `profileStatus`, `roleStatus`, and `roleCount`.
-   - Log role/profile resolution failures to the existing `auth_events` table when possible.
+- `src/lib/trainer.functions.ts` — add a tiny `getServerTime` server function that returns `{ now: string }` (ISO) using the DB clock (`select now()` via Supabase), and update `trainer_checkin` RPC call path is unchanged. Also remove the old 30-minute window from the client.
+- `src/routes/_authenticated/ground/$scheduleId.tsx` — replace the device-clock `now` with a server-anchored clock and recompute `canStart` + countdown target around `endMs - 10 min`.
+- (No DB migration; RPC `trainer_checkin` server-side window check is left alone for now — see "Server enforcement" below.)
 
-4. **Make role/profile loading resilient**
-   - Add retry/backoff around `getMe` in `useMe`.
-   - Do not show “No role assigned” until:
-     - session restoration is complete,
-     - a valid session exists,
-     - profile/role queries have completed and retried,
-     - the final role result is truly empty.
-   - Never call `signOut()` because a profile or role query failed.
+## Client changes (`$scheduleId.tsx`)
 
-5. **Gate redirects safely**
-   - `AuthGate` will redirect to `/login` only after auth restoration completes and there is definitely no valid session.
-   - `/` will navigate to the correct dashboard only after `getMe` finishes successfully and roles are initialized.
-   - `/login` will navigate to `/` after sign-in and let the centralized flow resolve the dashboard.
+1. **Server clock**
 
-6. **Verify profile/role integrity and RLS**
-   - Add a read-only diagnostic server function for current-user auth health, or improve logging in `getMe`, so admins can debug profile/role problems without exposing secrets.
-   - If database constraints are missing, add a migration only for safe integrity/RLS guarantees already implied by the app:
-     - ensure profile id uniqueness via existing primary key,
-     - preserve existing `user_roles` uniqueness,
-     - keep/repair self-read policies if needed.
-   - I will not auto-assign roles to the user that currently has zero roles, because that is a data/admin decision.
+   - Add a query that calls `getServerTime` once on mount and every ~60s to compute a drift offset:
+     ```
+     offset = serverNowMs - Date.now()
+     serverNow = () => Date.now() + offset
+     ```
+   - Replace `const [now, setNow] = useState(Date.now())` with a 1s tick that uses `serverNow()`.
 
-### Verification
-- Confirm codebase has only one `onAuthStateChange` call.
-- Confirm no auth flow signs users out on role/profile failure.
-- Verify RLS policies still allow users to read their own profile and role.
-- Use the preview/browser to test refresh and reload behavior where possible.
-- Confirm dashboard routing waits for role initialization before navigation.
+2. **Window math (last 10 minutes of session)**
 
-### Expected result
-- Stable login and refresh behavior.
-- No random automatic logouts.
-- No false “No role assigned” errors for valid users.
-- A real no-role account still gets a clear error after retries.
-- Existing ERP modules and UI remain unchanged.
+   Replace:
+   ```
+   canStart = now ∈ [startMs - 10m, startMs + 20m]
+   ```
+   with:
+   ```
+   windowOpenMs  = endMs - 10 * 60_000
+   windowCloseMs = endMs
+   canStart      = serverNow ∈ [windowOpenMs, windowCloseMs]
+   ```
+
+3. **Countdown ring target**
+
+   In `CheckInStep`:
+   - If `serverNow < windowOpenMs` → ring counts down to `windowOpenMs`, label "until window opens".
+   - If `serverNow ∈ [windowOpenMs, windowCloseMs]` → ring counts down to `windowCloseMs`, label "to check in".
+   - If `serverNow > windowCloseMs` → ring shows `00:00`, button disabled "Check-in window closed".
+
+   Update the helper text from "Attendance window: 30 minutes from session start" to **"Attendance window: last 10 minutes of the session"**.
+
+4. **Button disabled states** stay the same shape, just driven by the new `canStart`.
+
+## Server changes (`trainer.functions.ts`)
+
+Add:
+
+```ts
+export const getServerTime = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data } = await context.supabase.rpc("now_iso"); // or select now() via a view
+    return { now: (data as string) ?? new Date().toISOString() };
+  });
+```
+
+If no `now_iso` RPC exists, fall back to `new Date().toISOString()` from the server function (still server time, just the Worker's clock instead of the DB's — acceptable for this UI gate). This avoids a migration.
+
+## Server enforcement (note, not part of this change)
+
+The RPC `trainer_checkin` currently rejects check-ins outside its own window. If that window is still "30 min from start", the new UI will let trainers press the button at minute 80 but the RPC will refuse. If that's the case we'll need a follow-up migration to update the RPC's window to `[end - 10m, end]`. I'll confirm by reading the RPC after you approve and include the migration in the same change if needed.
+
+## Acceptance
+
+- 90-minute session starting 10:00 → ring counts down to 11:20; at 11:20 the "Check-In Location" button enables; at 11:30 it disables again.
+- Changing the device clock does not shift the window.
+- No other steps (Setup, Roster, Done) change.
