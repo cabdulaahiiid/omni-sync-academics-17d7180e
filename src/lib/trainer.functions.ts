@@ -2,6 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+// Server-anchored clock used by trainer UI countdowns. Cheap; no DB roundtrip.
+export const getServerTime = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => ({ now: new Date().toISOString() }));
+
 const BatchSchema = z.object({
   client_uuid: z.string().uuid(),
   schedule_id: z.string().uuid(),
