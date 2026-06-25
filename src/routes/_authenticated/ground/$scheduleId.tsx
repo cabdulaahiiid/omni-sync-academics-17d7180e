@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  getScheduleDetail, setSessionMode, trainerCheckIn, trainerEndSession, getMyProgress,
+  getScheduleDetail, setSessionMode, trainerCheckIn, trainerEndSession, getMyProgress, getServerTime,
 } from "@/lib/trainer.functions";
 import { enqueueSessionBatch } from "@/lib/offline/queue";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
@@ -38,6 +38,7 @@ function SessionDetail() {
   const endFn = useServerFn(trainerEndSession);
   const progressFn = useServerFn(getMyProgress);
   const cfgFn = useServerFn(getGlobalConfig);
+  const serverTimeFn = useServerFn(getServerTime);
   const { flush } = useOfflineSync();
   const { data: me } = useMe();
 
@@ -48,6 +49,21 @@ function SessionDetail() {
   });
   const { data: progress } = useQuery({ queryKey: ["my-progress"], queryFn: () => progressFn(), staleTime: 30000 });
   const { data: cfg } = useQuery({ queryKey: ["global-config"], queryFn: () => cfgFn(), staleTime: 60000 });
+
+  // Server-anchored clock: compute drift offset, refresh every 60s.
+  const { data: srvTime } = useQuery({
+    queryKey: ["server-time"],
+    queryFn: async () => {
+      const t0 = Date.now();
+      const res = await serverTimeFn();
+      const t1 = Date.now();
+      const serverMs = new Date(res.now).getTime() + Math.round((t1 - t0) / 2);
+      return { offsetMs: serverMs - t1 };
+    },
+    refetchInterval: 60_000,
+    staleTime: 60_000,
+  });
+  const offsetMs = srvTime?.offsetMs ?? 0;
 
   const bypass = !!me?.profile?.bypass_geofence;
   const geofenceEnabled = cfg?.geofence_enabled !== false;
@@ -63,7 +79,12 @@ function SessionDetail() {
     ? new Date(`${data.schedule.date}T${data.schedule.end_time}`).getTime() : 0;
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
-  const canStart = !!startMs && now >= startMs - 10 * 60000 && now <= startMs + 20 * 60000;
+  // Server-anchored "now" so a wrong device clock cannot shift the window.
+  const serverNow = now + offsetMs;
+  // Attendance window = last 10 minutes of the session.
+  const windowOpenMs = endMs ? endMs - 10 * 60_000 : 0;
+  const windowCloseMs = endMs;
+  const canStart = !!endMs && serverNow >= windowOpenMs && serverNow <= windowCloseMs;
 
   const [mode, setLocalMode] = useState<Mode | "">("");
   const [checkInAt, setCheckInAt] = useState<string | null>(null);
@@ -190,8 +211,10 @@ function SessionDetail() {
 
       {step === "checkin" && (
         <CheckInStep
-          startMs={startMs}
-          now={now}
+          serverNow={serverNow}
+          offsetMs={offsetMs}
+          windowOpenMs={windowOpenMs}
+          windowCloseMs={windowCloseMs}
           canStart={canStart}
           geo={geo}
           geofenceEnabled={geofenceEnabled}
@@ -314,22 +337,25 @@ function Row({ label, value, inline }: { label: string; value: string; inline?: 
 }
 
 /* ---------------- Step 4: Session Started / Check-In ---------------- */
-function CheckInStep({ startMs, now, canStart, geo, geofenceEnabled, bypass, checking, onCheckIn, onBack }: any) {
-  // Target ring: time until check-in window opens, or time until window closes.
+function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, canStart, geo, geofenceEnabled, bypass, checking, onCheckIn, onBack }: any) {
+  // Ring target: counts down to window open, then to window close.
   const target = useMemo(() => {
-    if (!startMs) return null;
-    if (now < startMs - 10 * 60_000) return new Date(startMs - 10 * 60_000).toISOString();
-    if (now <= startMs + 20 * 60_000) return new Date(startMs + 20 * 60_000).toISOString();
-    return new Date(startMs + 20 * 60_000).toISOString();
-  }, [startMs, now]);
-  const windowLabel = startMs && now < startMs - 10 * 60_000 ? "until window opens" : "to check in";
+    if (!windowCloseMs) return null;
+    if (serverNow < windowOpenMs) return new Date(windowOpenMs).toISOString();
+    return new Date(windowCloseMs).toISOString();
+  }, [serverNow, windowOpenMs, windowCloseMs]);
+  const beforeOpen = serverNow < windowOpenMs;
+  const afterClose = serverNow > windowCloseMs;
+  const windowLabel = beforeOpen ? "until window opens" : afterClose ? "window closed" : "to check in";
+  // Ring fill: beforeOpen fills against a 10-min countdown; once open, against the 10-min window.
+  const ringTotalMs = 10 * 60_000;
 
   return (
     <>
       <Card className="rounded-2xl">
         <CardContent className="space-y-4 p-6">
-          <CountdownTimer until={target} label={windowLabel} variant="ring" />
-          <p className="text-center text-xs text-muted-foreground">Attendance window: 30 minutes from session start</p>
+          <CountdownTimer until={target} label={windowLabel} variant="ring" offsetMs={offsetMs} totalMs={ringTotalMs} />
+          <p className="text-center text-xs text-muted-foreground">Attendance window: last 10 minutes of the session</p>
         </CardContent>
       </Card>
 
@@ -363,7 +389,7 @@ function CheckInStep({ startMs, now, canStart, geo, geofenceEnabled, bypass, che
           disabled={!canStart || (geofenceEnabled && !bypass && !geo.inRadius) || checking}
           onClick={onCheckIn}>
           <MapPin className="mr-2 h-4 w-4" />
-          {checking ? "Checking in…" : !canStart ? "Outside check-in window" : "Check-In Location"}
+          {checking ? "Checking in…" : beforeOpen ? "Check-in opens in last 10 min" : afterClose ? "Check-in window closed" : "Check-In Location"}
         </Button>
         <Button variant="ghost" className="w-full" onClick={onBack}>Back to setup</Button>
       </div>
