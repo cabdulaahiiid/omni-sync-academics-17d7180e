@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { listApprovalQueue, decideApproval } from "@/lib/ma.functions";
+import { deleteSchedule } from "@/lib/ma.functions";
 import { maRejectSemesterWithFeedback } from "@/lib/feedback.functions";
 import {
   listDeptsWithPendingSessions,
@@ -26,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp, Search, X, Inbox } from "lucide-react";
+import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp, Search, X, Inbox, Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
