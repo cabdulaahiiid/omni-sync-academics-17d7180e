@@ -110,3 +110,21 @@ export const listSemesters = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+export const deleteSchedule = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      reason: z.string().trim().min(3, "Reason is required").max(500),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "deleteSchedule");
+    const { error } = await context.supabase.rpc("ma_delete_schedule", {
+      _schedule_id: data.id,
+      _reason: data.reason,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { listApprovalQueue, decideApproval } from "@/lib/ma.functions";
+import { deleteSchedule } from "@/lib/ma.functions";
 import { maRejectSemesterWithFeedback } from "@/lib/feedback.functions";
 import {
   listDeptsWithPendingSessions,
@@ -26,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp, Search, X, Inbox } from "lucide-react";
+import { Eye, Check, MessageSquareWarning, Split, ChevronDown, ChevronUp, Search, X, Inbox, Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -421,6 +422,23 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteFn = useServerFn(deleteSchedule);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const deleteMut = useMutation({
+    mutationFn: () => deleteFn({ data: { id: pendingDelete!.id, reason: deleteReason.trim() } }),
+    onSuccess: () => {
+      toast.success("Schedule deleted");
+      qc.invalidateQueries({ queryKey: ["approvals-week", deptId, viewWeek] });
+      qc.invalidateQueries({ queryKey: ["approvals-weeks", deptId] });
+      qc.invalidateQueries({ queryKey: ["approvals-depts"] });
+      qc.invalidateQueries({ queryKey: ["approval-queue"] });
+      setPendingDelete(null);
+      setDeleteReason("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-4">
       {!fixedDeptId && (
@@ -492,6 +510,7 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
                     <TableHead>Trainer</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Approval</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -511,15 +530,62 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setDeleteReason("");
+                            setPendingDelete({ id: r.id, label: `${r.module_code} • ${r.date} ${r.start_time}` });
+                          }}
+                        >
+                          <Trash2 className="mr-1 h-3 w-3" /> Delete
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {(weekRows ?? []).length === 0 && (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No sessions.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No sessions.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete schedule dialog (MA only) */}
+      <Dialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => { if (!o) { setPendingDelete(null); setDeleteReason(""); } }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete schedule</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Permanently remove <span className="font-medium text-foreground">{pendingDelete?.label}</span>.
+            This deletes its approval row, attendance, session log, and feedback. The assigned trainer will be notified.
+          </p>
+          <Textarea
+            rows={4}
+            value={deleteReason}
+            onChange={(e) => setDeleteReason(e.target.value)}
+            placeholder="Required reason (min 3 chars) — recorded in the audit log."
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPendingDelete(null); setDeleteReason(""); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteMut.isPending || deleteReason.trim().length < 3}
+              onClick={() => deleteMut.mutate()}
+            >
+              {deleteMut.isPending ? "Deleting…" : "Delete schedule"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

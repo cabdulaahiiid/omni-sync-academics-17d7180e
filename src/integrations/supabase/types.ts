@@ -1248,6 +1248,10 @@ export type Database = {
         }
         Returns: Json
       }
+      ma_delete_schedule: {
+        Args: { _reason: string; _schedule_id: string }
+        Returns: Json
+      }
       ma_reject_semester_with_feedback: {
         Args: { _message: string; _semester_id: string }
         Returns: string
