@@ -1,74 +1,49 @@
 ## Goal
+Allow Master Admin (MA) to delete schedules in **any** status — Draft, Pending Approval, and Approved/Live/Ended — directly from the app. Today only DH can delete, and only when status = DRAFT (`dh_delete_draft_session`).
 
-Change the trainer "Session Started / Check-In" step so:
+## Backend (migration)
+Add a new security-definer RPC `public.ma_delete_schedule(_schedule_id uuid, _reason text)`:
+- Reject if caller is not MA (`has_role(auth.uid(),'MA')`).
+- Require a non-empty `_reason` (≥3 chars) for audit accountability.
+- Cleanup in FK-safe order inside one transaction:
+  1. `attendance_overrides` rows linked to this schedule's `attendance_logs`
+  2. `attendance_logs` for the schedule
+  3. `session_logs` for the schedule
+  4. `pending_sync` rows for the schedule
+  5. `schedule_feedback_messages` → `schedule_feedback_threads` tied to this schedule (week-scoped threads only — semester threads are left intact)
+  6. `approval_queue` rows where `schedule_id = _schedule_id` or `target_id = _schedule_id AND type='session'`
+  7. `schedules` row itself
+- Notify the assigned trainer (if any) via `notifications`: "Schedule removed by admin — <reason>".
+- Insert an `audit_logs` row (`action_type = 'MA_DELETE_SCHEDULE'`, before_state = snapshot of the schedule, after_state = `{reason}`).
+- Temporarily disable the `enforce_schedule_transition` issue: it only fires on UPDATE, so DELETE is unaffected — no extra work.
 
-1. The attendance check-in window opens during the **last 10 minutes of the scheduled session** (e.g. a 90-minute class → window opens at minute 80, closes at minute 90).
-2. The countdown ring uses **server-supplied time**, not the trainer's device clock, so a wrong device clock cannot let a trainer check in early/late.
+## Server function
+`src/lib/ma.functions.ts` → add `deleteSchedule` server fn:
+- `requireSupabaseAuth` + `requireRole(["MA"], "deleteSchedule")`.
+- Input: `{ id: uuid, reason: string (min 3, max 500) }`.
+- Calls `rpc("ma_delete_schedule", ...)`.
 
-The geofence behavior, roster step, and end-session step are untouched.
+## UI
+1. **Approvals page** (`src/routes/_authenticated/strategic/approvals.tsx`)
+   - In the session approvals table rows (pending/approved/rejected), add a small destructive "Delete" icon button next to the existing actions. Visible only to MA (which is the page audience already).
+   - Confirmation dialog reusing `RejectFeedbackDialog` styling — requires a reason. On success: `qc.invalidateQueries(["approval-queue","schedules"])`, toast.
 
-## Files
+2. **Live Monitor** (`src/routes/_authenticated/operational/live-monitor.tsx`) — gated to MA only
+   - Add per-row "Delete" button on each schedule (any status), with the same reason dialog. This is the natural place to remove an Approved/Live/Ended schedule.
 
-- `src/lib/trainer.functions.ts` — add a tiny `getServerTime` server function that returns `{ now: string }` (ISO) using the DB clock (`select now()` via Supabase), and update `trainer_checkin` RPC call path is unchanged. Also remove the old 30-minute window from the client.
-- `src/routes/_authenticated/ground/$scheduleId.tsx` — replace the device-clock `now` with a server-anchored clock and recompute `canStart` + countdown target around `endMs - 10 min`.
-- (No DB migration; RPC `trainer_checkin` server-side window check is left alone for now — see "Server enforcement" below.)
+3. **DH Drafts page** is untouched (DH already has draft delete).
 
-## Client changes (`$scheduleId.tsx`)
+## Audit & realtime
+- The existing `useLiveTables(["approval_queue","schedules"], …)` subscriptions already refresh the UI on delete (Supabase emits DELETE events on those tables).
 
-1. **Server clock**
-
-   - Add a query that calls `getServerTime` once on mount and every ~60s to compute a drift offset:
-     ```
-     offset = serverNowMs - Date.now()
-     serverNow = () => Date.now() + offset
-     ```
-   - Replace `const [now, setNow] = useState(Date.now())` with a 1s tick that uses `serverNow()`.
-
-2. **Window math (last 10 minutes of session)**
-
-   Replace:
-   ```
-   canStart = now ∈ [startMs - 10m, startMs + 20m]
-   ```
-   with:
-   ```
-   windowOpenMs  = endMs - 10 * 60_000
-   windowCloseMs = endMs
-   canStart      = serverNow ∈ [windowOpenMs, windowCloseMs]
-   ```
-
-3. **Countdown ring target**
-
-   In `CheckInStep`:
-   - If `serverNow < windowOpenMs` → ring counts down to `windowOpenMs`, label "until window opens".
-   - If `serverNow ∈ [windowOpenMs, windowCloseMs]` → ring counts down to `windowCloseMs`, label "to check in".
-   - If `serverNow > windowCloseMs` → ring shows `00:00`, button disabled "Check-in window closed".
-
-   Update the helper text from "Attendance window: 30 minutes from session start" to **"Attendance window: last 10 minutes of the session"**.
-
-4. **Button disabled states** stay the same shape, just driven by the new `canStart`.
-
-## Server changes (`trainer.functions.ts`)
-
-Add:
-
-```ts
-export const getServerTime = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data } = await context.supabase.rpc("now_iso"); // or select now() via a view
-    return { now: (data as string) ?? new Date().toISOString() };
-  });
-```
-
-If no `now_iso` RPC exists, fall back to `new Date().toISOString()` from the server function (still server time, just the Worker's clock instead of the DB's — acceptable for this UI gate). This avoids a migration.
-
-## Server enforcement (note, not part of this change)
-
-The RPC `trainer_checkin` currently rejects check-ins outside its own window. If that window is still "30 min from start", the new UI will let trainers press the button at minute 80 but the RPC will refuse. If that's the case we'll need a follow-up migration to update the RPC's window to `[end - 10m, end]`. I'll confirm by reading the RPC after you approve and include the migration in the same change if needed.
+## Out of scope
+- No bulk-delete UI in this pass (single-row only).
+- No edit-then-delete; semester-level deletes remain a separate flow.
+- No change to DH permissions — DH still limited to DRAFT.
 
 ## Acceptance
-
-- 90-minute session starting 10:00 → ring counts down to 11:20; at 11:20 the "Check-In Location" button enables; at 11:30 it disables again.
-- Changing the device clock does not shift the window.
-- No other steps (Setup, Roster, Done) change.
+- MA can delete a schedule in DRAFT, PENDING_MA, LIVE, ACTIVE, or ENDED state with a required reason.
+- Related attendance/session/feedback/approval rows are cleaned up; no orphan FK errors.
+- Trainer receives a notification when their published schedule is deleted.
+- `audit_logs` records actor, schedule snapshot, and reason.
+- Non-MA callers receive 403 from both the server fn and the RPC.
