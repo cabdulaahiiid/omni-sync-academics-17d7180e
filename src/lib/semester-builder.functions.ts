@@ -29,6 +29,7 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const roles = await requireRole(context, ["DH", "MA"], "getBuilderOptions");
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Resolve department: MA may target any dept (or none), DH is locked to their own.
     let deptId = data.department_id ?? null;
@@ -78,7 +79,7 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
             .map((r: any) => r.trainer_registry_id)
             .filter((id: string) => id && !byId.has(id));
           if (extraIds.length) {
-            const { data: extras } = await supabase
+            const { data: extras } = await supabaseAdmin
               .from("trainer_registry")
               .select("id, hidden_staff_id, full_name, department_id, sessions_target")
               .in("id", extraIds);
@@ -93,7 +94,7 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
         }
         if (!trs.length) return { data: [] as any[] };
         // Left-join profile data for login email + canonical display name.
-        const { data: profs } = await supabase
+        const { data: profs } = await supabaseAdmin
           .from("profiles")
           .select("id, full_name, email, trainer_registry_id")
           .in("trainer_registry_id", trs.map((t) => t.id));
@@ -386,6 +387,7 @@ export const saveBuilderDraft = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const roles = await requireRole(context, ["DH", "MA"], "saveBuilderDraft");
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // DH may only write to their own department.
     if (!roles.includes("MA")) {
@@ -395,10 +397,11 @@ export const saveBuilderDraft = createServerFn({ method: "POST" })
       }
     }
 
-    const [{ data: sem }, { data: mod }, { data: trainer }, { data: venue }, { data: section }, { data: level }] = await Promise.all([
+    const [{ data: sem }, { data: mod }, { data: trainer }, { data: trainerDept }, { data: venue }, { data: section }, { data: level }] = await Promise.all([
       supabase.from("semester_registry").select("id, start_date, end_date").eq("id", data.semester_id).maybeSingle(),
       supabase.from("modules").select("id, code, name, type, department_id, level_id").eq("id", data.module_id).maybeSingle(),
-      supabase.from("trainer_registry").select("id, full_name, hidden_staff_id, department_id").eq("id", data.trainer_id).maybeSingle(),
+      supabaseAdmin.from("trainer_registry").select("id, full_name, hidden_staff_id, department_id").eq("id", data.trainer_id).maybeSingle(),
+      supabaseAdmin.from("trainer_departments").select("trainer_registry_id").eq("trainer_registry_id", data.trainer_id).eq("department_id", data.department_id).maybeSingle(),
       supabase.from("venues").select("id, name").eq("id", data.venue_id).maybeSingle(),
       supabase.from("sections").select("id, name, level_id, department_id").eq("id", data.section_id).maybeSingle(),
       supabase.from("levels").select("id, name, department_id").eq("id", data.level_id).maybeSingle(),
@@ -406,7 +409,7 @@ export const saveBuilderDraft = createServerFn({ method: "POST" })
     if (!sem) throw new Error("Semester not found");
     if (!mod || !trainer || !venue || !section || !level) throw new Error("One of the selected references does not exist");
     if (mod.department_id !== data.department_id) throw new Error("Module does not belong to that department");
-    if (trainer.department_id !== data.department_id) throw new Error("Trainer does not belong to that department");
+    if (trainer.department_id !== data.department_id && !trainerDept) throw new Error("Trainer is not assigned to that department");
     if (section.department_id !== data.department_id) throw new Error("Section does not belong to that department");
     if (level.department_id !== data.department_id) throw new Error("Level does not belong to that department");
     if (section.level_id !== data.level_id) throw new Error("Section does not belong to the chosen level");
