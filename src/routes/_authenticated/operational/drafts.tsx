@@ -72,7 +72,7 @@ type SemesterRow = {
   end_date: string;
   status: string;
   distribution_status: string | null;
-  weeks: { week_num: number; total: number; pending: number; published: number }[];
+  weeks: { week_num: number; total: number; draft?: number; pending: number; published: number }[];
 };
 
 function DraftsPage() {
@@ -85,6 +85,7 @@ function DraftsPage() {
   const resubmitWeekFn = useServerFn(dhResubmitWeek);
   const qc = useQueryClient();
   const [openWorkspace, setOpenWorkspace] = useState<{ semester_id: string; week_num: number; title: string } | null>(null);
+  const isAdmin = me?.roles?.includes("MA") ?? false;
 
   useEffect(() => {
     if (search.chat && search.semester && search.week != null) {
@@ -98,23 +99,27 @@ function DraftsPage() {
 
   const deptId = me?.profile?.department_id;
   useEffect(() => {
-    if (!deptId) return;
-    const ch = supabase.channel(`dh-drafts-${deptId}`)
+    if (!me) return;
+    const ch = supabase.channel(`dh-drafts-${deptId ?? "all"}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "semester_registry" },
         () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
-      .on("postgres_changes", { event: "*", schema: "public", table: "schedules", filter: `department_id=eq.${deptId}` },
+      .on("postgres_changes", deptId
+        ? { event: "*", schema: "public", table: "schedules", filter: `department_id=eq.${deptId}` }
+        : { event: "*", schema: "public", table: "schedules" },
         () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
-      .on("postgres_changes", { event: "*", schema: "public", table: "schedule_feedback_threads", filter: `department_id=eq.${deptId}` },
+      .on("postgres_changes", deptId
+        ? { event: "*", schema: "public", table: "schedule_feedback_threads", filter: `department_id=eq.${deptId}` }
+        : { event: "*", schema: "public", table: "schedule_feedback_threads" },
         () => qc.invalidateQueries({ queryKey: ["week-feedback-threads", deptId] }))
       .on("postgres_changes", { event: "*", schema: "public", table: "schedule_feedback_messages" },
         () => qc.invalidateQueries({ queryKey: ["week-feedback-threads", deptId] }))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [deptId, qc]);
+  }, [deptId, me, qc]);
   const { data, isLoading } = useQuery({
     queryKey: ["semester-drafts", deptId],
-    queryFn: () => listFn({ data: { department_id: deptId! } }),
-    enabled: !!deptId,
+    queryFn: () => listFn({ data: deptId ? { department_id: deptId } : {} }),
+    enabled: !!me && (!!deptId || isAdmin),
   });
   const { data: weekThreads } = useQuery({
     queryKey: ["week-feedback-threads", deptId],
@@ -174,22 +179,29 @@ function DraftsPage() {
     for (const s of semesters) {
       semMeta[s.id] = s;
       for (const w of s.weeks) {
-        let bucket: WeekBucket = "DRAFT";
         const isFeedback = feedbackKeys.has(`${s.id}:${w.week_num}`);
-        if (isFeedback && w.published < w.total) bucket = "FEEDBACK";
-        else if (w.pending > 0) bucket = "PENDING";
-        else if (w.total > 0 && w.published === w.total) bucket = "APPROVED";
-        else bucket = "DRAFT";
-        const row: WeekRow = {
+        const baseRow = {
           semester_id: s.id, semester_name: s.name,
           start_date: s.start_date, end_date: s.end_date,
           week_num: w.week_num, total: w.total, pending: w.pending, published: w.published,
-          bucket,
         };
-        (allBySem[s.id] ??= []).push(row);
-        if (bucket === "DRAFT") (draftsBySem[s.id] ??= []).push(row);
-        else if (bucket === "PENDING") pendingRows.push(row);
-        else if (bucket === "APPROVED") (approvedBySem[s.id] ??= []).push(row);
+
+        let primaryBucket: WeekBucket = "DRAFT";
+        if (isFeedback && (w.draft ?? 0) > 0) primaryBucket = "FEEDBACK";
+        else if ((w.draft ?? 0) > 0) primaryBucket = "DRAFT";
+        else if (w.pending > 0) primaryBucket = "PENDING";
+        else if (w.published > 0) primaryBucket = "APPROVED";
+        (allBySem[s.id] ??= []).push({ ...baseRow, bucket: primaryBucket });
+
+        if ((w.draft ?? 0) > 0 && !isFeedback) {
+          (draftsBySem[s.id] ??= []).push({ ...baseRow, total: w.draft ?? 0, bucket: "DRAFT" });
+        }
+        if (w.pending > 0) {
+          pendingRows.push({ ...baseRow, total: w.pending, bucket: "PENDING" });
+        }
+        if (w.published > 0) {
+          (approvedBySem[s.id] ??= []).push({ ...baseRow, total: w.published, bucket: "APPROVED" });
+        }
       }
     }
 

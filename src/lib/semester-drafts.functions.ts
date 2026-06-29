@@ -5,10 +5,25 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const listSemesterDrafts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ department_id: z.string().uuid() }).parse(d),
+    z.object({ department_id: z.string().uuid().optional() }).parse(d ?? {}),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const { requireRole } = await import("@/lib/auth/require-role");
+    const roles = await requireRole(context, ["DH", "MA"], "listSemesterDrafts");
+
+    let departmentId = data.department_id ?? null;
+    if (!roles.includes("MA")) {
+      const { data: prof, error: profError } = await supabase
+        .from("profiles")
+        .select("department_id")
+        .eq("id", context.userId)
+        .maybeSingle();
+      if (profError) throw new Error(profError.message);
+      departmentId = prof?.department_id ?? null;
+      if (!departmentId) throw new Error("No department assigned to this Department Head account.");
+    }
+
     const { data: sems, error } = await supabase
       .from("semester_registry")
       .select("id, name, start_date, end_date, status, distribution_status")
@@ -17,18 +32,22 @@ export const listSemesterDrafts = createServerFn({ method: "POST" })
 
     const ids = (sems ?? []).map((s) => s.id);
     if (!ids.length) return [];
-    const { data: rows } = await supabase
+    let scheduleQuery = supabase
       .from("schedules")
       .select("semester_id, week_num, status, is_published")
-      .eq("department_id", data.department_id)
-      .in("semester_id", ids);
+      .in("semester_id", ids)
+      .neq("status", "CANCELLED");
+    if (departmentId) scheduleQuery = scheduleQuery.eq("department_id", departmentId);
+    const { data: rows, error: rowsError } = await scheduleQuery;
+    if (rowsError) throw new Error(rowsError.message);
 
-    const byId = new Map<string, Record<number, { total: number; pending: number; published: number }>>();
+    const byId = new Map<string, Record<number, { total: number; draft: number; pending: number; published: number }>>();
     for (const r of rows ?? []) {
       if (!r.semester_id || r.week_num == null) continue;
       const m = byId.get(r.semester_id) ?? {};
-      const w = m[r.week_num] ?? { total: 0, pending: 0, published: 0 };
+      const w = m[r.week_num] ?? { total: 0, draft: 0, pending: 0, published: 0 };
       w.total += 1;
+      if (r.status === "DRAFT" && !r.is_published) w.draft += 1;
       if (r.status === "PENDING_MA") w.pending += 1;
       if (r.is_published) w.published += 1;
       m[r.week_num] = w;
