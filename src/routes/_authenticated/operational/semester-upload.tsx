@@ -269,14 +269,19 @@ function SemesterBuilderPage() {
   // ---- Save / Publish -------------------------------------------------------
   const saveMut = useMutation({
     mutationFn: () => saveFn({ data: builderPayload }),
-    onSuccess: (r) => {
-      qc.invalidateQueries({ queryKey: ["trainer-load"] });
-      qc.invalidateQueries({ queryKey: ["schedules"] });
-      qc.invalidateQueries({ queryKey: ["drafts"] });
-      qc.invalidateQueries({ queryKey: ["semester-drafts"] });
+    onSuccess: async (r) => {
       setDraftCount((n) => n + r.created);
+      // Force-refetch every cache that surfaces drafts so the new sessions are
+      // visible the moment the user lands on Active Drafts (or already has it open).
+      await Promise.all([
+        qc.refetchQueries({ queryKey: ["semester-drafts"], type: "all" }),
+        qc.refetchQueries({ queryKey: ["trainer-load"], type: "all" }),
+        qc.refetchQueries({ queryKey: ["schedules"], type: "all" }),
+        qc.refetchQueries({ queryKey: ["drafts"], type: "all" }),
+        qc.refetchQueries({ queryKey: ["dashboard"], type: "all" }),
+      ]);
       toast.success(`Saved ${r.created} draft session(s).`, {
-        description: "Visible under Active Drafts until you submit for approval.",
+        description: "Now visible under Active Drafts. Submit when ready for Admin approval.",
         action: {
           label: "View in Active Drafts",
           onClick: () => navigate({ to: "/operational/drafts" }),
