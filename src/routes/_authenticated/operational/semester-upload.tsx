@@ -270,11 +270,18 @@ function SemesterBuilderPage() {
   const saveMut = useMutation({
     mutationFn: () => saveFn({ data: builderPayload }),
     onSuccess: (r) => {
-      toast.success(`Saved ${r.created} draft session(s).`);
       qc.invalidateQueries({ queryKey: ["trainer-load"] });
       qc.invalidateQueries({ queryKey: ["schedules"] });
       qc.invalidateQueries({ queryKey: ["drafts"] });
+      qc.invalidateQueries({ queryKey: ["semester-drafts"] });
       setDraftCount((n) => n + r.created);
+      toast.success(`Saved ${r.created} draft session(s).`, {
+        description: "Visible under Active Drafts until you submit for approval.",
+        action: {
+          label: "View in Active Drafts",
+          onClick: () => navigate({ to: "/operational/drafts" }),
+        },
+      });
     },
     onError: (e: Error) => toast.error(e.message),
   });
