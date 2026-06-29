@@ -179,23 +179,29 @@ function DraftsPage() {
     for (const s of semesters) {
       semMeta[s.id] = s;
       for (const w of s.weeks) {
-        let bucket: WeekBucket = "DRAFT";
         const isFeedback = feedbackKeys.has(`${s.id}:${w.week_num}`);
-        if (isFeedback && (w.draft ?? 0) > 0) bucket = "FEEDBACK";
-        else if (w.pending > 0) bucket = "PENDING";
-        else if (w.total > 0 && w.published === w.total) bucket = "APPROVED";
-        else if ((w.draft ?? 0) > 0) bucket = "DRAFT";
-        else bucket = "DRAFT";
-        const row: WeekRow = {
+        const baseRow = {
           semester_id: s.id, semester_name: s.name,
           start_date: s.start_date, end_date: s.end_date,
           week_num: w.week_num, total: w.total, pending: w.pending, published: w.published,
-          bucket,
         };
-        (allBySem[s.id] ??= []).push(row);
-        if (bucket === "DRAFT") (draftsBySem[s.id] ??= []).push(row);
-        else if (bucket === "PENDING") pendingRows.push(row);
-        else if (bucket === "APPROVED") (approvedBySem[s.id] ??= []).push(row);
+
+        let primaryBucket: WeekBucket = "DRAFT";
+        if (isFeedback && (w.draft ?? 0) > 0) primaryBucket = "FEEDBACK";
+        else if ((w.draft ?? 0) > 0) primaryBucket = "DRAFT";
+        else if (w.pending > 0) primaryBucket = "PENDING";
+        else if (w.published > 0) primaryBucket = "APPROVED";
+        (allBySem[s.id] ??= []).push({ ...baseRow, bucket: primaryBucket });
+
+        if ((w.draft ?? 0) > 0 && !isFeedback) {
+          (draftsBySem[s.id] ??= []).push({ ...baseRow, total: w.draft ?? 0, bucket: "DRAFT" });
+        }
+        if (w.pending > 0) {
+          pendingRows.push({ ...baseRow, total: w.pending, bucket: "PENDING" });
+        }
+        if (w.published > 0) {
+          (approvedBySem[s.id] ??= []).push({ ...baseRow, total: w.published, bucket: "APPROVED" });
+        }
       }
     }
 
