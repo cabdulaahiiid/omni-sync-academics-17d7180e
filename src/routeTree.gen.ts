@@ -48,6 +48,7 @@ import { Route as AuthenticatedOperationalDraftsRouteImport } from './routes/_au
 import { Route as AuthenticatedOperationalAttendanceRouteImport } from './routes/_authenticated/operational/attendance'
 import { Route as AuthenticatedGroundScheduleIdRouteImport } from './routes/_authenticated/ground/$scheduleId'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedStrategicDepartmentsIdRouteImport } from './routes/_authenticated/strategic/departments.$id'
 
 const McpRoute = McpRouteImport.update({
@@ -276,6 +277,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedStrategicDepartmentsIdRoute =
   AuthenticatedStrategicDepartmentsIdRouteImport.update({
     id: '/$id',
@@ -293,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/profile': typeof AuthenticatedProfileRoute
   '/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
@@ -331,6 +338,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
@@ -374,6 +382,7 @@ export interface FileRoutesById {
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/_authenticated/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
@@ -417,6 +426,7 @@ export interface FileRouteTypes {
     | '/operational'
     | '/profile'
     | '/strategic'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ground/$scheduleId'
     | '/operational/attendance'
@@ -455,6 +465,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/profile'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ground/$scheduleId'
     | '/operational/attendance'
@@ -497,6 +508,7 @@ export interface FileRouteTypes {
     | '/_authenticated/operational'
     | '/_authenticated/profile'
     | '/_authenticated/strategic'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/ground/$scheduleId'
     | '/_authenticated/operational/attendance'
@@ -536,6 +548,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 
@@ -814,6 +827,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/strategic/departments/$id': {
       id: '/_authenticated/strategic/departments/$id'
       path: '/$id'
@@ -961,6 +981,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
 }
 export const routeTree = rootRouteImport
