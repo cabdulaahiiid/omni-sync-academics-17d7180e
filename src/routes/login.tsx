@@ -9,9 +9,10 @@ import loginBg from "@/assets/login-bg.png.asset.json";
 import { logAuthEvent } from "@/lib/auth/telemetry";
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    next: typeof s.next === "string" ? s.next : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>): { next?: string } => {
+    const next = typeof s.next === "string" ? s.next : undefined;
+    return next ? { next } : {};
+  },
   component: LoginPage,
 });
 
