@@ -9,11 +9,15 @@ import loginBg from "@/assets/login-bg.png.asset.json";
 import { logAuthEvent } from "@/lib/auth/telemetry";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : undefined,
+  }),
   component: LoginPage,
 });
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,11 +44,14 @@ function LoginPage() {
           userId: data.user.id,
           ok: true,
         });
-        // Delegate routing to "/" — HomeRedirect resolves the role via the
-        // authenticated server fn (with retries) and routes to the correct
-        // workspace. This avoids the client-side race that intermittently
-        // produced false "No role assigned" errors right after sign-in.
-        await navigate({ to: "/", replace: true });
+        // If we were sent here to complete an OAuth consent flow, return to
+        // that same-origin relative URL. Otherwise delegate to "/" so
+        // HomeRedirect resolves the role and routes to the workspace.
+        if (next && next.startsWith("/") && !next.startsWith("//")) {
+          window.location.replace(next);
+        } else {
+          await navigate({ to: "/", replace: true });
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Invalid credentials";
