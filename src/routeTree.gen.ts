@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
@@ -16,6 +17,8 @@ import { Route as AuthenticatedStrategicRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOperationalRouteImport } from './routes/_authenticated/operational'
 import { Route as AuthenticatedGroundRouteImport } from './routes/_authenticated/ground'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedStrategicIndexRouteImport } from './routes/_authenticated/strategic/index'
 import { Route as AuthenticatedOperationalIndexRouteImport } from './routes/_authenticated/operational/index'
 import { Route as AuthenticatedGroundIndexRouteImport } from './routes/_authenticated/ground/index'
@@ -44,8 +47,14 @@ import { Route as AuthenticatedOperationalLiveMonitorRouteImport } from './route
 import { Route as AuthenticatedOperationalDraftsRouteImport } from './routes/_authenticated/operational/drafts'
 import { Route as AuthenticatedOperationalAttendanceRouteImport } from './routes/_authenticated/operational/attendance'
 import { Route as AuthenticatedGroundScheduleIdRouteImport } from './routes/_authenticated/ground/$scheduleId'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AuthenticatedStrategicDepartmentsIdRouteImport } from './routes/_authenticated/strategic/departments.$id'
 
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -81,6 +90,18 @@ const AuthenticatedGroundRoute = AuthenticatedGroundRouteImport.update({
   path: '/ground',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedStrategicIndexRoute =
   AuthenticatedStrategicIndexRouteImport.update({
     id: '/',
@@ -249,6 +270,12 @@ const AuthenticatedGroundScheduleIdRoute =
     path: '/$scheduleId',
     getParentRoute: () => AuthenticatedGroundRoute,
   } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedStrategicDepartmentsIdRoute =
   AuthenticatedStrategicDepartmentsIdRouteImport.update({
     id: '/$id',
@@ -259,10 +286,14 @@ const AuthenticatedStrategicDepartmentsIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/ground': typeof AuthenticatedGroundRouteWithChildren
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/profile': typeof AuthenticatedProfileRoute
   '/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
@@ -296,7 +327,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
@@ -332,10 +367,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/ground': typeof AuthenticatedGroundRouteWithChildren
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/_authenticated/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/_authenticated/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
@@ -371,10 +410,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/mcp'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/ground'
     | '/operational'
     | '/profile'
     | '/strategic'
+    | '/.mcp/invoke-tool/$tool'
     | '/ground/$scheduleId'
     | '/operational/attendance'
     | '/operational/drafts'
@@ -408,7 +451,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/mcp'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/profile'
+    | '/.mcp/invoke-tool/$tool'
     | '/ground/$scheduleId'
     | '/operational/attendance'
     | '/operational/drafts'
@@ -443,10 +490,14 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/mcp'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/_authenticated/ground'
     | '/_authenticated/operational'
     | '/_authenticated/profile'
     | '/_authenticated/strategic'
+    | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/ground/$scheduleId'
     | '/_authenticated/operational/attendance'
     | '/_authenticated/operational/drafts'
@@ -482,10 +533,21 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  McpRoute: typeof McpRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -534,6 +596,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/ground'
       preLoaderRoute: typeof AuthenticatedGroundRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/strategic/': {
       id: '/_authenticated/strategic/'
@@ -731,6 +807,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroundScheduleIdRouteImport
       parentRoute: typeof AuthenticatedGroundRoute
     }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/strategic/departments/$id': {
       id: '/_authenticated/strategic/departments/$id'
       path: '/$id'
@@ -874,6 +957,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  McpRoute: McpRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
