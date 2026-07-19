@@ -30,7 +30,13 @@ export function AvatarUploader({ ownerId, initialUrl, fallback = "U", onUploaded
     setBusy(true);
     try {
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const path = `${ownerId}/${crypto.randomUUID()}.${ext}`;
+      let path = `${ownerId}/${crypto.randomUUID()}.${ext}`;
+      if (ownerId === "pending") {
+        const { data: userData } = await supabase.auth.getUser();
+        const uid = userData.user?.id;
+        if (!uid) throw new Error("You must be signed in to upload");
+        path = `pending/${uid}/${crypto.randomUUID()}.${ext}`;
+      }
       const { error } = await supabase.storage.from("avatars").upload(path, file, {
         cacheControl: "3600", upsert: true, contentType: file.type,
       });
