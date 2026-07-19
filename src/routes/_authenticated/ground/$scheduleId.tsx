@@ -473,27 +473,49 @@ function RosterStep({ data, presence, setPresence, presentCount, geo, rosterUnti
 function DoneStep({ data, presentCount, absentCount, lessonPlan, onHome }: any) {
   const s = data.schedule;
   const sessionNum = data.session_number ?? "—";
+  const pct = data.students.length ? Math.round((presentCount / data.students.length) * 100) : 0;
+  const checklist = [
+    "Attendance Saved",
+    "Session Report Generated",
+    "PDF Created",
+    "Synced with ERP",
+    "Department Head Notified",
+    "Student Attendance Updated",
+    "Session Archived",
+  ];
   return (
     <>
-      <Card className="rounded-2xl">
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Session {sessionNum} Summary — {s.module_name}</CardTitle></CardHeader>
-        <CardContent className="text-sm">
-          <p>{data.students.length} Students Expected,</p>
-          <p><span className="font-semibold text-emerald">{presentCount} Present</span>, <span className="font-semibold text-rose">{absentCount} Absent</span></p>
+      <div className="flex flex-col items-center py-6">
+        <div className="grid h-24 w-24 animate-pulse place-items-center rounded-full bg-[#16A34A]/15 text-[#16A34A]">
+          <CheckCircle2 className="h-14 w-14" />
+        </div>
+        <p className="mt-4 text-xl font-bold text-slate-900">Session Successfully Completed</p>
+        <p className="text-sm text-slate-500">Session {sessionNum} · {s.module_name}</p>
+      </div>
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="grid grid-cols-3 gap-3 p-4 text-center">
+          <div><p className="text-xs text-slate-500">Present</p><p className="text-2xl font-bold text-[#16A34A]">{presentCount}</p></div>
+          <div><p className="text-xs text-slate-500">Absent</p><p className="text-2xl font-bold text-[#DC2626]">{absentCount}</p></div>
+          <div><p className="text-xs text-slate-500">Attendance</p><p className="text-2xl font-bold text-[#123E7C]">{pct}%</p></div>
         </CardContent>
       </Card>
-      <Card className="rounded-2xl">
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Lesson Plan</CardTitle></CardHeader>
-        <CardContent><p className="whitespace-pre-wrap text-sm">{lessonPlan || "—"}</p></CardContent>
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="space-y-2 p-4">
+          {checklist.map((c) => (
+            <div key={c} className="flex items-center gap-2 text-sm text-slate-700">
+              <CheckCircle2 className="h-4 w-4 text-[#16A34A]" /> {c}
+            </div>
+          ))}
+        </CardContent>
       </Card>
-      <div className="flex flex-col items-center py-4">
-        <div className="grid h-20 w-20 place-items-center rounded-full bg-emerald/15 text-emerald">
-          <CheckCircle2 className="h-12 w-12" />
-        </div>
-        <p className="mt-3 text-xl font-bold text-emerald">SUCCESS!</p>
-      </div>
-      <Button className="h-11 w-full" onClick={onHome}>
-        <Home className="mr-2 h-4 w-4" /> Return to Home
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-4">
+          <p className="text-xs uppercase tracking-wider text-slate-500">Lesson Plan</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{lessonPlan || "—"}</p>
+        </CardContent>
+      </Card>
+      <Button className="h-12 w-full rounded-2xl bg-[#123E7C] text-base hover:bg-[#0f356a]" onClick={onHome}>
+        <Home className="mr-2 h-4 w-4" /> Home
       </Button>
     </>
   );

@@ -46,6 +46,8 @@ import { Route as AuthenticatedOperationalMatrixRouteImport } from './routes/_au
 import { Route as AuthenticatedOperationalLiveMonitorRouteImport } from './routes/_authenticated/operational/live-monitor'
 import { Route as AuthenticatedOperationalDraftsRouteImport } from './routes/_authenticated/operational/drafts'
 import { Route as AuthenticatedOperationalAttendanceRouteImport } from './routes/_authenticated/operational/attendance'
+import { Route as AuthenticatedGroundProfileRouteImport } from './routes/_authenticated/ground/profile'
+import { Route as AuthenticatedGroundCompletedRouteImport } from './routes/_authenticated/ground/completed'
 import { Route as AuthenticatedGroundScheduleIdRouteImport } from './routes/_authenticated/ground/$scheduleId'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -265,6 +267,18 @@ const AuthenticatedOperationalAttendanceRoute =
     path: '/attendance',
     getParentRoute: () => AuthenticatedOperationalRoute,
   } as any)
+const AuthenticatedGroundProfileRoute =
+  AuthenticatedGroundProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedGroundRoute,
+  } as any)
+const AuthenticatedGroundCompletedRoute =
+  AuthenticatedGroundCompletedRouteImport.update({
+    id: '/completed',
+    path: '/completed',
+    getParentRoute: () => AuthenticatedGroundRoute,
+  } as any)
 const AuthenticatedGroundScheduleIdRoute =
   AuthenticatedGroundScheduleIdRouteImport.update({
     id: '/$scheduleId',
@@ -302,6 +316,8 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
+  '/ground/completed': typeof AuthenticatedGroundCompletedRoute
+  '/ground/profile': typeof AuthenticatedGroundProfileRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
@@ -341,6 +357,8 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
+  '/ground/completed': typeof AuthenticatedGroundCompletedRoute
+  '/ground/profile': typeof AuthenticatedGroundProfileRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
@@ -385,6 +403,8 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
+  '/_authenticated/ground/completed': typeof AuthenticatedGroundCompletedRoute
+  '/_authenticated/ground/profile': typeof AuthenticatedGroundProfileRoute
   '/_authenticated/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/_authenticated/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
   '/_authenticated/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
@@ -429,6 +449,8 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ground/$scheduleId'
+    | '/ground/completed'
+    | '/ground/profile'
     | '/operational/attendance'
     | '/operational/drafts'
     | '/operational/live-monitor'
@@ -468,6 +490,8 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ground/$scheduleId'
+    | '/ground/completed'
+    | '/ground/profile'
     | '/operational/attendance'
     | '/operational/drafts'
     | '/operational/live-monitor'
@@ -511,6 +535,8 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/ground/$scheduleId'
+    | '/_authenticated/ground/completed'
+    | '/_authenticated/ground/profile'
     | '/_authenticated/operational/attendance'
     | '/_authenticated/operational/drafts'
     | '/_authenticated/operational/live-monitor'
@@ -813,6 +839,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperationalAttendanceRouteImport
       parentRoute: typeof AuthenticatedOperationalRoute
     }
+    '/_authenticated/ground/profile': {
+      id: '/_authenticated/ground/profile'
+      path: '/profile'
+      fullPath: '/ground/profile'
+      preLoaderRoute: typeof AuthenticatedGroundProfileRouteImport
+      parentRoute: typeof AuthenticatedGroundRoute
+    }
+    '/_authenticated/ground/completed': {
+      id: '/_authenticated/ground/completed'
+      path: '/completed'
+      fullPath: '/ground/completed'
+      preLoaderRoute: typeof AuthenticatedGroundCompletedRouteImport
+      parentRoute: typeof AuthenticatedGroundRoute
+    }
     '/_authenticated/ground/$scheduleId': {
       id: '/_authenticated/ground/$scheduleId'
       path: '/$scheduleId'
@@ -846,11 +886,15 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedGroundRouteChildren {
   AuthenticatedGroundScheduleIdRoute: typeof AuthenticatedGroundScheduleIdRoute
+  AuthenticatedGroundCompletedRoute: typeof AuthenticatedGroundCompletedRoute
+  AuthenticatedGroundProfileRoute: typeof AuthenticatedGroundProfileRoute
   AuthenticatedGroundIndexRoute: typeof AuthenticatedGroundIndexRoute
 }
 
 const AuthenticatedGroundRouteChildren: AuthenticatedGroundRouteChildren = {
   AuthenticatedGroundScheduleIdRoute: AuthenticatedGroundScheduleIdRoute,
+  AuthenticatedGroundCompletedRoute: AuthenticatedGroundCompletedRoute,
+  AuthenticatedGroundProfileRoute: AuthenticatedGroundProfileRoute,
   AuthenticatedGroundIndexRoute: AuthenticatedGroundIndexRoute,
 }
 
