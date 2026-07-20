@@ -11,13 +11,14 @@ import { useGeoGatekeeper } from "@/hooks/use-geo-gatekeeper";
 import { getGlobalConfig } from "@/lib/global-config.functions";
 import { useMe } from "@/hooks/use-me";
 import { CountdownTimer } from "@/components/countdown-timer";
+import { generateSessionReportPdf, type SessionReportInput } from "@/lib/session-report-pdf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, MapPin, CheckCircle2, AlertTriangle, StopCircle, Home } from "lucide-react";
+import { ArrowLeft, MapPin, CheckCircle2, AlertTriangle, StopCircle, Home, Download, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/ground/$scheduleId")({
