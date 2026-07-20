@@ -319,10 +319,12 @@ function SessionDetail() {
 }
 
 /* ---------------- Step 3: Context Setup ---------------- */
-function SetupStep({ data, progress, mode, setMode, lessonPlan, setLessonPlan, outcome, setOutcome, onProceed }: any) {
+function SetupStep({ data, progress, mode, setMode, lessonPlan, setLessonPlan, outcome, setOutcome, onProceed, geo, geofenceEnabled, bypass }: any) {
   const s = data.schedule;
   const sessionNum = data.session_number ?? 1;
   const target = progress?.target ?? data.module?.total_sessions ?? 15;
+  const geoBlocked = geofenceEnabled && !bypass && !geo?.inRadius;
+  const ready = !!mode && lessonPlan.trim().length >= 5 && outcome.trim().length >= 5 && !geoBlocked;
   return (
     <>
       <Card className="rounded-2xl">
@@ -371,9 +373,30 @@ function SetupStep({ data, progress, mode, setMode, lessonPlan, setLessonPlan, o
         </CardContent>
       </Card>
 
-      <Button className="h-12 w-full text-base" disabled={!mode || lessonPlan.trim().length < 5 || outcome.trim().length < 5}
-        onClick={onProceed}>
-        Proceed to Check-In
+      <Card className="rounded-2xl">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Geo-Fence Verification</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Status</span>
+            <span className={!geofenceEnabled ? "text-muted-foreground" : bypass ? "text-amber-600" : geo?.inRadius ? "text-emerald-600 font-medium" : "text-rose-600 font-medium"}>
+              {!geofenceEnabled ? "Disabled (global)" : bypass ? "Bypassed" : geo?.inRadius ? "Verified · Inside campus" : "Outside campus"}
+            </span>
+          </div>
+          {geo?.distance != null && geofenceEnabled && !bypass && (
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Distance</span>
+              <span className={geo.inRadius ? "text-emerald-600" : "text-amber-600"}>{Math.round(geo.distance)}m</span>
+            </div>
+          )}
+          {geo?.error && <p className="flex items-center gap-1 text-xs text-rose-600"><AlertTriangle className="h-3 w-3" />{geo.error}</p>}
+          {geoBlocked && <p className="text-xs text-rose-600">You must be inside the campus geo-fence before starting teaching.</p>}
+        </CardContent>
+      </Card>
+
+      <Button className="h-12 w-full text-base" disabled={!ready} onClick={onProceed}>
+        {geoBlocked ? "Outside geo-fence — cannot proceed" : "Proceed to Check-In"}
       </Button>
     </>
   );
