@@ -114,6 +114,35 @@ function SessionDetail() {
   const isEnded = status === "ENDED";
   const checkedIn = !!checkInAt || status === "ACTIVE";
 
+  // Build a report input snapshot for PDF generation.
+  const buildReport = (): SessionReportInput | null => {
+    if (!data) return null;
+    return {
+      schedule: data.schedule as SessionReportInput["schedule"],
+      department: data.department,
+      level: data.level,
+      section: data.section,
+      venue: data.venue,
+      trainer: { full_name: me?.profile?.full_name ?? "" },
+      session_number: data.session_number ?? null,
+      target_sessions: (progress?.target ?? data.module?.total_sessions) ?? null,
+      lesson_plan: lessonPlan,
+      learning_outcome: outcome,
+      students: data.students,
+      presence,
+    };
+  };
+  async function downloadReport() {
+    const input = buildReport();
+    if (!input) return;
+    try {
+      await generateSessionReportPdf(input);
+      toast.success("Session report downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate report");
+    }
+  }
+
   // Derive current step
   const step: Step = useMemo(() => {
     if (stepOverride) return stepOverride;
@@ -168,15 +197,33 @@ function SessionDetail() {
   const endMut = useMutation({
     mutationFn: () =>
       endFn({ data: { schedule_id: scheduleId, learning_outcome: outcome, lesson_plan: lessonPlan } }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Session ended");
       qc.invalidateQueries({ queryKey: ["my-progress"] });
       qc.invalidateQueries({ queryKey: ["trainer-today"] });
       setStepOverride("done");
       refetch();
+      // Auto-generate report on end.
+      const input = buildReport();
+      if (input) {
+        try { await generateSessionReportPdf(input); } catch { /* user can retry from Done step */ }
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // Auto-end at scheduled finish (server-anchored). Requires plan + outcome.
+  const autoEndTriedRef = useRef(false);
+  useEffect(() => {
+    if (autoEndTriedRef.current) return;
+    if (!endMs || isEnded) return;
+    if (serverNow < endMs) return;
+    if (lessonPlan.trim().length < 5 || outcome.trim().length < 5) return;
+    if (!checkedIn) return;
+    autoEndTriedRef.current = true;
+    toast.message("Session time reached — ending automatically");
+    endMut.mutate();
+  }, [serverNow, endMs, isEnded, checkedIn, lessonPlan, outcome]);
 
   if (isLoading || !data) return <p className="p-4 text-sm text-muted-foreground">Loading…</p>;
 
