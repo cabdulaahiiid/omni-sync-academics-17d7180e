@@ -482,18 +482,44 @@ function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, canStar
 
 /* ---------------- Step 5: Active Attendance ---------------- */
 function RosterStep({ data, presence, setPresence, presentCount, geo, rosterUntil, isEnded,
-  onSubmit, canEnd, ending, onEnd, lessonPlan, setLessonPlan, outcome, setOutcome }: any) {
+  onSubmit, canEnd, ending, onEnd, lessonPlan, setLessonPlan, outcome, setOutcome,
+  sessionEndAt, offsetMs, sessionDurationMs, geofenceEnabled, bypass, sync }: any) {
   const setPresent = (id: string, val: boolean) => setPresence((p: any) => ({ ...p, [id]: val }));
   return (
     <>
       <Card className="rounded-2xl">
-        <CardContent className="space-y-2 p-4">
+        <CardContent className="space-y-3 p-4">
+          {sessionEndAt && (
+            <CountdownTimer
+              until={sessionEndAt}
+              label="Session ends in"
+              variant="ring"
+              offsetMs={offsetMs ?? 0}
+              totalMs={sessionDurationMs}
+            />
+          )}
           {rosterUntil && <CountdownTimer until={rosterUntil} label="Attendance window remaining" />}
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">GPS status</span>
-            <span className={geo.inRadius ? "text-emerald font-medium" : "text-amber font-medium"}>
-              ● {geo.inRadius ? "On Campus" : "Outside"}
-            </span>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-md border p-2">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Geo-fence</p>
+              <p className={!geofenceEnabled ? "text-muted-foreground" : bypass ? "text-amber-600 font-medium" : geo?.inRadius ? "text-emerald-600 font-medium" : "text-rose-600 font-medium"}>
+                ● {!geofenceEnabled ? "Disabled" : bypass ? "Bypassed" : geo?.inRadius ? "On campus" : "Outside"}
+                {geo?.distance != null && geofenceEnabled && !bypass && (
+                  <span className="ml-1 text-muted-foreground">({Math.round(geo.distance)}m)</span>
+                )}
+              </p>
+            </div>
+            <div className="rounded-md border p-2">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Sync</p>
+              <p className={sync?.online ? "text-emerald-600 font-medium" : "text-amber-600 font-medium"}>
+                {sync?.online ? <Wifi className="mr-1 inline h-3 w-3" /> : <WifiOff className="mr-1 inline h-3 w-3" />}
+                {sync?.online ? "Online" : "Offline"}
+                {sync?.pending > 0 && (
+                  <span className="ml-1 text-muted-foreground">· {sync.pending} pending</span>
+                )}
+                {sync?.syncing && <RefreshCw className="ml-1 inline h-3 w-3 animate-spin" />}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
