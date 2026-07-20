@@ -579,7 +579,7 @@ function RosterStep({ data, presence, setPresence, presentCount, geo, rosterUnti
 }
 
 /* ---------------- Step 6: Session Completed ---------------- */
-function DoneStep({ data, presentCount, absentCount, lessonPlan, onHome }: any) {
+function DoneStep({ data, presentCount, absentCount, lessonPlan, onHome, onDownloadReport, sync }: any) {
   const s = data.schedule;
   const sessionNum = data.session_number ?? "—";
   const pct = data.students.length ? Math.round((presentCount / data.students.length) * 100) : 0;
@@ -587,7 +587,7 @@ function DoneStep({ data, presentCount, absentCount, lessonPlan, onHome }: any) 
     "Attendance Saved",
     "Session Report Generated",
     "PDF Created",
-    "Synced with ERP",
+    sync?.online && sync?.pending === 0 ? "Synced with ERP" : sync?.online ? "Syncing with ERP…" : "Queued for sync (offline)",
     "Department Head Notified",
     "Student Attendance Updated",
     "Session Archived",
@@ -623,6 +623,9 @@ function DoneStep({ data, presentCount, absentCount, lessonPlan, onHome }: any) 
           <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{lessonPlan || "—"}</p>
         </CardContent>
       </Card>
+      <Button className="h-12 w-full rounded-2xl bg-[#16A34A] text-base hover:bg-[#128a3d]" onClick={onDownloadReport}>
+        <Download className="mr-2 h-4 w-4" /> Download Session Report (PDF)
+      </Button>
       <Button className="h-12 w-full rounded-2xl bg-[#123E7C] text-base hover:bg-[#0f356a]" onClick={onHome}>
         <Home className="mr-2 h-4 w-4" /> Home
       </Button>
