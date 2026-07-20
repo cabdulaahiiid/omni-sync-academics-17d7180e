@@ -42,6 +42,7 @@ function SessionDetail() {
   const serverTimeFn = useServerFn(getServerTime);
   const { flush } = useOfflineSync();
   const { data: me } = useMe();
+  const sync = useOfflineSync();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["schedule-detail", scheduleId],
