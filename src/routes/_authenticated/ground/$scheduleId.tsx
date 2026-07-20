@@ -255,6 +255,9 @@ function SessionDetail() {
           lessonPlan={lessonPlan} setLessonPlan={setLessonPlan}
           outcome={outcome} setOutcome={setOutcome}
           onProceed={() => setStepOverride("checkin")}
+          geo={geo}
+          geofenceEnabled={geofenceEnabled}
+          bypass={bypass}
         />
       )}
 
@@ -290,6 +293,12 @@ function SessionDetail() {
           onEnd={() => endMut.mutate()}
           lessonPlan={lessonPlan} setLessonPlan={setLessonPlan}
           outcome={outcome} setOutcome={setOutcome}
+          sessionEndAt={endMs ? new Date(endMs).toISOString() : null}
+          offsetMs={offsetMs}
+          sessionDurationMs={endMs && startMs ? endMs - startMs : undefined}
+          geofenceEnabled={geofenceEnabled}
+          bypass={bypass}
+          sync={sync}
         />
       )}
 
@@ -301,6 +310,8 @@ function SessionDetail() {
           lessonPlan={lessonPlan}
           outcome={outcome}
           onHome={() => navigate({ to: "/ground" })}
+          onDownloadReport={downloadReport}
+          sync={sync}
         />
       )}
     </div>
