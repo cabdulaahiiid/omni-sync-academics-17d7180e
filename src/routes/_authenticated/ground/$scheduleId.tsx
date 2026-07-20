@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -11,13 +11,14 @@ import { useGeoGatekeeper } from "@/hooks/use-geo-gatekeeper";
 import { getGlobalConfig } from "@/lib/global-config.functions";
 import { useMe } from "@/hooks/use-me";
 import { CountdownTimer } from "@/components/countdown-timer";
+import { generateSessionReportPdf, type SessionReportInput } from "@/lib/session-report-pdf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, MapPin, CheckCircle2, AlertTriangle, StopCircle, Home } from "lucide-react";
+import { ArrowLeft, MapPin, CheckCircle2, AlertTriangle, StopCircle, Home, Download, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/ground/$scheduleId")({
@@ -41,6 +42,7 @@ function SessionDetail() {
   const serverTimeFn = useServerFn(getServerTime);
   const { flush } = useOfflineSync();
   const { data: me } = useMe();
+  const sync = useOfflineSync();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["schedule-detail", scheduleId],
@@ -112,6 +114,35 @@ function SessionDetail() {
   const isEnded = status === "ENDED";
   const checkedIn = !!checkInAt || status === "ACTIVE";
 
+  // Build a report input snapshot for PDF generation.
+  const buildReport = (): SessionReportInput | null => {
+    if (!data) return null;
+    return {
+      schedule: data.schedule as SessionReportInput["schedule"],
+      department: data.department,
+      level: data.level,
+      section: data.section,
+      venue: data.venue,
+      trainer: { full_name: me?.profile?.full_name ?? "" },
+      session_number: data.session_number ?? null,
+      target_sessions: (progress?.target ?? data.module?.total_sessions) ?? null,
+      lesson_plan: lessonPlan,
+      learning_outcome: outcome,
+      students: data.students,
+      presence,
+    };
+  };
+  async function downloadReport() {
+    const input = buildReport();
+    if (!input) return;
+    try {
+      await generateSessionReportPdf(input);
+      toast.success("Session report downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate report");
+    }
+  }
+
   // Derive current step
   const step: Step = useMemo(() => {
     if (stepOverride) return stepOverride;
@@ -166,15 +197,33 @@ function SessionDetail() {
   const endMut = useMutation({
     mutationFn: () =>
       endFn({ data: { schedule_id: scheduleId, learning_outcome: outcome, lesson_plan: lessonPlan } }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Session ended");
       qc.invalidateQueries({ queryKey: ["my-progress"] });
       qc.invalidateQueries({ queryKey: ["trainer-today"] });
       setStepOverride("done");
       refetch();
+      // Auto-generate report on end.
+      const input = buildReport();
+      if (input) {
+        try { await generateSessionReportPdf(input); } catch { /* user can retry from Done step */ }
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // Auto-end at scheduled finish (server-anchored). Requires plan + outcome.
+  const autoEndTriedRef = useRef(false);
+  useEffect(() => {
+    if (autoEndTriedRef.current) return;
+    if (!endMs || isEnded) return;
+    if (serverNow < endMs) return;
+    if (lessonPlan.trim().length < 5 || outcome.trim().length < 5) return;
+    if (!checkedIn) return;
+    autoEndTriedRef.current = true;
+    toast.message("Session time reached — ending automatically");
+    endMut.mutate();
+  }, [serverNow, endMs, isEnded, checkedIn, lessonPlan, outcome]);
 
   if (isLoading || !data) return <p className="p-4 text-sm text-muted-foreground">Loading…</p>;
 
@@ -206,6 +255,9 @@ function SessionDetail() {
           lessonPlan={lessonPlan} setLessonPlan={setLessonPlan}
           outcome={outcome} setOutcome={setOutcome}
           onProceed={() => setStepOverride("checkin")}
+          geo={geo}
+          geofenceEnabled={geofenceEnabled}
+          bypass={bypass}
         />
       )}
 
@@ -241,6 +293,12 @@ function SessionDetail() {
           onEnd={() => endMut.mutate()}
           lessonPlan={lessonPlan} setLessonPlan={setLessonPlan}
           outcome={outcome} setOutcome={setOutcome}
+          sessionEndAt={endMs ? new Date(endMs).toISOString() : null}
+          offsetMs={offsetMs}
+          sessionDurationMs={endMs && startMs ? endMs - startMs : undefined}
+          geofenceEnabled={geofenceEnabled}
+          bypass={bypass}
+          sync={sync}
         />
       )}
 
@@ -252,6 +310,8 @@ function SessionDetail() {
           lessonPlan={lessonPlan}
           outcome={outcome}
           onHome={() => navigate({ to: "/ground" })}
+          onDownloadReport={downloadReport}
+          sync={sync}
         />
       )}
     </div>
@@ -259,10 +319,12 @@ function SessionDetail() {
 }
 
 /* ---------------- Step 3: Context Setup ---------------- */
-function SetupStep({ data, progress, mode, setMode, lessonPlan, setLessonPlan, outcome, setOutcome, onProceed }: any) {
+function SetupStep({ data, progress, mode, setMode, lessonPlan, setLessonPlan, outcome, setOutcome, onProceed, geo, geofenceEnabled, bypass }: any) {
   const s = data.schedule;
   const sessionNum = data.session_number ?? 1;
   const target = progress?.target ?? data.module?.total_sessions ?? 15;
+  const geoBlocked = geofenceEnabled && !bypass && !geo?.inRadius;
+  const ready = !!mode && lessonPlan.trim().length >= 5 && outcome.trim().length >= 5 && !geoBlocked;
   return (
     <>
       <Card className="rounded-2xl">
@@ -311,9 +373,30 @@ function SetupStep({ data, progress, mode, setMode, lessonPlan, setLessonPlan, o
         </CardContent>
       </Card>
 
-      <Button className="h-12 w-full text-base" disabled={!mode || lessonPlan.trim().length < 5 || outcome.trim().length < 5}
-        onClick={onProceed}>
-        Proceed to Check-In
+      <Card className="rounded-2xl">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Geo-Fence Verification</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Status</span>
+            <span className={!geofenceEnabled ? "text-muted-foreground" : bypass ? "text-amber-600" : geo?.inRadius ? "text-emerald-600 font-medium" : "text-rose-600 font-medium"}>
+              {!geofenceEnabled ? "Disabled (global)" : bypass ? "Bypassed" : geo?.inRadius ? "Verified · Inside campus" : "Outside campus"}
+            </span>
+          </div>
+          {geo?.distance != null && geofenceEnabled && !bypass && (
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Distance</span>
+              <span className={geo.inRadius ? "text-emerald-600" : "text-amber-600"}>{Math.round(geo.distance)}m</span>
+            </div>
+          )}
+          {geo?.error && <p className="flex items-center gap-1 text-xs text-rose-600"><AlertTriangle className="h-3 w-3" />{geo.error}</p>}
+          {geoBlocked && <p className="text-xs text-rose-600">You must be inside the campus geo-fence before starting teaching.</p>}
+        </CardContent>
+      </Card>
+
+      <Button className="h-12 w-full text-base" disabled={!ready} onClick={onProceed}>
+        {geoBlocked ? "Outside geo-fence — cannot proceed" : "Proceed to Check-In"}
       </Button>
     </>
   );
@@ -399,18 +482,44 @@ function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, canStar
 
 /* ---------------- Step 5: Active Attendance ---------------- */
 function RosterStep({ data, presence, setPresence, presentCount, geo, rosterUntil, isEnded,
-  onSubmit, canEnd, ending, onEnd, lessonPlan, setLessonPlan, outcome, setOutcome }: any) {
+  onSubmit, canEnd, ending, onEnd, lessonPlan, setLessonPlan, outcome, setOutcome,
+  sessionEndAt, offsetMs, sessionDurationMs, geofenceEnabled, bypass, sync }: any) {
   const setPresent = (id: string, val: boolean) => setPresence((p: any) => ({ ...p, [id]: val }));
   return (
     <>
       <Card className="rounded-2xl">
-        <CardContent className="space-y-2 p-4">
+        <CardContent className="space-y-3 p-4">
+          {sessionEndAt && (
+            <CountdownTimer
+              until={sessionEndAt}
+              label="Session ends in"
+              variant="ring"
+              offsetMs={offsetMs ?? 0}
+              totalMs={sessionDurationMs}
+            />
+          )}
           {rosterUntil && <CountdownTimer until={rosterUntil} label="Attendance window remaining" />}
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">GPS status</span>
-            <span className={geo.inRadius ? "text-emerald font-medium" : "text-amber font-medium"}>
-              ● {geo.inRadius ? "On Campus" : "Outside"}
-            </span>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-md border p-2">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Geo-fence</p>
+              <p className={!geofenceEnabled ? "text-muted-foreground" : bypass ? "text-amber-600 font-medium" : geo?.inRadius ? "text-emerald-600 font-medium" : "text-rose-600 font-medium"}>
+                ● {!geofenceEnabled ? "Disabled" : bypass ? "Bypassed" : geo?.inRadius ? "On campus" : "Outside"}
+                {geo?.distance != null && geofenceEnabled && !bypass && (
+                  <span className="ml-1 text-muted-foreground">({Math.round(geo.distance)}m)</span>
+                )}
+              </p>
+            </div>
+            <div className="rounded-md border p-2">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Sync</p>
+              <p className={sync?.online ? "text-emerald-600 font-medium" : "text-amber-600 font-medium"}>
+                {sync?.online ? <Wifi className="mr-1 inline h-3 w-3" /> : <WifiOff className="mr-1 inline h-3 w-3" />}
+                {sync?.online ? "Online" : "Offline"}
+                {sync?.pending > 0 && (
+                  <span className="ml-1 text-muted-foreground">· {sync.pending} pending</span>
+                )}
+                {sync?.syncing && <RefreshCw className="ml-1 inline h-3 w-3 animate-spin" />}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -470,7 +579,7 @@ function RosterStep({ data, presence, setPresence, presentCount, geo, rosterUnti
 }
 
 /* ---------------- Step 6: Session Completed ---------------- */
-function DoneStep({ data, presentCount, absentCount, lessonPlan, onHome }: any) {
+function DoneStep({ data, presentCount, absentCount, lessonPlan, onHome, onDownloadReport, sync }: any) {
   const s = data.schedule;
   const sessionNum = data.session_number ?? "—";
   const pct = data.students.length ? Math.round((presentCount / data.students.length) * 100) : 0;
@@ -478,7 +587,7 @@ function DoneStep({ data, presentCount, absentCount, lessonPlan, onHome }: any) 
     "Attendance Saved",
     "Session Report Generated",
     "PDF Created",
-    "Synced with ERP",
+    sync?.online && sync?.pending === 0 ? "Synced with ERP" : sync?.online ? "Syncing with ERP…" : "Queued for sync (offline)",
     "Department Head Notified",
     "Student Attendance Updated",
     "Session Archived",
@@ -514,6 +623,9 @@ function DoneStep({ data, presentCount, absentCount, lessonPlan, onHome }: any) 
           <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{lessonPlan || "—"}</p>
         </CardContent>
       </Card>
+      <Button className="h-12 w-full rounded-2xl bg-[#16A34A] text-base hover:bg-[#128a3d]" onClick={onDownloadReport}>
+        <Download className="mr-2 h-4 w-4" /> Download Session Report (PDF)
+      </Button>
       <Button className="h-12 w-full rounded-2xl bg-[#123E7C] text-base hover:bg-[#0f356a]" onClick={onHome}>
         <Home className="mr-2 h-4 w-4" /> Home
       </Button>
