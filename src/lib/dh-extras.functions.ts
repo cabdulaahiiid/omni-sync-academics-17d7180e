@@ -209,8 +209,11 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
     const startDate = new Date(sem.start_date);
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
-    const { data: trainers } = await supabase
-      .from("trainer_registry").select("id, full_name, hidden_staff_id").eq("department_id", data.department_id);
+    const trainers = await listDepartmentTrainers<{ id: string; full_name: string; hidden_staff_id: string | null }>(
+      supabase,
+      data.department_id,
+      "id, full_name, hidden_staff_id",
+    );
     const { data: levels } = await supabase
       .from("levels").select("id, name").eq("department_id", data.department_id);
     const { data: sections } = await supabase
