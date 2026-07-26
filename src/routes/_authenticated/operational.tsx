@@ -100,6 +100,7 @@ function OperationalShell() {
             </div>
           </div>
           <NotificationsBell />
+          <RoleSwitcher className="ml-1 hidden sm:flex" />
           <Link
             to="/profile"
             className="ml-1 flex items-center gap-2 rounded-lg border border-border/60 bg-card px-2 py-1.5 hover:bg-muted/60"
