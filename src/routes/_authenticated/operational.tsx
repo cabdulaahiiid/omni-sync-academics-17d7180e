@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { RoleSwitcher } from "@/components/role-switcher";
 import { OfflineBanner } from "@/components/offline-banner";
 import { COLLEGE_SHORT_NAME, COLLEGE_FULL_NAME, COLLEGE_LOGO_URL } from "@/components/erp/brand";
 import { Breadcrumbs } from "@/components/erp/breadcrumbs";
@@ -100,6 +101,7 @@ function OperationalShell() {
             </div>
           </div>
           <NotificationsBell />
+          <RoleSwitcher className="ml-1 hidden sm:flex" />
           <Link
             to="/profile"
             className="ml-1 flex items-center gap-2 rounded-lg border border-border/60 bg-card px-2 py-1.5 hover:bg-muted/60"

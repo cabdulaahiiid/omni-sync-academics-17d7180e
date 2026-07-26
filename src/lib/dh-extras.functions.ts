@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { listDepartmentTrainers } from "@/lib/trainer-pool";
 
 export const swapTrainer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -94,8 +95,8 @@ export const getConflictPanelOptions = createServerFn({ method: "POST" })
     z.object({ department_id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const [{ data: trainers }, { data: venues }, { data: sections }] = await Promise.all([
-      context.supabase.from("trainer_registry").select("id, full_name").eq("department_id", data.department_id).order("full_name"),
+    const [trainers, { data: venues }, { data: sections }] = await Promise.all([
+      listDepartmentTrainers(context.supabase, data.department_id, "id, full_name"),
       context.supabase.from("venues").select("id, name").order("name"),
       context.supabase.from("sections").select("id, name, level_id").eq("department_id", data.department_id).order("name"),
     ]);
@@ -208,8 +209,11 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
     const startDate = new Date(sem.start_date);
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
-    const { data: trainers } = await supabase
-      .from("trainer_registry").select("id, full_name, hidden_staff_id").eq("department_id", data.department_id);
+    const trainers = await listDepartmentTrainers<{ id: string; full_name: string; hidden_staff_id: string | null }>(
+      supabase,
+      data.department_id,
+      "id, full_name, hidden_staff_id",
+    );
     const { data: levels } = await supabase
       .from("levels").select("id, name").eq("department_id", data.department_id);
     const { data: sections } = await supabase
