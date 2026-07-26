@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { RoleSwitcher } from "@/components/role-switcher";
 import { OfflineBanner } from "@/components/offline-banner";
 import { COLLEGE_SHORT_NAME, COLLEGE_LOGO_URL } from "@/components/erp/brand";
 import { Home as HomeIcon, ClipboardCheck, User as UserIcon } from "lucide-react";
@@ -49,6 +50,7 @@ function GroundShell() {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <RoleSwitcher className="hidden xs:flex sm:flex" />
             <NotificationsBell />
             <Link
               to="/ground/profile"
