@@ -1,45 +1,44 @@
-# Trainer Mobile App — UI/UX Overhaul (Scoped)
+## Goal
 
-Strict scope: only files under `src/routes/_authenticated/ground/*`, the trainer shell (`ground.tsx`), the trainer profile view when accessed by trainers, and trainer-only components. **No changes** to Admin (strategic), Department Head (operational), auth, RBAC, RLS, database schema, server functions, or any shared business logic.
+Three additive changes: multi-department trainers visible everywhere they're assigned, one user able to act as both Trainer and Department Head, and zero changes to the existing conflict-detection engine.
 
-## Design System (trainer-only tokens)
+## What already exists (verified)
 
-Add a scoped stylesheet / trainer theme wrapper (does not affect other shells):
-- Primary Navy `#123E7C`, Secondary Emerald `#16A34A`, Accent Sky, Amber `#F59E0B`, Danger `#DC2626`, BG `#F8FAFC`.
-- 16px radius, 56px primary buttons, Material Symbols Rounded (via CDN link in trainer shell only).
-- Typography scale: 24 bold header / 18 semibold section / 16 body / 14 caption.
+- `trainer_departments` table (with `is_primary`) plus `admin_set_trainer_departments` and `admin_set_dh_department` RPCs.
+- Admin > Users & Roles already has role checkboxes (multi-role) and a multi-department picker with a primary selector, and already calls `updateUserRoles`, `setTrainerDepartments`, and `setDHDepartment` in one save.
+- The Schedule Builder's trainer pool (`getBuilderOptions`) already unions `trainer_registry.department_id` with `trainer_departments`.
+- Conflict checks in `semester-builder.functions.ts` and `dh-extras.functions.ts` already run institution-wide by trainer/venue/section, not per department.
 
-## Screens (all under `/ground`)
+## Gaps to close
 
-1. **Shell / Home** (`ground/index.tsx`) — top app bar with greeting + trainer name + bell, "Today's Sessions (N)" heading, session cards (module, code, dept, level, section, room, time, status badge). Each card: `VIEW` (always enabled) + `START SESSION` (enabled only within 20 min before start; otherwise shows live "Available in HH:MM:SS" using existing server-time offset). Bottom nav: Home / Completed / Profile.
-2. **Session Details** (`ground/$scheduleId.tsx` — pre-start state) — auto-generated info block (dept, level, section, module, hours, total sessions, current/remaining, room, time) + manual inputs (students expected, mode dropdown Practical/Theory, learning outcome, lesson plan) + START SESSION.
-3. **Geofence Verification** — animated GPS check, distance vs allowed radius, verified/outside states, offline continue option. Reuses existing `useGeoGatekeeper` and geofence bypass rules — no logic changes.
-4. **Live Session** — big circular countdown using server-synced time (existing `getServerTime` + offset), status cards (Started/GPS/Sync/Location), progress bar, Attendance button that activates in last 15 min.
-5. **Attendance** — searchable student list with Present/Absent checkboxes, live Present/Absent/% summary, SUBMIT.
-6. **Attendance Summary** — large summary cards + Continue.
-7. **Session Report** — full report preview + Download PDF (reuses existing report export) + Share + Finish.
-8. **Session Completed** — success animation + checklist + HOME / VIEW REPORT.
-9. **Completed Sessions** (`ground/completed.tsx`, new route) — list of the trainer's completed sessions with View Report / Download PDF.
-10. **Profile** (`ground/profile.tsx` or reuse `/profile` styled for trainer) — photo, name, dept, email, phone, offline sync status, app version, logout.
+### 1. Multi-department trainers on Department Head surfaces
 
-Bottom nav appears on Home/Completed/Profile; hidden inside an active session flow.
+Several DH-facing trainer lists still filter only by `trainer_registry.department_id`, so a trainer assigned to a second department never appears there:
 
-## Offline & Auto-End
+- `src/lib/dh.functions.ts` — the trainer list for the DH Trainers page.
+- `src/lib/dh-extras.functions.ts` — the trainer options for session editing and the trainer roster used by matrix/load views.
 
-- Reuse existing offline queue (`src/lib/offline/*`) and `OfflineBanner`. Add trainer-styled banner variants (Offline / Waiting / Syncing / Synced / Failed) — presentation only.
-- Auto-end: rely on existing server-side rule; UI simply displays "Auto Ended" badge on completed cards when applicable. No server changes.
+Fix: introduce one shared helper (e.g. `listTrainersForDepartment(deptId)`) that returns the union of primary-department trainers and `trainer_departments` rows, and use it in those places. Same read shape as today, just a wider set. Department scoping stays intact — a DH still only ever sees trainers linked to their own department.
 
-## What this plan will NOT touch
+### 2. Dual role (Trainer + Department Head)
 
-- No changes to `strategic/*`, `operational/*`, `_authenticated.tsx`, `login.tsx`, auth provider, `use-me`, RBAC helpers, semester builder, approvals, admin/DH server functions, DB migrations, RLS, or shared components used by other shells.
-- No new server functions or schema; UI wires only to existing trainer endpoints (`getTrainerToday`, `getScheduleDetail`, `setSessionMode`, `trainerCheckIn`, `submitSessionBatch`, `trainerEndSession`, `getMyProgress`, `getServerTime`, `getTrainerSessionsDetailed`).
+- Keep role storage as-is (`user_roles`, one row per role) — it already supports multiple rows.
+- When Admin saves a user with both DH and T checked, ensure a `trainer_registry` row exists and is linked (the existing `admin_set_trainer_departments` path already auto-links via `link_trainer_login`); make sure the Users & Roles save runs the DH-department and trainer-department steps in an order that works when both are set.
+- Add a role switcher in the app header for users with more than one role, so a DH+T user can move between the Department Head workspace (`/operational`) and the Trainer app (`/ground`). Today `pickHome` sends them to `/operational` with no way back.
+- Leave the existing shell guards untouched — they already admit a DH+T user to both shells; only the navigation affordance is missing.
+
+### 3. Conflict detection — no changes
+
+No edits to conflict logic. A short regression check will confirm that a trainer assigned to two departments still trips a cross-department overlap, and that a DH+T user gets the same validation.
 
 ## Technical notes
 
-- New files: `src/components/trainer/*` (BottomNav, SessionCard, CountdownRing, StatusChip, GeofenceCheck, AttendanceList, ReportPreview, SuccessScreen, TrainerThemeProvider), `src/routes/_authenticated/ground/completed.tsx`, `src/routes/_authenticated/ground/profile.tsx`.
-- Edited files: `src/routes/_authenticated/ground.tsx` (shell restyle + bottom nav + theme wrapper), `src/routes/_authenticated/ground/index.tsx` (new home layout), `src/routes/_authenticated/ground/$scheduleId.tsx` (full flow refactor into stepper: Details → Geofence → Live → Attendance → Summary → Report → Completed).
-- Material Symbols font loaded via `<link>` inside trainer shell only, so admin/DH pages remain untouched.
+- Server-side only for the data changes; RBAC continues through `requireRole` and existing RLS. No new policies or migrations required — `trainer_departments` and both RPCs already exist.
+- UI changes limited to: role switcher in the header shells, plus any labelling needed so a dual-role user sees both roles.
+- No changes to `semester-builder.functions.ts` validation, `dh-extras.functions.ts` conflict scans, or approval workflows.
 
-## Deliverables
+## Verification
 
-A single cohesive trainer-only mobile experience matching the 12-screen spec, using only existing backend endpoints and existing role/permission model.
+- Assign one trainer to two departments; confirm they show in both DHs' trainer lists and both Schedule Builders.
+- Give one user DH + T; confirm they can open both workspaces via the switcher, only manage their own department as DH, and appear as a schedulable trainer in every assigned department.
+- Create overlapping sessions for a multi-department trainer in two departments; confirm the trainer conflict still fires.
