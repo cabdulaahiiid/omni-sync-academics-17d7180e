@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { listDepartmentTrainers } from "@/lib/trainer-pool";
 
 export const swapTrainer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -94,8 +95,8 @@ export const getConflictPanelOptions = createServerFn({ method: "POST" })
     z.object({ department_id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const [{ data: trainers }, { data: venues }, { data: sections }] = await Promise.all([
-      context.supabase.from("trainer_registry").select("id, full_name").eq("department_id", data.department_id).order("full_name"),
+    const [trainers, { data: venues }, { data: sections }] = await Promise.all([
+      listDepartmentTrainers(context.supabase, data.department_id, "id, full_name"),
       context.supabase.from("venues").select("id, name").order("name"),
       context.supabase.from("sections").select("id, name, level_id").eq("department_id", data.department_id).order("name"),
     ]);
