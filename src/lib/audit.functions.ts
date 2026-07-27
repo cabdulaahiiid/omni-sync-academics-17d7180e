@@ -16,14 +16,16 @@ const filterSchema = z.object({
 
 export type AuditFilters = z.infer<typeof filterSchema>;
 
+type Json = string | number | boolean | null | { [k: string]: Json } | Json[];
+
 type Row = {
   id: string;
   actor_id: string | null;
   action_type: string;
   entity_type: string;
   entity_id: string | null;
-  before_state: unknown;
-  after_state: unknown;
+  before_state: Json;
+  after_state: Json;
   timestamp: string;
   ip_address: string | null;
   device_info: string | null;
