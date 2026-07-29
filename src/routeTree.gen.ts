@@ -24,6 +24,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as AuthenticatedStrategicIndexRouteImport } from './routes/_authenticated/strategic/index'
 import { Route as AuthenticatedOperationalIndexRouteImport } from './routes/_authenticated/operational/index'
 import { Route as AuthenticatedGroundIndexRouteImport } from './routes/_authenticated/ground/index'
+import { Route as ManualModulesSlugRouteImport } from './routes/manual/modules.$slug'
 import { Route as AuthenticatedStrategicVenuesRouteImport } from './routes/_authenticated/strategic/venues'
 import { Route as AuthenticatedStrategicUsersRouteImport } from './routes/_authenticated/strategic/users'
 import { Route as AuthenticatedStrategicTrainersRouteImport } from './routes/_authenticated/strategic/trainers'
@@ -135,6 +136,11 @@ const AuthenticatedGroundIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedGroundRoute,
   } as any)
+const ManualModulesSlugRoute = ManualModulesSlugRouteImport.update({
+  id: '/modules/$slug',
+  path: '/modules/$slug',
+  getParentRoute: () => ManualRoute,
+} as any)
 const AuthenticatedStrategicVenuesRoute =
   AuthenticatedStrategicVenuesRouteImport.update({
     id: '/venues',
@@ -356,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/manual/modules/$slug': typeof ManualModulesSlugRoute
   '/ground/': typeof AuthenticatedGroundIndexRoute
   '/operational/': typeof AuthenticatedOperationalIndexRoute
   '/strategic/': typeof AuthenticatedStrategicIndexRoute
@@ -398,6 +405,7 @@ export interface FileRoutesByTo {
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/manual/modules/$slug': typeof ManualModulesSlugRoute
   '/ground': typeof AuthenticatedGroundIndexRoute
   '/operational': typeof AuthenticatedOperationalIndexRoute
   '/strategic': typeof AuthenticatedStrategicIndexRoute
@@ -446,6 +454,7 @@ export interface FileRoutesById {
   '/_authenticated/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/_authenticated/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/_authenticated/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/manual/modules/$slug': typeof ManualModulesSlugRoute
   '/_authenticated/ground/': typeof AuthenticatedGroundIndexRoute
   '/_authenticated/operational/': typeof AuthenticatedOperationalIndexRoute
   '/_authenticated/strategic/': typeof AuthenticatedStrategicIndexRoute
@@ -494,6 +503,7 @@ export interface FileRouteTypes {
     | '/strategic/trainers'
     | '/strategic/users'
     | '/strategic/venues'
+    | '/manual/modules/$slug'
     | '/ground/'
     | '/operational/'
     | '/strategic/'
@@ -536,6 +546,7 @@ export interface FileRouteTypes {
     | '/strategic/trainers'
     | '/strategic/users'
     | '/strategic/venues'
+    | '/manual/modules/$slug'
     | '/ground'
     | '/operational'
     | '/strategic'
@@ -583,6 +594,7 @@ export interface FileRouteTypes {
     | '/_authenticated/strategic/trainers'
     | '/_authenticated/strategic/users'
     | '/_authenticated/strategic/venues'
+    | '/manual/modules/$slug'
     | '/_authenticated/ground/'
     | '/_authenticated/operational/'
     | '/_authenticated/strategic/'
@@ -707,6 +719,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ground/'
       preLoaderRoute: typeof AuthenticatedGroundIndexRouteImport
       parentRoute: typeof AuthenticatedGroundRoute
+    }
+    '/manual/modules/$slug': {
+      id: '/manual/modules/$slug'
+      path: '/modules/$slug'
+      fullPath: '/manual/modules/$slug'
+      preLoaderRoute: typeof ManualModulesSlugRouteImport
+      parentRoute: typeof ManualRoute
     }
     '/_authenticated/strategic/venues': {
       id: '/_authenticated/strategic/venues'
@@ -1056,10 +1075,12 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 
 interface ManualRouteChildren {
   ManualIndexRoute: typeof ManualIndexRoute
+  ManualModulesSlugRoute: typeof ManualModulesSlugRoute
 }
 
 const ManualRouteChildren: ManualRouteChildren = {
   ManualIndexRoute: ManualIndexRoute,
+  ManualModulesSlugRoute: ManualModulesSlugRoute,
 }
 
 const ManualRouteWithChildren =
