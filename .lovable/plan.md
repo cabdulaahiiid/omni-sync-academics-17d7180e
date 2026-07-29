@@ -1,44 +1,99 @@
-## Goal
+## ERP User Manual — Project Blueprint
 
-Three additive changes: multi-department trainers visible everywhere they're assigned, one user able to act as both Trainer and Department Head, and zero changes to the existing conflict-detection engine.
+One interactive, multi-section user manual for the Acme Corp ERP, built as a React + TypeScript app with shadcn/ui and Tailwind.
 
-## What already exists (verified)
+### One technical substitution
+Routing uses **TanStack Router** (file-based, already the fixed router on this stack) instead of React Router. Same result — real URLs per manual section, deep-linkable and shareable. Everything else follows your spec exactly.
 
-- `trainer_departments` table (with `is_primary`) plus `admin_set_trainer_departments` and `admin_set_dh_department` RPCs.
-- Admin > Users & Roles already has role checkboxes (multi-role) and a multi-department picker with a primary selector, and already calls `updateUserRoles`, `setTrainerDepartments`, and `setDHDepartment` in one save.
-- The Schedule Builder's trainer pool (`getBuilderOptions`) already unions `trainer_registry.department_id` with `trainer_departments`.
-- Conflict checks in `semester-builder.functions.ts` and `dh-extras.functions.ts` already run institution-wide by trainer/venue/section, not per department.
+---
 
-## Gaps to close
+### Design system
+Tokens defined centrally (in `src/styles.css`), never hardcoded in components:
 
-### 1. Multi-department trainers on Department Head surfaces
+| Token | Value | Use |
+|---|---|---|
+| primary | `#1e40af` | headers, active nav, primary buttons |
+| secondary | `#3b82f6` | links, hover states, step markers |
+| accent | `#f59e0b` | callouts, tips, stat highlights |
+| background | `#f8fafc` | page canvas |
+| surface | `#ffffff` | cards, sidebar |
 
-Several DH-facing trainer lists still filter only by `trainer_registry.department_id`, so a trainer assigned to a second department never appears there:
+Typography: Inter (loaded via a `<link>` in the root route head). Brand mark: Lucide `Settings` gear + "Acme Corp" wordmark, top-left of the sidebar.
 
-- `src/lib/dh.functions.ts` — the trainer list for the DH Trainers page.
-- `src/lib/dh-extras.functions.ts` — the trainer options for session editing and the trainer roster used by matrix/load views.
+### Layout
 
-Fix: introduce one shared helper (e.g. `listTrainersForDepartment(deptId)`) that returns the union of primary-department trainers and `trainer_departments` rows, and use it in those places. Same read shape as today, just a wider set. Department scoping stays intact — a DH still only ever sees trainers linked to their own department.
+```text
++--------------------------------------------------------------+
+| [gear] Acme Corp — ERP User Manual        [search]  [print]   |
++----------------+---------------------------------------------+
+| Sidebar        | Breadcrumb: Manual / Inventory Management    |
+|  Dashboard     |                                              |
+|  Inventory   * | H1 Module Title + 2-3 sentence description   |
+|  Sales Orders  | [Stat] [Stat] [Stat] [Stat]                  |
+|  Purchasing    | <img screenshot-inventory-dashboard.png>     |
+|  Reporting     | Key Tasks (accordion, numbered steps)        |
+|  User Admin    | Tip / warning callouts (accent)              |
+|                | < Prev module        Next module >           |
++----------------+---------------------------------------------+
+```
 
-### 2. Dual role (Trainer + Department Head)
+Sidebar collapses to an icon rail on desktop and a slide-over sheet on mobile.
 
-- Keep role storage as-is (`user_roles`, one row per role) — it already supports multiple rows.
-- When Admin saves a user with both DH and T checked, ensure a `trainer_registry` row exists and is linked (the existing `admin_set_trainer_departments` path already auto-links via `link_trainer_login`); make sure the Users & Roles save runs the DH-department and trainer-department steps in an order that works when both are set.
-- Add a role switcher in the app header for users with more than one role, so a DH+T user can move between the Department Head workspace (`/operational`) and the Trainer app (`/ground`). Today `pickHome` sends them to `/operational` with no way back.
-- Leave the existing shell guards untouched — they already admit a DH+T user to both shells; only the navigation affordance is missing.
+### Routes
+- `/` — manual home: welcome, how to use this manual, grid of 6 module cards
+- `/modules/dashboard-overview`
+- `/modules/inventory-management`
+- `/modules/sales-orders`
+- `/modules/purchasing`
+- `/modules/reporting-analytics`
+- `/modules/user-administration`
 
-### 3. Conflict detection — no changes
+### Content model
+All manual content lives in typed data files, so pages are pure presentation and content is editable without touching components.
 
-No edits to conflict logic. A short regression check will confirm that a trainer assigned to two departments still trips a cross-department overlap, and that a DH+T user gets the same validation.
+```ts
+type Step = { title: string; detail: string; note?: string }
+type Task = { id: string; title: string; goal: string; steps: Step[] }
+type Stat = { label: string; value: string; icon: LucideIcon }
+type Module = {
+  slug: string; title: string; description: string; icon: LucideIcon
+  screenshots: { src: string; alt: string; caption: string }[]
+  stats: Stat[]          // 3-4 per module
+  tasks: Task[]          // 3-5 per module
+  related: string[]      // slugs
+}
+```
 
-## Technical notes
+Module content to author:
+1. **Dashboard Overview** — stats: Active Users 128, Open Orders 342, Revenue MTD $1.2M, Alerts 7. Tasks: read the KPI strip, filter by date range, customise widgets, drill into a metric.
+2. **Inventory Management** — Total Products 1,247, Low Stock 32, Warehouses 4, Stock Value $894K. Tasks: add a product, adjust stock levels, set reorder points, run a stock count, transfer between warehouses.
+3. **Sales Order Processing** — Open Orders 342, Fulfilled MTD 1,880, Avg Order $612, Overdue Invoices 14. Tasks: create a sales order, apply pricing/discount, confirm and allocate stock, generate an invoice, process a return.
+4. **Purchasing** — Active Vendors 96, Open POs 71, Spend MTD $410K, Pending Approvals 9. Tasks: onboard a vendor, raise a purchase order, approve a PO, receive goods, match invoice to receipt.
+5. **Reporting & Analytics** — Saved Reports 58, Scheduled Exports 12, Dashboards 9, Data Refresh 15 min. Tasks: run a standard report, build a custom view, chart the results, schedule an export, share with a team.
+6. **User Administration** — Users 128, Roles 11, Permission Sets 42, MFA Adoption 87%. Tasks: invite a user, assign roles, create a custom role, review the audit trail, enforce security policy.
 
-- Server-side only for the data changes; RBAC continues through `requireRole` and existing RLS. No new policies or migrations required — `trainer_departments` and both RPCs already exist.
-- UI changes limited to: role switcher in the header shells, plus any labelling needed so a dual-role user sees both roles.
-- No changes to `semester-builder.functions.ts` validation, `dh-extras.functions.ts` conflict scans, or approval workflows.
+Screenshots are `<img>` placeholders with descriptive alt text (e.g. `screenshot-inventory-dashboard.png`) inside a bordered figure with caption — swap in real images later without layout change.
 
-## Verification
+### Components to build
+- `ManualLayout` — sidebar + header shell, renders the outlet
+- `ManualSidebar` — nav list with active highlight and mobile sheet
+- `ModulePage` — generic renderer driven by a `Module` object
+- `StatCard`, `ScreenshotFigure`, `TaskAccordion`, `StepList`, `Callout`, `ModulePager`
+- `SearchCommand` — ⌘K palette over module and task titles
+- `ManualContext` — React Context holding current module, search query, sidebar state, and reading progress (completed tasks persisted to localStorage)
 
-- Assign one trainer to two departments; confirm they show in both DHs' trainer lists and both Schedule Builders.
-- Give one user DH + T; confirm they can open both workspaces via the switcher, only manage their own department as DH, and appear as a schedulable trainer in every assigned department.
-- Create overlapping sessions for a multi-department trainer in two departments; confirm the trainer conflict still fires.
+### Extras included
+- Client-side search across all modules and tasks
+- "Mark task complete" checkboxes with per-module progress bar
+- Print-friendly stylesheet so any module prints cleanly
+- Per-route SEO head: unique title, description, and social tags
+
+### Build order
+1. Design tokens, Inter font, layout shell and sidebar navigation
+2. Content model plus data files for all 6 modules
+3. Generic `ModulePage` renderer with stats, screenshots, task accordion
+4. Manual home page and module card grid
+5. Context: search palette, progress tracking, sidebar state
+6. Print styles, responsive pass, SEO metadata
+
+Approve and I'll build it in that order.

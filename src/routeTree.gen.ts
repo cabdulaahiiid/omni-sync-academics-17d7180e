@@ -10,9 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as ManualRouteImport } from './routes/manual'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ManualIndexRouteImport } from './routes/manual/index'
 import { Route as AuthenticatedStrategicRouteImport } from './routes/_authenticated/strategic'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOperationalRouteImport } from './routes/_authenticated/operational'
@@ -22,6 +24,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as AuthenticatedStrategicIndexRouteImport } from './routes/_authenticated/strategic/index'
 import { Route as AuthenticatedOperationalIndexRouteImport } from './routes/_authenticated/operational/index'
 import { Route as AuthenticatedGroundIndexRouteImport } from './routes/_authenticated/ground/index'
+import { Route as ManualModulesSlugRouteImport } from './routes/manual/modules.$slug'
 import { Route as AuthenticatedStrategicVenuesRouteImport } from './routes/_authenticated/strategic/venues'
 import { Route as AuthenticatedStrategicUsersRouteImport } from './routes/_authenticated/strategic/users'
 import { Route as AuthenticatedStrategicTrainersRouteImport } from './routes/_authenticated/strategic/trainers'
@@ -58,6 +61,11 @@ const McpRoute = McpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManualRoute = ManualRouteImport.update({
+  id: '/manual',
+  path: '/manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -71,6 +79,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ManualIndexRoute = ManualIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ManualRoute,
 } as any)
 const AuthenticatedStrategicRoute = AuthenticatedStrategicRouteImport.update({
   id: '/strategic',
@@ -123,6 +136,11 @@ const AuthenticatedGroundIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedGroundRoute,
   } as any)
+const ManualModulesSlugRoute = ManualModulesSlugRouteImport.update({
+  id: '/modules/$slug',
+  path: '/modules/$slug',
+  getParentRoute: () => ManualRoute,
+} as any)
 const AuthenticatedStrategicVenuesRoute =
   AuthenticatedStrategicVenuesRouteImport.update({
     id: '/venues',
@@ -306,6 +324,7 @@ const AuthenticatedStrategicDepartmentsIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/manual': typeof ManualRouteWithChildren
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -313,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/profile': typeof AuthenticatedProfileRoute
   '/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/manual/': typeof ManualIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
@@ -342,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/manual/modules/$slug': typeof ManualModulesSlugRoute
   '/ground/': typeof AuthenticatedGroundIndexRoute
   '/operational/': typeof AuthenticatedOperationalIndexRoute
   '/strategic/': typeof AuthenticatedStrategicIndexRoute
@@ -354,6 +375,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/manual': typeof ManualIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
@@ -383,6 +405,7 @@ export interface FileRoutesByTo {
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/manual/modules/$slug': typeof ManualModulesSlugRoute
   '/ground': typeof AuthenticatedGroundIndexRoute
   '/operational': typeof AuthenticatedOperationalIndexRoute
   '/strategic': typeof AuthenticatedStrategicIndexRoute
@@ -393,6 +416,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/manual': typeof ManualRouteWithChildren
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -400,6 +424,7 @@ export interface FileRoutesById {
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
+  '/manual/': typeof ManualIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
@@ -429,6 +454,7 @@ export interface FileRoutesById {
   '/_authenticated/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/_authenticated/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/_authenticated/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/manual/modules/$slug': typeof ManualModulesSlugRoute
   '/_authenticated/ground/': typeof AuthenticatedGroundIndexRoute
   '/_authenticated/operational/': typeof AuthenticatedOperationalIndexRoute
   '/_authenticated/strategic/': typeof AuthenticatedStrategicIndexRoute
@@ -439,6 +465,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/manual'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -446,6 +473,7 @@ export interface FileRouteTypes {
     | '/operational'
     | '/profile'
     | '/strategic'
+    | '/manual/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ground/$scheduleId'
@@ -475,6 +503,7 @@ export interface FileRouteTypes {
     | '/strategic/trainers'
     | '/strategic/users'
     | '/strategic/venues'
+    | '/manual/modules/$slug'
     | '/ground/'
     | '/operational/'
     | '/strategic/'
@@ -487,6 +516,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/profile'
+    | '/manual'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ground/$scheduleId'
@@ -516,6 +546,7 @@ export interface FileRouteTypes {
     | '/strategic/trainers'
     | '/strategic/users'
     | '/strategic/venues'
+    | '/manual/modules/$slug'
     | '/ground'
     | '/operational'
     | '/strategic'
@@ -525,6 +556,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/manual'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -532,6 +564,7 @@ export interface FileRouteTypes {
     | '/_authenticated/operational'
     | '/_authenticated/profile'
     | '/_authenticated/strategic'
+    | '/manual/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/ground/$scheduleId'
@@ -561,6 +594,7 @@ export interface FileRouteTypes {
     | '/_authenticated/strategic/trainers'
     | '/_authenticated/strategic/users'
     | '/_authenticated/strategic/venues'
+    | '/manual/modules/$slug'
     | '/_authenticated/ground/'
     | '/_authenticated/operational/'
     | '/_authenticated/strategic/'
@@ -571,6 +605,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ManualRoute: typeof ManualRouteWithChildren
   McpRoute: typeof McpRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -585,6 +620,13 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manual': {
+      id: '/manual'
+      path: '/manual'
+      fullPath: '/manual'
+      preLoaderRoute: typeof ManualRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -607,6 +649,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/manual/': {
+      id: '/manual/'
+      path: '/'
+      fullPath: '/manual/'
+      preLoaderRoute: typeof ManualIndexRouteImport
+      parentRoute: typeof ManualRoute
     }
     '/_authenticated/strategic': {
       id: '/_authenticated/strategic'
@@ -670,6 +719,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ground/'
       preLoaderRoute: typeof AuthenticatedGroundIndexRouteImport
       parentRoute: typeof AuthenticatedGroundRoute
+    }
+    '/manual/modules/$slug': {
+      id: '/manual/modules/$slug'
+      path: '/modules/$slug'
+      fullPath: '/manual/modules/$slug'
+      preLoaderRoute: typeof ManualModulesSlugRouteImport
+      parentRoute: typeof ManualRoute
     }
     '/_authenticated/strategic/venues': {
       id: '/_authenticated/strategic/venues'
@@ -1017,10 +1073,24 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface ManualRouteChildren {
+  ManualIndexRoute: typeof ManualIndexRoute
+  ManualModulesSlugRoute: typeof ManualModulesSlugRoute
+}
+
+const ManualRouteChildren: ManualRouteChildren = {
+  ManualIndexRoute: ManualIndexRoute,
+  ManualModulesSlugRoute: ManualModulesSlugRoute,
+}
+
+const ManualRouteWithChildren =
+  ManualRoute._addFileChildren(ManualRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  ManualRoute: ManualRouteWithChildren,
   McpRoute: McpRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
