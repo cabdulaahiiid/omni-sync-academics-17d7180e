@@ -581,7 +581,7 @@ function SemesterBuilderPage() {
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-end gap-2">
           <div className="mr-auto text-xs text-muted-foreground">
             {draftCount > 0
-              ? <span className="text-emerald-600">{draftCount} draft session(s) saved this semester.</span>
+              ? <span className="text-emerald-600">{draftCount} draft session(s) saved for this level.</span>
               : formComplete
                 ? validationOk ? <span className="text-emerald-600">Ready to save.</span>
                   : <span className="text-destructive">Resolve conflicts before saving.</span>
