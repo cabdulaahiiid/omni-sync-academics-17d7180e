@@ -9,7 +9,7 @@ type Options = {
   departments: { id: string; name: string }[];
   trainers: { id: string; full_name: string }[];
   modules: { id: string; code: string; name: string }[];
-  semesters: { id: string; name: string }[];
+  levels: { id: string; name: string }[];
   academic_years: string[];
 };
 
@@ -50,7 +50,7 @@ export function ReportFilterBar({
           <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="All" /></SelectTrigger>
           <SelectContent>
             <SelectItem value={NONE}>All</SelectItem>
-            {(options?.semesters ?? []).map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            {(options?.levels ?? []).map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </Field>

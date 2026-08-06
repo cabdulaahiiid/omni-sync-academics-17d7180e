@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import React from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
+import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/level-drafts.functions";
 import { listWeekThreadsForDept, dhResubmitWeek } from "@/lib/feedback.functions";
 import { WeekFeedbackWorkspace } from "@/components/week-feedback-workspace";
 import { useMe } from "@/hooks/use-me";
@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/operational/drafts")({
   validateSearch: (s: Record<string, unknown>) =>
     z.object({
-      semester: z.string().uuid().optional(),
+      level: z.string().uuid().optional(),
       week: z.coerce.number().int().optional(),
       chat: z.coerce.number().int().optional(),
     }).parse(s),
@@ -88,25 +88,25 @@ function DraftsPage() {
   const isAdmin = me?.roles?.includes("MA") ?? false;
 
   useEffect(() => {
-    if (search.chat && search.semester && search.week != null) {
+    if (search.chat && search.level && search.week != null) {
       setOpenWorkspace({
-        semester_id: search.semester,
+        semester_id: search.level,
         week_num: search.week,
         title: `Week ${search.week}`,
       });
     }
-  }, [search.chat, search.semester, search.week]);
+  }, [search.chat, search.level, search.week]);
 
   const deptId = me?.profile?.department_id;
   useEffect(() => {
     if (!me) return;
     const ch = supabase.channel(`dh-drafts-${deptId ?? "all"}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "semester_registry" },
-        () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
+        () => qc.invalidateQueries({ queryKey: ["level-drafts"] }))
       .on("postgres_changes", deptId
         ? { event: "*", schema: "public", table: "schedules", filter: `department_id=eq.${deptId}` }
         : { event: "*", schema: "public", table: "schedules" },
-        () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
+        () => qc.invalidateQueries({ queryKey: ["level-drafts"] }))
       .on("postgres_changes", deptId
         ? { event: "*", schema: "public", table: "schedule_feedback_threads", filter: `department_id=eq.${deptId}` }
         : { event: "*", schema: "public", table: "schedule_feedback_threads" },
@@ -117,7 +117,7 @@ function DraftsPage() {
     return () => { supabase.removeChannel(ch); };
   }, [deptId, me, qc]);
   const { data, isLoading } = useQuery({
-    queryKey: ["semester-drafts", deptId],
+    queryKey: ["level-drafts", deptId],
     queryFn: () => listFn({ data: deptId ? { department_id: deptId } : {} }),
     enabled: !!me && (!!deptId || isAdmin),
   });
@@ -130,8 +130,8 @@ function DraftsPage() {
   const submitMut = useMutation({
     mutationFn: (semester_id: string) => reqFn({ data: { semester_id } }),
     onSuccess: () => {
-      toast.success("Semester sent to Admin for approval");
-      qc.invalidateQueries({ queryKey: ["semester-drafts"] });
+      toast.success("Level sent to Admin for approval");
+      qc.invalidateQueries({ queryKey: ["level-drafts"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -144,7 +144,7 @@ function DraftsPage() {
       } else {
         toast.success(`Submitted ${r.created} weekly session(s) to Admin`);
       }
-      qc.invalidateQueries({ queryKey: ["semester-drafts"] });
+      qc.invalidateQueries({ queryKey: ["level-drafts"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -154,7 +154,7 @@ function DraftsPage() {
       resubmitWeekFn({ data: v }),
     onSuccess: (r) => {
       toast.success(`Resubmitted ${r?.count ?? 0} session(s) for approval`);
-      qc.invalidateQueries({ queryKey: ["semester-drafts"] });
+      qc.invalidateQueries({ queryKey: ["level-drafts"] });
       qc.invalidateQueries({ queryKey: ["week-feedback-threads", deptId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -169,14 +169,14 @@ function DraftsPage() {
   }, [weekThreads]);
 
   const { drafts, pending, approved, allWeeksBySem } = useMemo(() => {
-    const semesters = (data ?? []) as SemesterRow[];
+    const levels = (data ?? []) as SemesterRow[];
     const draftsBySem: Record<string, WeekRow[]> = {};
     const pendingRows: WeekRow[] = [];
     const approvedBySem: Record<string, WeekRow[]> = {};
     const allBySem: Record<string, WeekRow[]> = {};
     const semMeta: Record<string, SemesterRow> = {};
 
-    for (const s of semesters) {
+    for (const s of levels) {
       semMeta[s.id] = s;
       for (const w of s.weeks) {
         const isFeedback = feedbackKeys.has(`${s.id}:${w.week_num}`);
@@ -329,7 +329,7 @@ function DraftsQuadrant({
         <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
           <UploadIcon className="h-6 w-6 opacity-40" />
           <p>No drafts.</p>
-          <Link to="/operational/semester-upload" className="text-primary underline">Build a semester schedule</Link>
+          <Link to="/operational/level-upload" className="text-primary underline">Build a level schedule</Link>
         </div>
       ) : (
         <div className="space-y-3">
@@ -359,7 +359,7 @@ function DraftsQuadrant({
                     <Button size="sm" variant="secondary" className="h-7 text-[11px]"
                       disabled={!canSubmit || submittingSem}
                       onClick={() => onSubmitSemester(sem.id)}>
-                      <Send className="mr-1 h-3 w-3" /> Submit by Semester
+                      <Send className="mr-1 h-3 w-3" /> Submit by Level
                     </Button>
                   </div>
                 </div>

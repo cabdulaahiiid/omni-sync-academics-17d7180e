@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getThreadForSemester, replyFeedback, dhResubmitSemester, dhResubmitWeek } from "@/lib/feedback.functions";
-import { listSemesterSessions, updateDraftSession } from "@/lib/semester-drafts.functions";
+import { listSemesterSessions, updateDraftSession } from "@/lib/level-drafts.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/hooks/use-me";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,11 +55,11 @@ export function FeedbackChat({ semesterId, weekNum = null, title = "Feedback cha
   });
 
   const { data: semData, refetch: refetchSem } = useQuery({
-    queryKey: ["semester-sessions", semesterId],
+    queryKey: ["level-sessions", semesterId],
     queryFn: () => sessionsFn({ data: { semester_id: semesterId } }),
     staleTime: 10000,
   });
-  const isFeedbackActive = semData?.semester?.distribution_status === "FEEDBACK_ACTIVE";
+  const isFeedbackActive = semData?.level?.distribution_status === "FEEDBACK_ACTIVE";
   const isDH = me?.roles?.includes?.("DH");
 
   const resubmit = useMutation({
@@ -67,7 +67,7 @@ export function FeedbackChat({ semesterId, weekNum = null, title = "Feedback cha
       if (weekNum == null) await resubmitFn({ data: { semester_id: semesterId } });
       else await resubmitWeekFn({ data: { semester_id: semesterId, week_num: weekNum } });
     },
-    onSuccess: () => { toast.success("Resubmitted to Admin"); refetchSem(); qc.invalidateQueries({ queryKey: ["semester-sessions", semesterId] }); },
+    onSuccess: () => { toast.success("Resubmitted to Admin"); refetchSem(); qc.invalidateQueries({ queryKey: ["level-sessions", semesterId] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -88,9 +88,9 @@ export function FeedbackChat({ semesterId, weekNum = null, title = "Feedback cha
       <CardHeader className="pb-2 border-b">
         <CardTitle className="text-sm flex items-center gap-2">
           <MessageSquare className="h-4 w-4" /> {title}
-          {semData?.semester?.distribution_status && (
+          {semData?.level?.distribution_status && (
             <Badge variant={isFeedbackActive ? "destructive" : "secondary"} className="ml-auto text-[10px]">
-              {semData.semester.distribution_status}
+              {semData.level.distribution_status}
             </Badge>
           )}
         </CardTitle>
@@ -138,7 +138,7 @@ export function FeedbackChat({ semesterId, weekNum = null, title = "Feedback cha
               }} />
           ))}
           {(semData?.sessions ?? []).filter((s: any) => weekNum == null || s.week_num === weekNum).length === 0 && (
-            <p className="text-xs text-muted-foreground">No sessions in this semester.</p>
+            <p className="text-xs text-muted-foreground">No sessions in this level.</p>
           )}
         </CardContent>
         <div className="border-t p-3">

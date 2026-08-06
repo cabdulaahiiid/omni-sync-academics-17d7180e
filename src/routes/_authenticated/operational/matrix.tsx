@@ -8,7 +8,7 @@ import {
   validateScheduleEdit,
   getConflictPanelOptions,
 } from "@/lib/dh-extras.functions";
-import { updateDraftSession } from "@/lib/semester-drafts.functions";
+import { updateDraftSession } from "@/lib/level-drafts.functions";
 import { dhResubmitWeek } from "@/lib/feedback.functions";
 import { useMe } from "@/hooks/use-me";
 import { listTrainers } from "@/lib/dh.functions";
@@ -62,7 +62,7 @@ function WeeklyMatrix() {
   const { data: trainers } = useQuery({
     queryKey: ["dh-trainers"], queryFn: () => trainersFn(), staleTime: 60000,
   });
-  const { data: semesters } = useQuery({
+  const { data: levels } = useQuery({
     queryKey: ["semesters"], queryFn: () => semsFn(), staleTime: 60000,
   });
   const { data: options } = useQuery({
@@ -142,10 +142,10 @@ function WeeklyMatrix() {
         </div>
         <div className="flex items-center gap-2">
           <Select value={semesterId || "all"} onValueChange={(v) => setSemesterId(v === "all" ? "" : v)}>
-            <SelectTrigger className="h-8 w-[200px]"><SelectValue placeholder="All semesters" /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[200px]"><SelectValue placeholder="All levels" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All semesters</SelectItem>
-              {(semesters ?? []).map((s: any) => (
+              <SelectItem value="all">All levels</SelectItem>
+              {(levels ?? []).map((s: any) => (
                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
               ))}
             </SelectContent>

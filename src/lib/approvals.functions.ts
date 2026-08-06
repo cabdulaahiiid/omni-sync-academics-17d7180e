@@ -75,7 +75,7 @@ export const listPendingWeeksForDept = createServerFn({ method: "POST" })
   });
 
 /**
- * All weeks for a department (optionally scoped to a semester), with rich
+ * All weeks for a department (optionally scoped to a level), with rich
  * per-week rollup status: total, pending, approved, rejected, draft, and the
  * min/max session date for the week. Powers the redesigned Weekly Status table.
  */
@@ -286,7 +286,7 @@ export const getDepartmentOverview = createServerFn({ method: "POST" })
     };
   });
 
-/** Split a pending semester-level approval into per-session approvals (grouped by week). */
+/** Split a pending level-level approval into per-session approvals (grouped by week). */
 export const splitSemesterToWeeks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pencil, Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { getSemesterWeekTimetable, updateDraftSession, dhDeleteDraftSession } from "@/lib/semester-drafts.functions";
+import { getSemesterWeekTimetable, updateDraftSession, dhDeleteDraftSession } from "@/lib/level-drafts.functions";
 import { listVenues } from "@/lib/data.functions";
 import { listTrainers } from "@/lib/dh.functions";
 import { useMe } from "@/hooks/use-me";
@@ -33,7 +33,7 @@ export function WeekTimetableDialog({ open, onOpenChange, semesterId, weekNum, t
   const deleteFn = useServerFn(dhDeleteDraftSession);
   const [editingId, setEditingId] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
-    queryKey: ["semester-week-timetable", semesterId, weekNum],
+    queryKey: ["level-week-timetable", semesterId, weekNum],
     queryFn: () => fn({ data: { semester_id: semesterId, week_num: weekNum } }),
     enabled: open,
   });
@@ -52,7 +52,7 @@ export function WeekTimetableDialog({ open, onOpenChange, semesterId, weekNum, t
   const deptId = me?.profile?.department_id;
   const deptTrainers = (trainers ?? []).filter((t: any) => !deptId || t.department_id === deptId);
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["semester-week-timetable", semesterId, weekNum] });
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["level-week-timetable", semesterId, weekNum] });
 
   const delMut = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { schedule_id: id } }),
