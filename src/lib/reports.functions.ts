@@ -65,7 +65,7 @@ export const REPORT_CATALOGUE: ReportMeta[] = [
   { key: "attendanceSummary", title: "Attendance summary", group: "Academic" },
   { key: "trainerWorkload", title: "Trainer workload", group: "Academic" },
   { key: "timetableUtilization", title: "Timetable utilization", group: "Academic" },
-  { key: "semesterProgress", title: "Semester progress", group: "Academic" },
+  { key: "semesterProgress", title: "Level progress", group: "Academic" },
   // Department
   { key: "departmentPerformance", title: "Department performance", group: "Department" },
   { key: "trainerPerformance", title: "Trainer performance", group: "Department" },
@@ -355,7 +355,7 @@ async function semesterProgress(supabase: any, f: ReportFilters) {
     };
   });
   return {
-    title: "Semester progress",
+    title: "Level progress",
     columns: [
       { key: "semester", label: "Semester" },
       { key: "status", label: "Status" },

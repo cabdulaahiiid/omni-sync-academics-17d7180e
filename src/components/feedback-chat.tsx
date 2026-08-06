@@ -138,7 +138,7 @@ export function FeedbackChat({ semesterId, weekNum = null, title = "Feedback cha
               }} />
           ))}
           {(semData?.sessions ?? []).filter((s: any) => weekNum == null || s.week_num === weekNum).length === 0 && (
-            <p className="text-xs text-muted-foreground">No sessions in this semester.</p>
+            <p className="text-xs text-muted-foreground">No sessions in this level.</p>
           )}
         </CardContent>
         <div className="border-t p-3">

@@ -205,7 +205,7 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
 
     const { data: sem } = await supabase
       .from("semester_registry").select("id, start_date").eq("id", data.semester_id).single();
-    if (!sem) throw new Error("Semester not found");
+    if (!sem) throw new Error("Level not found");
     const startDate = new Date(sem.start_date);
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
