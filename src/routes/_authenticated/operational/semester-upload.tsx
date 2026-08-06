@@ -328,14 +328,14 @@ function SemesterBuilderPage() {
       {/* Compact hero */}
       <div className="flex items-center gap-2.5 rounded-xl border bg-card/60 px-3 py-2">
         <Sparkles className="h-4 w-4 text-primary" />
-        <h1 className="text-sm font-semibold tracking-tight">Semester Schedule Builder</h1>
+        <h1 className="text-sm font-semibold tracking-tight">Level Schedule Builder</h1>
         <span className="hidden text-xs text-muted-foreground sm:inline">— database-driven, real-time conflict checks.</span>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         {/* LEFT: form */}
         <Accordion type="multiple" defaultValue={["s1","s2","s3"]} className="space-y-2">
-          <SectionItem step={1} title="Semester Information" icon={CalendarRange} value="s1" complete={!!semesterId}>
+          <SectionItem step={1} title="Level Information" icon={CalendarRange} value="s1" complete={!!semesterId}>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Academic Year</Label>
@@ -347,9 +347,9 @@ function SemesterBuilderPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Semester</Label>
+                <Label className="text-xs">Level</Label>
                 <Select value={semesterId} onValueChange={setSemesterId}>
-                  <SelectTrigger><SelectValue placeholder={academicYear ? "Pick semester" : "Pick a year first"} /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={academicYear ? "Pick level" : "Pick a year first"} /></SelectTrigger>
                   <SelectContent>
                     {semestersForYear.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
@@ -418,7 +418,7 @@ function SemesterBuilderPage() {
             <div className="grid gap-2 rounded-xl border bg-muted/30 p-3 text-xs md:grid-cols-3">
               <div><span className="text-muted-foreground">Per session:</span> <b>{(durationMin / 60).toFixed(2)} h</b></div>
               <div><span className="text-muted-foreground">Weekly:</span> <b>{(weeklyMins / 60).toFixed(2)} h</b></div>
-              <div><span className="text-muted-foreground">Semester total:</span> <b>{(totalContactMins / 60).toFixed(1)} h</b></div>
+              <div><span className="text-muted-foreground">Level total:</span> <b>{(totalContactMins / 60).toFixed(1)} h</b></div>
             </div>
           </SectionItem>
 
@@ -517,7 +517,7 @@ function SemesterBuilderPage() {
             <div className="grid gap-2 rounded-xl border bg-muted/30 p-3 text-xs md:grid-cols-3">
               <div><span className="text-muted-foreground">End time / session:</span> <b>{endTime || "—"}</b></div>
               <div><span className="text-muted-foreground">Last session date:</span> <b>{validation?.summary.end_date ?? "—"}</b></div>
-              <div><span className="text-muted-foreground">Semester completion:</span> <b>{selectedSem?.end_date ?? "—"}</b></div>
+              <div><span className="text-muted-foreground">Level completion:</span> <b>{selectedSem?.end_date ?? "—"}</b></div>
             </div>
           </SectionItem>
         </Accordion>
@@ -581,7 +581,7 @@ function SemesterBuilderPage() {
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-end gap-2">
           <div className="mr-auto text-xs text-muted-foreground">
             {draftCount > 0
-              ? <span className="text-emerald-600">{draftCount} draft session(s) saved this semester.</span>
+              ? <span className="text-emerald-600">{draftCount} draft session(s) saved for this level.</span>
               : formComplete
                 ? validationOk ? <span className="text-emerald-600">Ready to save.</span>
                   : <span className="text-destructive">Resolve conflicts before saving.</span>
@@ -602,12 +602,12 @@ function SemesterBuilderPage() {
 
       <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>How would you like Admin to review this semester?</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>How would you like Admin to review this level?</DialogTitle></DialogHeader>
           <div className="space-y-2 text-sm text-muted-foreground">
             <p>Drafts have been saved. Choose a submission path:</p>
             <ul className="list-disc pl-5">
               <li><b>By Week</b> — Admin approves/rejects each week independently.</li>
-              <li><b>Full Semester</b> — Admin reviews the entire semester at once.</li>
+              <li><b>Full Level</b> — Admin reviews the entire level at once.</li>
             </ul>
           </div>
           <DialogFooter className="flex flex-col gap-2 sm:flex-row">
@@ -616,7 +616,7 @@ function SemesterBuilderPage() {
               {submitWeekly.isPending ? "Submitting…" : "Request Approval by Week"}
             </Button>
             <Button onClick={() => submitFull.mutate()} disabled={submitFull.isPending}>
-              {submitFull.isPending ? "Submitting…" : "Request Approval for Full Semester"}
+              {submitFull.isPending ? "Submitting…" : "Request Approval for Full Level"}
             </Button>
           </DialogFooter>
         </DialogContent>

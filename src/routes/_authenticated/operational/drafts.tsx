@@ -130,7 +130,7 @@ function DraftsPage() {
   const submitMut = useMutation({
     mutationFn: (semester_id: string) => reqFn({ data: { semester_id } }),
     onSuccess: () => {
-      toast.success("Semester sent to Admin for approval");
+      toast.success("Level sent to Admin for approval");
       qc.invalidateQueries({ queryKey: ["semester-drafts"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -329,7 +329,7 @@ function DraftsQuadrant({
         <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
           <UploadIcon className="h-6 w-6 opacity-40" />
           <p>No drafts.</p>
-          <Link to="/operational/semester-upload" className="text-primary underline">Build a semester schedule</Link>
+          <Link to="/operational/semester-upload" className="text-primary underline">Build a level schedule</Link>
         </div>
       ) : (
         <div className="space-y-3">
@@ -359,7 +359,7 @@ function DraftsQuadrant({
                     <Button size="sm" variant="secondary" className="h-7 text-[11px]"
                       disabled={!canSubmit || submittingSem}
                       onClick={() => onSubmitSemester(sem.id)}>
-                      <Send className="mr-1 h-3 w-3" /> Submit by Semester
+                      <Send className="mr-1 h-3 w-3" /> Submit by Level
                     </Button>
                   </div>
                 </div>

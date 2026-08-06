@@ -14,7 +14,7 @@ const LABELS: Record<string, string> = {
   venues: "Venues",
   levels: "Levels",
   sections: "Sections",
-  semesters: "Semesters",
+  semesters: "Levels",
   "department-heads": "Department Heads",
   trainers: "Trainers",
   students: "Students",

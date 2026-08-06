@@ -84,7 +84,7 @@ function ApprovalsPage() {
     mutationFn: (vars: { semester_id: string; message: string }) =>
       rejectSemFn({ data: vars }),
     onSuccess: () => {
-      toast.success("Semester returned to DH with feedback");
+      toast.success("Level returned to DH with feedback");
       qc.invalidateQueries({ queryKey: ["approval-queue"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -140,14 +140,14 @@ function ApprovalsPage() {
     <div className="container mx-auto space-y-4 p-6">
       <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-1 border-b border-border/70 bg-background/85 px-6 py-3 backdrop-blur">
         <h1 className="text-[22px] font-semibold tracking-tight text-foreground">Approvals — Weekly Status</h1>
-        <p className="text-xs text-muted-foreground">Approve, return, or split semester &amp; per-week submissions.</p>
+        <p className="text-xs text-muted-foreground">Approve, return, or split level &amp; per-week submissions.</p>
       </div>
       <Card className="rounded-xl border-border/70 bg-[var(--surface-raised)]">
         <CardContent className="flex flex-wrap items-center gap-2 p-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search semester or module…"
+              placeholder="Search level or module…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-7"
@@ -197,7 +197,7 @@ function ApprovalsPage() {
       <Tabs value={tab} onValueChange={(v) => setTab(v as "session" | "semester")}>
         <TabsList>
           <TabsTrigger value="session">Sessions</TabsTrigger>
-          <TabsTrigger value="semester">Semesters</TabsTrigger>
+          <TabsTrigger value="semester">Levels</TabsTrigger>
         </TabsList>
         <TabsContent value="session" className="mt-4">
           <SessionApprovalsByDeptWeek onSwitchTab={() => setTab("semester")} />
@@ -269,7 +269,7 @@ function ApprovalRow({ row, onApprove, onReject, rejecting, onOpenChat, onSplit,
   const target = row.schedule ?? row.semester;
   const entityName = row.type === "session"
     ? `${target?.module_code ?? "?"} • ${target?.module_name ?? ""}`
-    : target?.name ?? "Semester";
+    : target?.name ?? "Level";
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -296,7 +296,7 @@ function ApprovalRow({ row, onApprove, onReject, rejecting, onOpenChat, onSplit,
         )}
         <Textarea placeholder="Decision comment (optional)" value={comment} onChange={(e) => setComment(e.target.value)} />
         <ApprovalActions
-          approveLabel={row.type === "semester" ? "Approve Full Semester" : "Approve"}
+          approveLabel={row.type === "semester" ? "Approve Full Level" : "Approve"}
           entityName={entityName}
           rejectTitle={row.type === "semester" ? `Reject semester: ${entityName}` : `Reject: ${entityName}`}
           rejectDescription={
@@ -447,7 +447,7 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Filter by Academic Session</label>
               <Select value={semesterId ?? ""} onValueChange={(v) => { setStoredSemesterId(v); setViewWeek(null); }}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Choose a semester…" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Choose a level…" /></SelectTrigger>
                 <SelectContent>
                   {(semesters ?? []).map((s: any) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
@@ -711,9 +711,9 @@ function WeeklyStatusTable({
                     <EmptyState
                       icon={Inbox}
                       title="No weeks to show"
-                      description="Once the Department Head uploads a semester and submits weeks for review, they appear here."
+                      description="Once the Department Head uploads a level and submits weeks for review, they appear here."
                       action={onSwitchTab && (
-                        <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Semesters tab</Button>
+                        <Button size="sm" variant="outline" onClick={onSwitchTab}>Open Levels tab</Button>
                       )}
                     />
                   </TableCell>

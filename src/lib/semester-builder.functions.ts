@@ -306,7 +306,7 @@ export const validateBuilder = createServerFn({ method: "POST" })
       .select("id, name, start_date, end_date")
       .eq("id", data.semester_id)
       .maybeSingle();
-    if (!sem) throw new Error("Semester not found");
+    if (!sem) throw new Error("Level not found");
 
     const plan = planOccurrences(data, sem.start_date, sem.end_date);
     if (!plan.occurrences.length) {
@@ -406,7 +406,7 @@ export const saveBuilderDraft = createServerFn({ method: "POST" })
       supabase.from("sections").select("id, name, level_id, department_id").eq("id", data.section_id).maybeSingle(),
       supabase.from("levels").select("id, name, department_id").eq("id", data.level_id).maybeSingle(),
     ]);
-    if (!sem) throw new Error("Semester not found");
+    if (!sem) throw new Error("Level not found");
     if (!mod || !trainer || !venue || !section || !level) throw new Error("One of the selected references does not exist");
     if (mod.department_id !== data.department_id) throw new Error("Module does not belong to that department");
     if (trainer.department_id !== data.department_id && !trainerDept) throw new Error("Trainer is not assigned to that department");

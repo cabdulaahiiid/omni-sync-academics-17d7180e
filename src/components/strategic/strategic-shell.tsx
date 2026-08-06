@@ -67,7 +67,7 @@ const GROUPS: NavGroup[] = [
       { to: "/strategic/venues", label: "Venues", icon: MapPin },
       { to: "/strategic/levels", label: "Levels", icon: Layers },
       { to: "/strategic/sections", label: "Sections", icon: Grid3x3 },
-      { to: "/strategic/semesters", label: "Semesters", icon: CalendarRange },
+      { to: "/strategic/semesters", label: "Levels", icon: CalendarRange },
     ],
   },
   {
@@ -229,7 +229,7 @@ export function StrategicShell() {
           <div className="relative ml-auto max-w-md flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search modules, trainers, semesters…"
+              placeholder="Search modules, trainers, levels…"
               className="h-10 rounded-lg border-border/70 bg-muted/40 pl-9 text-sm shadow-none focus-visible:bg-card"
             />
           </div>
@@ -284,7 +284,7 @@ export function StrategicShell() {
                 <MapPin className="mr-2 h-4 w-4" /> New Venue
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate({ to: "/strategic/semesters" })}>
-                <CalendarRange className="mr-2 h-4 w-4" /> New Semester
+                <CalendarRange className="mr-2 h-4 w-4" /> New Level
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate({ to: "/strategic/trainers" })}>
                 <Users className="mr-2 h-4 w-4" /> New Trainer

@@ -142,9 +142,9 @@ function WeeklyMatrix() {
         </div>
         <div className="flex items-center gap-2">
           <Select value={semesterId || "all"} onValueChange={(v) => setSemesterId(v === "all" ? "" : v)}>
-            <SelectTrigger className="h-8 w-[200px]"><SelectValue placeholder="All semesters" /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[200px]"><SelectValue placeholder="All levels" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All semesters</SelectItem>
+              <SelectItem value="all">All levels</SelectItem>
               {(semesters ?? []).map((s: any) => (
                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
               ))}

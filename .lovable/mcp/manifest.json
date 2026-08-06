@@ -35,7 +35,7 @@
       {
         "name": "list_active_drafts",
         "title": "List active schedule drafts",
-        "description": "List draft schedule sessions visible to the signed-in user. Department Heads see only their department; Master Admins see all departments. Returns per-semester, per-week draft/pending/published counts.",
+        "description": "List draft schedule sessions visible to the signed-in user. Department Heads see only their department; Master Admins see all departments. Returns per-level, per-week draft/pending/published counts.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
