@@ -100,7 +100,7 @@ export const listWeekThreadsForDept = createServerFn({ method: "POST" })
         .in("id", semIds);
       sems = Object.fromEntries((rs ?? []).map((r) => [r.id, { name: r.name }]));
     }
-    return (threads ?? []).map((t) => ({ ...t, semester_name: sems[t.semester_id]?.name ?? "Semester" }));
+    return (threads ?? []).map((t) => ({ ...t, semester_name: sems[t.semester_id]?.name ?? "Level" }));
   });
 
 /** DH: resubmit a single week back to PENDING_MA. */

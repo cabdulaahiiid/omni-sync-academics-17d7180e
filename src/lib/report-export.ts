@@ -24,7 +24,7 @@ export type ExportContext = {
 
 const FILTER_LABELS: Record<string, string> = {
   academic_year: "Academic Year",
-  semester_id: "Semester",
+  semester_id: "Level",
   department_id: "Department",
   trainer_registry_id: "Trainer",
   module_id: "Module",
