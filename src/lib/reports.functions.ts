@@ -65,7 +65,7 @@ export const REPORT_CATALOGUE: ReportMeta[] = [
   { key: "attendanceSummary", title: "Attendance summary", group: "Academic" },
   { key: "trainerWorkload", title: "Trainer workload", group: "Academic" },
   { key: "timetableUtilization", title: "Timetable utilization", group: "Academic" },
-  { key: "semesterProgress", title: "Level progress", group: "Academic" },
+  { key: "semesterProgress", title: "Semester progress", group: "Academic" },
   // Department
   { key: "departmentPerformance", title: "Department performance", group: "Department" },
   { key: "trainerPerformance", title: "Trainer performance", group: "Department" },
@@ -344,7 +344,7 @@ async function semesterProgress(supabase: any, f: ReportFilters) {
   const rows = (sems ?? []).map((s: any) => {
     const b = byS.get(s.id) ?? { total: 0, ended: 0, live: 0, pending: 0, draft: 0 };
     return {
-      level: s.name,
+      semester: s.name,
       status: s.status,
       distribution: s.distribution_status,
       sessions: b.total,
@@ -355,7 +355,7 @@ async function semesterProgress(supabase: any, f: ReportFilters) {
     };
   });
   return {
-    title: "Level progress",
+    title: "Semester progress",
     columns: [
       { key: "semester", label: "Semester" },
       { key: "status", label: "Status" },
@@ -697,7 +697,7 @@ export const getReportFilterOptions = createServerFn({ method: "GET" })
       departments: depts ?? [],
       trainers: trainers ?? [],
       modules: modules ?? [],
-      levels: sems ?? [],
+      semesters: sems ?? [],
       academic_years: years,
     };
   });

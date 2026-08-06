@@ -16,7 +16,7 @@ import {
   getSemesterWeekTimetable,
   updateDraftSession,
   dhDeleteDraftSession,
-} from "@/lib/level-drafts.functions";
+} from "@/lib/semester-drafts.functions";
 import { listVenues } from "@/lib/data.functions";
 import { listTrainers } from "@/lib/dh.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,7 +67,7 @@ function WorkspaceBody({ semesterId, weekNum, title }: { semesterId: string; wee
   const resubmitFn = useServerFn(dhResubmitWeek);
 
   const { data: rows = [], isLoading: rowsLoading } = useQuery({
-    queryKey: ["level-week-timetable", semesterId, weekNum],
+    queryKey: ["semester-week-timetable", semesterId, weekNum],
     queryFn: () => tableFn({ data: { semester_id: semesterId, week_num: weekNum } }),
   });
 
@@ -89,10 +89,10 @@ function WorkspaceBody({ semesterId, weekNum, title }: { semesterId: string; wee
     onSuccess: (r: any) => {
       const n = r?.count ?? 0;
       toast.success(n > 0 ? `Resubmitted ${n} session(s) to Admin` : "Nothing new to resubmit");
-      qc.invalidateQueries({ queryKey: ["level-week-timetable", semesterId, weekNum] });
+      qc.invalidateQueries({ queryKey: ["semester-week-timetable", semesterId, weekNum] });
       qc.invalidateQueries({ queryKey: ["feedback-thread", semesterId, weekNum] });
       qc.invalidateQueries({ queryKey: ["week-feedback-threads"] });
-      qc.invalidateQueries({ queryKey: ["level-drafts"] });
+      qc.invalidateQueries({ queryKey: ["semester-drafts"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -260,7 +260,7 @@ function EditorPanel({
   const deptTrainers = (trainers ?? []).filter((t: any) => !deptId || t.department_id === deptId);
 
   const invalidate = () =>
-    qc.invalidateQueries({ queryKey: ["level-week-timetable", semesterId, weekNum] });
+    qc.invalidateQueries({ queryKey: ["semester-week-timetable", semesterId, weekNum] });
 
   const del = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { schedule_id: id } }),

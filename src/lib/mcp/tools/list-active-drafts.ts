@@ -12,7 +12,7 @@ export default defineTool({
   name: "list_active_drafts",
   title: "List active schedule drafts",
   description:
-    "List draft schedule sessions visible to the signed-in user. Department Heads see only their department; Master Admins see all departments. Returns per-level, per-week draft/pending/published counts.",
+    "List draft schedule sessions visible to the signed-in user. Department Heads see only their department; Master Admins see all departments. Returns per-semester, per-week draft/pending/published counts.",
   inputSchema: {},
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (_input, ctx) => {
@@ -57,8 +57,8 @@ export default defineTool({
     const ids = (sems ?? []).map((s) => s.id);
     if (!ids.length) {
       return {
-        content: [{ type: "text", text: "No levels found." }],
-        structuredContent: { levels: [] },
+        content: [{ type: "text", text: "No semesters found." }],
+        structuredContent: { semesters: [] },
       };
     }
 
@@ -85,7 +85,7 @@ export default defineTool({
       byId.set(r.semester_id, m);
     }
 
-    const levels = (sems ?? [])
+    const semesters = (sems ?? [])
       .map((s) => {
         const weeks = Object.entries(byId.get(s.id) ?? {})
           .map(([k, v]) => ({ week_num: Number(k), ...v }))
@@ -96,8 +96,8 @@ export default defineTool({
       .filter((s) => s.weeks.length > 0);
 
     return {
-      content: [{ type: "text", text: JSON.stringify({ levels }, null, 2) }],
-      structuredContent: { levels },
+      content: [{ type: "text", text: JSON.stringify({ semesters }, null, 2) }],
+      structuredContent: { semesters },
     };
   },
 });

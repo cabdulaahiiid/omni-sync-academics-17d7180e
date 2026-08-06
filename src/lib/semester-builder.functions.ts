@@ -18,7 +18,7 @@ const addMinutes = (hhmm: string, mins: number) => {
 };
 
 /**
- * Load every option list the Level Schedule Builder needs in one round-trip.
+ * Load every option list the Semester Schedule Builder needs in one round-trip.
  * DH callers get their department; MA may pass any department_id.
  */
 export const getBuilderOptions = createServerFn({ method: "POST" })
@@ -43,7 +43,7 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
     }
 
     const [
-      { data: levels },
+      { data: semesters },
       { data: modules },
       { data: linkedProfiles },
       { data: levels },
@@ -135,7 +135,7 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
       department_id: deptId,
       can_pick_department: roles.includes("MA"),
       departments: depts ?? [],
-      levels: levels ?? [],
+      semesters: semesters ?? [],
       modules: modules ?? [],
       trainers: trainers ?? [],
       levels: levels ?? [],
@@ -144,7 +144,7 @@ export const getBuilderOptions = createServerFn({ method: "POST" })
     };
   });
 
-/** Aggregate currently-assigned weekly minutes per trainer for the chosen level. */
+/** Aggregate currently-assigned weekly minutes per trainer for the chosen semester. */
 export const getTrainerLoad = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -216,7 +216,7 @@ function planOccurrences(input: BuilderInputT, semStart: string, semEnd: string)
   const startDate = new Date(input.start_date + "T00:00:00Z");
   const endDate = new Date(semEnd + "T00:00:00Z");
   const semStartD = new Date(semStart + "T00:00:00Z");
-  // Anchor weeks to the level's Monday so week_num matches the rest of the app.
+  // Anchor weeks to the semester's Monday so week_num matches the rest of the app.
   const semMonday = new Date(semStartD);
   semMonday.setUTCDate(semMonday.getUTCDate() - ((semMonday.getUTCDay() + 6) % 7));
 
@@ -227,7 +227,7 @@ function planOccurrences(input: BuilderInputT, semStart: string, semEnd: string)
   const end_time_hhmm = addMinutes(input.start_time, duration_min);
   const occurrences: Occurrence[] = [];
 
-  // Iterate week by week from the start_date until level end.
+  // Iterate week by week from the start_date until semester end.
   const cursorMon = new Date(startDate);
   cursorMon.setUTCDate(cursorMon.getUTCDate() - ((cursorMon.getUTCDay() + 6) % 7));
   while (cursorMon <= endDate) {
@@ -306,7 +306,7 @@ export const validateBuilder = createServerFn({ method: "POST" })
       .select("id, name, start_date, end_date")
       .eq("id", data.semester_id)
       .maybeSingle();
-    if (!sem) throw new Error("Level not found");
+    if (!sem) throw new Error("Semester not found");
 
     const plan = planOccurrences(data, sem.start_date, sem.end_date);
     if (!plan.occurrences.length) {
@@ -406,7 +406,7 @@ export const saveBuilderDraft = createServerFn({ method: "POST" })
       supabase.from("sections").select("id, name, level_id, department_id").eq("id", data.section_id).maybeSingle(),
       supabase.from("levels").select("id, name, department_id").eq("id", data.level_id).maybeSingle(),
     ]);
-    if (!sem) throw new Error("Level not found");
+    if (!sem) throw new Error("Semester not found");
     if (!mod || !trainer || !venue || !section || !level) throw new Error("One of the selected references does not exist");
     if (mod.department_id !== data.department_id) throw new Error("Module does not belong to that department");
     if (trainer.department_id !== data.department_id && !trainerDept) throw new Error("Trainer is not assigned to that department");

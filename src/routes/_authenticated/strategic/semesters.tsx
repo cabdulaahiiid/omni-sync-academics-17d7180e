@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/strategic/semesters")({
   component: SemestersPage,
 });
 
-type Term = "Level 1" | "Level 2" | "Summer Course";
+type Term = "Semester 1" | "Semester 2" | "Summer Course";
 type Status = "ACTIVE" | "CLOSED" | "ARCHIVED";
 type Sem = { id: string; name: string; start_date: string; end_date: string; status: string };
 
@@ -27,9 +27,9 @@ function parseName(name: string): { year: number; term: Term } {
   const m = name.match(/Year\s+(\d{4})\s*[–-]\s*(.+)/);
   if (m) {
     const term = m[2].trim() as Term;
-    return { year: Number(m[1]), term: ["Level 1", "Level 2", "Summer Course"].includes(term) ? term : "Level 1" };
+    return { year: Number(m[1]), term: ["Semester 1", "Semester 2", "Summer Course"].includes(term) ? term : "Semester 1" };
   }
-  return { year: new Date().getFullYear(), term: "Level 1" };
+  return { year: new Date().getFullYear(), term: "Semester 1" };
 }
 
 function SemestersPage() {
@@ -47,7 +47,7 @@ function SemestersPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Sem | null>(null);
   const [year, setYear] = useState<number>(new Date().getFullYear());
-  const [term, setTerm] = useState<Term>("Level 1");
+  const [term, setTerm] = useState<Term>("Semester 1");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [status, setStatus] = useState<Status>("ACTIVE");
@@ -66,7 +66,7 @@ function SemestersPage() {
   const openNew = () => {
     setEditing(null);
     setYear(new Date().getFullYear());
-    setTerm("Level 1");
+    setTerm("Semester 1");
     setStartDate("");
     setEndDate("");
     setStatus("ACTIVE");
@@ -86,15 +86,15 @@ function SemestersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Levels</h1>
-          <p className="text-sm text-muted-foreground">Create academic levels as Year + Term.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Semesters</h1>
+          <p className="text-sm text-muted-foreground">Create academic semesters as Year + Term.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> New level</Button>
+            <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> New semester</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>{editing ? "Edit level" : "New level"}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editing ? "Edit semester" : "New semester"}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
@@ -106,8 +106,8 @@ function SemestersPage() {
                   <Select value={term} onValueChange={(v) => setTerm(v as Term)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Level 1">Level 1</SelectItem>
-                      <SelectItem value="Level 2">Level 2</SelectItem>
+                      <SelectItem value="Semester 1">Semester 1</SelectItem>
+                      <SelectItem value="Semester 2">Semester 2</SelectItem>
                       <SelectItem value="Summer Course">Summer Course</SelectItem>
                     </SelectContent>
                   </Select>
@@ -149,7 +149,7 @@ function SemestersPage() {
           </TableHeader>
           <TableBody>
             {isLoading && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
-            {!isLoading && rows?.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No levels yet.</TableCell></TableRow>}
+            {!isLoading && rows?.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No semesters yet.</TableCell></TableRow>}
             {rows?.map((r) => {
               const s = r as Sem;
               return (

@@ -91,13 +91,13 @@ export const seedDemoData = createServerFn({ method: "POST" })
       if (id) moduleIds.push({ id, code: m.code, name: m.name, dept: m.dept, level: m.level });
     }
 
-    // Level
+    // Semester
     const today = new Date();
     const semStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
     const semEnd = new Date(today.getFullYear(), today.getMonth() + 4, 0).toISOString().slice(0, 10);
-    const { data: semEx } = await supabaseAdmin.from("semester_registry").select("id").eq("name", "Demo Level").maybeSingle();
+    const { data: semEx } = await supabaseAdmin.from("semester_registry").select("id").eq("name", "Demo Semester").maybeSingle();
     const semId = semEx?.id ?? (await supabaseAdmin.from("semester_registry")
-      .insert({ name: "Demo Level", start_date: semStart, end_date: semEnd }).select().single()).data?.id;
+      .insert({ name: "Demo Semester", start_date: semStart, end_date: semEnd }).select().single()).data?.id;
 
     // Helper: create user
     async function ensureUser(email: string, password: string, fullName: string) {

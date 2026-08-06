@@ -247,7 +247,7 @@ export const deleteSection = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ===== Levels =====
+// ===== Semesters =====
 export const listSemesters = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -262,7 +262,7 @@ export const listSemesters = createServerFn({ method: "GET" })
 const semesterInput = z.object({
   id: z.string().uuid().optional(),
   year: z.number().int().min(2000).max(2100),
-  term: z.enum(["Level 1", "Level 2", "Summer Course"]),
+  term: z.enum(["Semester 1", "Semester 2", "Summer Course"]),
   start_date: z.string().min(8),
   end_date: z.string().min(8),
   status: z.enum(["ACTIVE", "CLOSED", "ARCHIVED"]).default("ACTIVE"),

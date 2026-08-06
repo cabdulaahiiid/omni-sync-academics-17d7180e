@@ -173,7 +173,7 @@ export const getWeeklyMatrix = createServerFn({ method: "POST" })
     };
   });
 
-// Temporal Slicing Engine: parse level rows -> 16 weekly buckets
+// Temporal Slicing Engine: parse semester rows -> 16 weekly buckets
 const SliceRowSchema = z.object({
   module_code: z.string().min(1),
   module_name: z.string().min(1),
@@ -205,7 +205,7 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
 
     const { data: sem } = await supabase
       .from("semester_registry").select("id, start_date").eq("id", data.semester_id).single();
-    if (!sem) throw new Error("Level not found");
+    if (!sem) throw new Error("Semester not found");
     const startDate = new Date(sem.start_date);
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -312,7 +312,7 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
       }
     }
 
-    // DB conflicts: existing schedules on same dates that overlap (exclude this level's own drafts)
+    // DB conflicts: existing schedules on same dates that overlap (exclude this semester's own drafts)
     if (inserts.length) {
       const dates = Array.from(new Set(inserts.map((i) => i.date)));
       // Global cross-departmental read: bypass DH RLS using the admin client
@@ -369,7 +369,7 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
       return { ok: errors.length === 0 && conflicts.length === 0, created: 0, errors, conflicts, total_rows: data.rows.length };
     }
 
-    // Replace any previous drafts for this level before re-inserting
+    // Replace any previous drafts for this semester before re-inserting
     await supabase.from("schedules").delete().eq("semester_id", data.semester_id).eq("status", "DRAFT");
 
     let created = 0;
@@ -382,7 +382,7 @@ export const uploadSemesterSchedule = createServerFn({ method: "POST" })
         created += slice.length;
       }
     }
-    // Ensure level is in DRAFT state (do NOT auto-submit for approval)
+    // Ensure semester is in DRAFT state (do NOT auto-submit for approval)
     await supabase.from("semester_registry").update({ distribution_status: "DRAFT" }).eq("id", data.semester_id);
     return { ok: true, created, errors, conflicts, total_rows: data.rows.length };
   });

@@ -46,7 +46,7 @@ export const listApprovalQueue = createServerFn({ method: "POST" })
     return (rows ?? []).map((r) => ({
       ...r,
       schedule: r.type === "session" ? sMap[r.target_id as string] : null,
-      level: r.type === "semester" ? semMap[r.target_id as string] : null,
+      semester: r.type === "semester" ? semMap[r.target_id as string] : null,
     }));
   });
 

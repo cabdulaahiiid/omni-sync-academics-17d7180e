@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-/** MA: reject a level and open/append a feedback thread. */
+/** MA: reject a semester and open/append a feedback thread. */
 export const maRejectSemesterWithFeedback = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -38,7 +38,7 @@ export const replyFeedback = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** DH: resubmit a level back to PENDING_MA. */
+/** DH: resubmit a semester back to PENDING_MA. */
 export const dhResubmitSemester = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -52,7 +52,7 @@ export const dhResubmitSemester = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Find a feedback thread by level. Returns null if none. */
+/** Find a feedback thread by semester. Returns null if none. */
 export const getThreadForSemester = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>

@@ -48,7 +48,7 @@ export function downloadXlsxTemplate(spec: TemplateSpec) {
 }
 
 export const SEMESTER_TIMETABLE_TEMPLATE: TemplateSpec = {
-  fileName: "level-timetable-template.xlsx",
+  fileName: "semester-timetable-template.xlsx",
   sheetName: "Timetable",
   columns: [
     { name: "module_code", required: true, type: "text", example: "ICT-101", notes: "Must exist in Modules registry" },

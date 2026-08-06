@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
- * Derive an ordered version timeline for a level (and optional week)
+ * Derive an ordered version timeline for a semester (and optional week)
  * from approval_queue rows + linked feedback messages.
  * Each approval_queue row = one submission/version.
  */
@@ -18,7 +18,7 @@ export const getApprovalHistory = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
 
-    // Pull queue rows scoped to this level (and week if provided).
+    // Pull queue rows scoped to this semester (and week if provided).
     let scheduleIds: string[] = [];
     if (data.week_num != null) {
       const { data: sched } = await supabase

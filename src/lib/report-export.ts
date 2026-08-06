@@ -178,13 +178,13 @@ export async function downloadPdf(r: ReportResult, ctx: ExportContext = {}) {
     doc.setTextColor(90, 90, 90);
     const meta: string[] = [];
     if (r.filters.academic_year) meta.push(`Academic Year: ${r.filters.academic_year}`);
-    if (r.filters.semester_id) meta.push(`Level: ${r.filters.semester_id}`);
+    if (r.filters.semester_id) meta.push(`Semester: ${r.filters.semester_id}`);
     if (r.filters.department_id) meta.push(`Department: ${r.filters.department_id}`);
     if (meta.length) doc.text(meta.join("    ·    "), 24, 94);
 
     // Filter chips line
     const otherChips = filterChips.filter(
-      (c) => !c.startsWith("Academic Year:") && !c.startsWith("Level:") && !c.startsWith("Department:"),
+      (c) => !c.startsWith("Academic Year:") && !c.startsWith("Semester:") && !c.startsWith("Department:"),
     );
     if (otherChips.length) {
       doc.setTextColor(110, 110, 110);

@@ -14,7 +14,7 @@ export interface ApprovalChatDockProps {
 
 /**
  * Floating, minimisable real-time approval discussion dock.
- * Minimise / expand / close / reopen states are persisted per (level, week)
+ * Minimise / expand / close / reopen states are persisted per (semester, week)
  * in localStorage so the dock survives navigation.
  */
 export function ApprovalChatDock({ semesterId, weekNum = null, title, open, onOpenChange }: ApprovalChatDockProps) {

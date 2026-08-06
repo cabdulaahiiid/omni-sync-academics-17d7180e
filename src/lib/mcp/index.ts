@@ -9,7 +9,7 @@ export default defineMcp({
   title: "JPTV Schedule MCP",
   version: "0.1.0",
   instructions:
-    "Tools for the JPTV level scheduling app. Use `whoami` to inspect the signed-in user and roles. Use `list_active_drafts` to list draft/pending/published schedule sessions per level and week for the user's department (or all departments for Master Admins).",
+    "Tools for the JPTV semester scheduling app. Use `whoami` to inspect the signed-in user and roles. Use `list_active_drafts` to list draft/pending/published schedule sessions per semester and week for the user's department (or all departments for Master Admins).",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",

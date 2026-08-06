@@ -71,7 +71,7 @@ export const requestSemesterApproval = createServerFn({ method: "POST" })
     z.object({ semester_id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    // If level is in FEEDBACK_ACTIVE, route through dh_resubmit_semester
+    // If semester is in FEEDBACK_ACTIVE, route through dh_resubmit_semester
     // (otherwise submit_for_approval silently no-ops because nothing is in DRAFT).
     const { data: sem } = await context.supabase
       .from("semester_registry")
@@ -167,7 +167,7 @@ export const listSemesterSessions = createServerFn({ method: "POST" })
       .select("id, name, status, distribution_status")
       .eq("id", data.semester_id)
       .maybeSingle();
-    return { sessions: rows ?? [], level: sem };
+    return { sessions: rows ?? [], semester: sem };
   });
 
 export const getSemesterWeekTimetable = createServerFn({ method: "POST" })
