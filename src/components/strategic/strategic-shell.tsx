@@ -67,7 +67,7 @@ const GROUPS: NavGroup[] = [
       { to: "/strategic/venues", label: "Venues", icon: MapPin },
       { to: "/strategic/levels", label: "Levels", icon: Layers },
       { to: "/strategic/sections", label: "Sections", icon: Grid3x3 },
-      { to: "/strategic/semesters", label: "Semesters", icon: CalendarRange },
+      { to: "/strategic/semesters", label: "Levels", icon: CalendarRange },
     ],
   },
   {
@@ -284,7 +284,7 @@ export function StrategicShell() {
                 <MapPin className="mr-2 h-4 w-4" /> New Venue
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate({ to: "/strategic/semesters" })}>
-                <CalendarRange className="mr-2 h-4 w-4" /> New Semester
+                <CalendarRange className="mr-2 h-4 w-4" /> New Level
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate({ to: "/strategic/trainers" })}>
                 <Users className="mr-2 h-4 w-4" /> New Trainer

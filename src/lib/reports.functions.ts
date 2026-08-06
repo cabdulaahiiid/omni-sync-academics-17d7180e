@@ -357,7 +357,7 @@ async function semesterProgress(supabase: any, f: ReportFilters) {
   return {
     title: "Level progress",
     columns: [
-      { key: "semester", label: "Semester" },
+      { key: "semester", label: "Level" },
       { key: "status", label: "Status" },
       { key: "distribution", label: "Distribution" },
       { key: "sessions", label: "Sessions", align: "right" as const },

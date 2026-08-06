@@ -42,7 +42,7 @@ export function ReportFilterBar({
           </SelectContent>
         </Select>
       </Field>
-      <Field label="Semester">
+      <Field label="Level">
         <Select
           value={value.semester_id ?? NONE}
           onValueChange={(v) => update({ semester_id: v === NONE ? undefined : v })}

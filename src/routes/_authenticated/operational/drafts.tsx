@@ -359,7 +359,7 @@ function DraftsQuadrant({
                     <Button size="sm" variant="secondary" className="h-7 text-[11px]"
                       disabled={!canSubmit || submittingSem}
                       onClick={() => onSubmitSemester(sem.id)}>
-                      <Send className="mr-1 h-3 w-3" /> Submit by Semester
+                      <Send className="mr-1 h-3 w-3" /> Submit by Level
                     </Button>
                   </div>
                 </div>

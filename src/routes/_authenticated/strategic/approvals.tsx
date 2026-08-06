@@ -269,7 +269,7 @@ function ApprovalRow({ row, onApprove, onReject, rejecting, onOpenChat, onSplit,
   const target = row.schedule ?? row.semester;
   const entityName = row.type === "session"
     ? `${target?.module_code ?? "?"} • ${target?.module_name ?? ""}`
-    : target?.name ?? "Semester";
+    : target?.name ?? "Level";
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">

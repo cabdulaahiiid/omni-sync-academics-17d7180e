@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/strategic/semesters")({
   component: SemestersPage,
 });
 
-type Term = "Level 1" | "Level 2" | "Summer Course";
+type Term = "Level 1" | "Level 2" | "Level 3" | "Level 4" | "Summer Course";
 type Status = "ACTIVE" | "CLOSED" | "ARCHIVED";
 type Sem = { id: string; name: string; start_date: string; end_date: string; status: string };
 
@@ -27,7 +27,7 @@ function parseName(name: string): { year: number; term: Term } {
   const m = name.match(/Year\s+(\d{4})\s*[–-]\s*(.+)/);
   if (m) {
     const term = m[2].trim() as Term;
-    return { year: Number(m[1]), term: ["Level 1", "Level 2", "Summer Course"].includes(term) ? term : "Level 1" };
+    return { year: Number(m[1]), term: ["Level 1", "Level 2", "Level 3", "Level 4", "Summer Course"].includes(term) ? term : "Level 1" };
   }
   return { year: new Date().getFullYear(), term: "Level 1" };
 }
@@ -108,6 +108,8 @@ function SemestersPage() {
                     <SelectContent>
                       <SelectItem value="Level 1">Level 1</SelectItem>
                       <SelectItem value="Level 2">Level 2</SelectItem>
+                      <SelectItem value="Level 3">Level 3</SelectItem>
+                      <SelectItem value="Level 4">Level 4</SelectItem>
                       <SelectItem value="Summer Course">Summer Course</SelectItem>
                     </SelectContent>
                   </Select>
