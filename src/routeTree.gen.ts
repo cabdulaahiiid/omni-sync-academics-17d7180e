@@ -49,6 +49,9 @@ import { Route as AuthenticatedOperationalMatrixRouteImport } from './routes/_au
 import { Route as AuthenticatedOperationalLiveMonitorRouteImport } from './routes/_authenticated/operational/live-monitor'
 import { Route as AuthenticatedOperationalDraftsRouteImport } from './routes/_authenticated/operational/drafts'
 import { Route as AuthenticatedOperationalAttendanceRouteImport } from './routes/_authenticated/operational/attendance'
+import { Route as AuthenticatedGroundStudentsRouteImport } from './routes/_authenticated/ground/students'
+import { Route as AuthenticatedGroundSessionsRouteImport } from './routes/_authenticated/ground/sessions'
+import { Route as AuthenticatedGroundReportsRouteImport } from './routes/_authenticated/ground/reports'
 import { Route as AuthenticatedGroundProfileRouteImport } from './routes/_authenticated/ground/profile'
 import { Route as AuthenticatedGroundCompletedRouteImport } from './routes/_authenticated/ground/completed'
 import { Route as AuthenticatedGroundScheduleIdRouteImport } from './routes/_authenticated/ground/$scheduleId'
@@ -285,6 +288,24 @@ const AuthenticatedOperationalAttendanceRoute =
     path: '/attendance',
     getParentRoute: () => AuthenticatedOperationalRoute,
   } as any)
+const AuthenticatedGroundStudentsRoute =
+  AuthenticatedGroundStudentsRouteImport.update({
+    id: '/students',
+    path: '/students',
+    getParentRoute: () => AuthenticatedGroundRoute,
+  } as any)
+const AuthenticatedGroundSessionsRoute =
+  AuthenticatedGroundSessionsRouteImport.update({
+    id: '/sessions',
+    path: '/sessions',
+    getParentRoute: () => AuthenticatedGroundRoute,
+  } as any)
+const AuthenticatedGroundReportsRoute =
+  AuthenticatedGroundReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedGroundRoute,
+  } as any)
 const AuthenticatedGroundProfileRoute =
   AuthenticatedGroundProfileRouteImport.update({
     id: '/profile',
@@ -338,6 +359,9 @@ export interface FileRoutesByFullPath {
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/ground/completed': typeof AuthenticatedGroundCompletedRoute
   '/ground/profile': typeof AuthenticatedGroundProfileRoute
+  '/ground/reports': typeof AuthenticatedGroundReportsRoute
+  '/ground/sessions': typeof AuthenticatedGroundSessionsRoute
+  '/ground/students': typeof AuthenticatedGroundStudentsRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
@@ -381,6 +405,9 @@ export interface FileRoutesByTo {
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/ground/completed': typeof AuthenticatedGroundCompletedRoute
   '/ground/profile': typeof AuthenticatedGroundProfileRoute
+  '/ground/reports': typeof AuthenticatedGroundReportsRoute
+  '/ground/sessions': typeof AuthenticatedGroundSessionsRoute
+  '/ground/students': typeof AuthenticatedGroundStudentsRoute
   '/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
   '/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
@@ -430,6 +457,9 @@ export interface FileRoutesById {
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/_authenticated/ground/completed': typeof AuthenticatedGroundCompletedRoute
   '/_authenticated/ground/profile': typeof AuthenticatedGroundProfileRoute
+  '/_authenticated/ground/reports': typeof AuthenticatedGroundReportsRoute
+  '/_authenticated/ground/sessions': typeof AuthenticatedGroundSessionsRoute
+  '/_authenticated/ground/students': typeof AuthenticatedGroundStudentsRoute
   '/_authenticated/operational/attendance': typeof AuthenticatedOperationalAttendanceRoute
   '/_authenticated/operational/drafts': typeof AuthenticatedOperationalDraftsRoute
   '/_authenticated/operational/live-monitor': typeof AuthenticatedOperationalLiveMonitorRoute
@@ -479,6 +509,9 @@ export interface FileRouteTypes {
     | '/ground/$scheduleId'
     | '/ground/completed'
     | '/ground/profile'
+    | '/ground/reports'
+    | '/ground/sessions'
+    | '/ground/students'
     | '/operational/attendance'
     | '/operational/drafts'
     | '/operational/live-monitor'
@@ -522,6 +555,9 @@ export interface FileRouteTypes {
     | '/ground/$scheduleId'
     | '/ground/completed'
     | '/ground/profile'
+    | '/ground/reports'
+    | '/ground/sessions'
+    | '/ground/students'
     | '/operational/attendance'
     | '/operational/drafts'
     | '/operational/live-monitor'
@@ -570,6 +606,9 @@ export interface FileRouteTypes {
     | '/_authenticated/ground/$scheduleId'
     | '/_authenticated/ground/completed'
     | '/_authenticated/ground/profile'
+    | '/_authenticated/ground/reports'
+    | '/_authenticated/ground/sessions'
+    | '/_authenticated/ground/students'
     | '/_authenticated/operational/attendance'
     | '/_authenticated/operational/drafts'
     | '/_authenticated/operational/live-monitor'
@@ -895,6 +934,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperationalAttendanceRouteImport
       parentRoute: typeof AuthenticatedOperationalRoute
     }
+    '/_authenticated/ground/students': {
+      id: '/_authenticated/ground/students'
+      path: '/students'
+      fullPath: '/ground/students'
+      preLoaderRoute: typeof AuthenticatedGroundStudentsRouteImport
+      parentRoute: typeof AuthenticatedGroundRoute
+    }
+    '/_authenticated/ground/sessions': {
+      id: '/_authenticated/ground/sessions'
+      path: '/sessions'
+      fullPath: '/ground/sessions'
+      preLoaderRoute: typeof AuthenticatedGroundSessionsRouteImport
+      parentRoute: typeof AuthenticatedGroundRoute
+    }
+    '/_authenticated/ground/reports': {
+      id: '/_authenticated/ground/reports'
+      path: '/reports'
+      fullPath: '/ground/reports'
+      preLoaderRoute: typeof AuthenticatedGroundReportsRouteImport
+      parentRoute: typeof AuthenticatedGroundRoute
+    }
     '/_authenticated/ground/profile': {
       id: '/_authenticated/ground/profile'
       path: '/profile'
@@ -944,6 +1004,9 @@ interface AuthenticatedGroundRouteChildren {
   AuthenticatedGroundScheduleIdRoute: typeof AuthenticatedGroundScheduleIdRoute
   AuthenticatedGroundCompletedRoute: typeof AuthenticatedGroundCompletedRoute
   AuthenticatedGroundProfileRoute: typeof AuthenticatedGroundProfileRoute
+  AuthenticatedGroundReportsRoute: typeof AuthenticatedGroundReportsRoute
+  AuthenticatedGroundSessionsRoute: typeof AuthenticatedGroundSessionsRoute
+  AuthenticatedGroundStudentsRoute: typeof AuthenticatedGroundStudentsRoute
   AuthenticatedGroundIndexRoute: typeof AuthenticatedGroundIndexRoute
 }
 
@@ -951,6 +1014,9 @@ const AuthenticatedGroundRouteChildren: AuthenticatedGroundRouteChildren = {
   AuthenticatedGroundScheduleIdRoute: AuthenticatedGroundScheduleIdRoute,
   AuthenticatedGroundCompletedRoute: AuthenticatedGroundCompletedRoute,
   AuthenticatedGroundProfileRoute: AuthenticatedGroundProfileRoute,
+  AuthenticatedGroundReportsRoute: AuthenticatedGroundReportsRoute,
+  AuthenticatedGroundSessionsRoute: AuthenticatedGroundSessionsRoute,
+  AuthenticatedGroundStudentsRoute: AuthenticatedGroundStudentsRoute,
   AuthenticatedGroundIndexRoute: AuthenticatedGroundIndexRoute,
 }
 
