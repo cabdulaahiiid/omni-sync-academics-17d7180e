@@ -18,6 +18,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { StepList, DetailTable, GeoRadar, type StepState } from "@/components/trainer/ui";
 import { ArrowLeft, MapPin, CheckCircle2, AlertTriangle, StopCircle, Home, Download, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
@@ -230,21 +236,31 @@ function SessionDetail() {
   const presentCount = Object.values(presence).filter(Boolean).length;
   const absentCount = data.students.length - presentCount;
   const stepTitle: Record<Step, string> = {
-    setup: "Context Setup",
-    checkin: "Session Started",
-    roster: "Attendance",
+    setup: "Pre-Class Preparation",
+    checkin: "Session In Progress",
+    roster: "Take Attendance",
     done: "Session Completed",
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Link to="/ground" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" /> Back
+      <div className="-mx-4 -mt-4 mb-1 flex items-center gap-3 bg-[#123E7C] px-4 py-3 text-white">
+        <Link to="/ground" aria-label="Back" className="rounded-lg p-1 hover:bg-white/10">
+          <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h2 className="text-sm font-semibold">{stepTitle[step]}</h2>
-        <div className="w-12" />
+        <h2 className="flex-1 text-center text-[15px] font-semibold">{stepTitle[step]}</h2>
+        <span className="w-7" />
       </div>
+
+      <StepList
+        steps={[
+          { label: "Pre-Class Preparation", state: (step === "setup" ? "current" : "done") as StepState },
+          { label: "Session Details", state: (step === "setup" ? "current" : "done") as StepState },
+          { label: "Geo-fence Check", state: (step === "setup" ? "locked" : step === "checkin" ? "current" : "done") as StepState },
+          { label: "Start Session", state: (step === "roster" ? "current" : step === "done" ? "done" : "locked") as StepState },
+          { label: "Take Attendance", state: (step === "roster" ? "current" : step === "done" ? "done" : "locked") as StepState },
+        ]}
+      />
 
       {step === "setup" && (
         <SetupStep
@@ -327,22 +343,22 @@ function SetupStep({ data, progress, mode, setMode, lessonPlan, setLessonPlan, o
   const ready = !!mode && lessonPlan.trim().length >= 5 && outcome.trim().length >= 5 && !geoBlocked;
   return (
     <>
-      <Card className="rounded-2xl">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">System Data (Read-only)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <Row label="Dept" value={data.department?.name ?? "—"} />
-          <Row label="Level" value={data.level?.display_name ?? data.level?.name ?? "—"} />
-          <Row label="UC/Module" value={s.module_name} />
-          <Row label="Module Code" value={s.module_code} />
-          <Row label="Total Hrs" value={`${data.module?.total_hours ?? "—"} Hr`} inline />
-          <Row label="Total Sessions" value={String(data.module?.total_sessions ?? target)} inline />
-          <Row label="Session" value={`${sessionNum} of ${target}`} />
-          <Row label="Venue" value={data.venue?.name ?? "—"} />
-          <Row label="When" value={`${s.date} · ${s.start_time?.slice(0,5)}–${s.end_time?.slice(0,5)}`} />
-        </CardContent>
-      </Card>
+      <p className="px-1 text-[13px] font-semibold text-[#123E7C]">Session Details</p>
+      <DetailTable
+        rows={[
+          ["Department", data.department?.name ?? "—"],
+          ["Level", data.level?.display_name ?? data.level?.name ?? "—"],
+          ["Module Code", s.module_code],
+          ["Module Name", s.module_name],
+          ["Total Hours (Module)", `${data.module?.total_hours ?? "—"}`],
+          ["Total Sessions (Module)", String(data.module?.total_sessions ?? target)],
+          ["Session Number", `${sessionNum} of ${target}`],
+          ["Venue", data.venue?.name ?? "—"],
+          ["Session Start Time", String(s.start_time ?? "").slice(0, 5)],
+          ["Session End Time", String(s.end_time ?? "").slice(0, 5)],
+          ["Date", String(s.date ?? "—")],
+        ]}
+      />
 
       <Card className="rounded-2xl">
         <CardHeader className="pb-2">
@@ -402,22 +418,6 @@ function SetupStep({ data, progress, mode, setMode, lessonPlan, setLessonPlan, o
   );
 }
 
-function Row({ label, value, inline }: { label: string; value: string; inline?: boolean }) {
-  if (inline) {
-    return (
-      <div className="flex justify-between gap-3 text-sm">
-        <span className="text-muted-foreground">{label}:</span>
-        <span className="font-medium">{value}</span>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col">
-      <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className="font-medium">{value}</span>
-    </div>
-  );
-}
 
 /* ---------------- Step 4: Session Started / Check-In ---------------- */
 function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, canStart, geo, geofenceEnabled, bypass, checking, onCheckIn, onBack }: any) {
@@ -437,6 +437,13 @@ function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, canStar
     <>
       <Card className="rounded-2xl">
         <CardContent className="space-y-4 p-6">
+          <GeoRadar ok={!geofenceEnabled || bypass || !!geo?.inRadius} />
+          <p className="text-center text-[13px] font-semibold text-slate-900">
+            {!geofenceEnabled ? "Geo-fence disabled" : bypass ? "Geo-fence bypassed" : geo?.inRadius ? "Geo-fence Passed" : "You are outside the allowed area"}
+          </p>
+          {geo?.coords && (
+            <p className="text-center text-[11px] text-slate-500">Accuracy: {Math.round(geo.coords.accuracy)}m</p>
+          )}
           <CountdownTimer until={target} label={windowLabel} variant="ring" offsetMs={offsetMs} totalMs={ringTotalMs} />
           <p className="text-center text-xs text-muted-foreground">Attendance window: last 10 minutes of the session</p>
         </CardContent>
@@ -485,6 +492,13 @@ function RosterStep({ data, presence, setPresence, presentCount, geo, rosterUnti
   onSubmit, canEnd, ending, onEnd, lessonPlan, setLessonPlan, outcome, setOutcome,
   sessionEndAt, offsetMs, sessionDurationMs, geofenceEnabled, bypass, sync }: any) {
   const setPresent = (id: string, val: boolean) => setPresence((p: any) => ({ ...p, [id]: val }));
+  const [query, setQuery] = useState("");
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const visible = data.students.filter((s: any) =>
+    !query.trim() ||
+    String(s.full_name ?? "").toLowerCase().includes(query.toLowerCase()) ||
+    String(s.registration_number ?? "").toLowerCase().includes(query.toLowerCase()),
+  );
   return (
     <>
       <Card className="rounded-2xl">
@@ -525,29 +539,43 @@ function RosterStep({ data, presence, setPresence, presentCount, geo, rosterUnti
       </Card>
 
       <Card className="rounded-2xl">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm">Students ({presentCount}/{data.students.length})</CardTitle>
-          <button onClick={() => setPresence(Object.fromEntries(data.students.map((s: any) => [s.id, true])))}
-            className="text-xs font-medium text-primary">Mark all present</button>
-        </CardHeader>
         <CardContent className="p-0">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 border-b bg-muted/30 px-4 py-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            <span>Student</span><span>Present</span><span>Absent</span>
+          <div className="flex items-center gap-2 border-b border-slate-100 p-3">
+            <Input
+              placeholder="Search students…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="h-9 flex-1 bg-white text-[13px]"
+            />
+            <button
+              type="button"
+              disabled={isEnded}
+              onClick={() => setPresence(Object.fromEntries(data.students.map((s: any) => [s.id, true])))}
+              className="whitespace-nowrap text-[12px] font-semibold text-[#123E7C] disabled:text-slate-300"
+            >
+              Select All
+            </button>
           </div>
-          <div className="max-h-[50vh] divide-y overflow-y-auto">
-            {data.students.map((s: any) => (
-              <div key={s.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 px-4 py-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{s.full_name}</p>
-                  <p className="text-[11px] text-muted-foreground">{s.registration_number}</p>
+          <div className="max-h-[46vh] divide-y divide-slate-100 overflow-y-auto">
+            {visible.map((s: any, i: number) => (
+              <label key={s.id} className="flex cursor-pointer items-center gap-3 px-4 py-2.5">
+                <span className="w-5 text-[12px] text-slate-400">{i + 1}.</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-medium text-slate-900">{s.full_name}</p>
+                  <p className="text-[11px] text-slate-500">{s.registration_number}</p>
                 </div>
-                <Checkbox checked={presence[s.id] === true} disabled={isEnded}
-                  onCheckedChange={() => setPresent(s.id, true)} />
-                <Checkbox checked={presence[s.id] === false} disabled={isEnded}
-                  onCheckedChange={() => setPresent(s.id, false)} />
-              </div>
+                <Checkbox
+                  checked={presence[s.id] === true}
+                  disabled={isEnded}
+                  onCheckedChange={(v) => setPresent(s.id, v === true)}
+                />
+              </label>
             ))}
-            {data.students.length === 0 && <p className="px-4 py-6 text-center text-xs text-muted-foreground">No students assigned.</p>}
+            {visible.length === 0 && <p className="px-4 py-6 text-center text-xs text-muted-foreground">No students found.</p>}
+          </div>
+          <div className="flex items-center gap-4 border-t border-slate-100 px-4 py-2.5 text-[11px] text-slate-600">
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#16A34A]" /> Present {presentCount}</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#DC2626]" /> Absent {data.students.length - presentCount}</span>
           </div>
         </CardContent>
       </Card>
@@ -569,10 +597,37 @@ function RosterStep({ data, presence, setPresence, presentCount, geo, rosterUnti
         </CardContent>
       </Card>
 
-      <Button variant="destructive" className="h-11 w-full" disabled={isEnded || ending || !canEnd} onClick={onEnd}>
+      <Button variant="destructive" className="h-11 w-full" disabled={isEnded || ending || !canEnd} onClick={() => setConfirmEnd(true)}>
         <StopCircle className="mr-2 h-4 w-4" />
         {ending ? "Ending…" : "End Session"}
       </Button>
+      <AlertDialog open={confirmEnd} onOpenChange={setConfirmEnd}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center">End Session</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Are you sure you want to end this session?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-xl bg-slate-50 p-3 text-[12px] text-slate-600">
+            <p className="mb-1 font-medium text-slate-700">This action will:</p>
+            <ul className="list-disc space-y-0.5 pl-4">
+              <li>Complete the session</li>
+              <li>Save all records</li>
+              <li>Generate final report</li>
+            </ul>
+          </div>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction
+              onClick={onEnd}
+              className="h-11 w-full rounded-xl bg-[#DC2626] text-white hover:bg-[#b91c1c]"
+            >
+              Yes, End Session
+            </AlertDialogAction>
+            <AlertDialogCancel className="h-11 w-full rounded-xl border-[#123E7C] text-[#123E7C]">Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {!canEnd && <p className="text-center text-[11px] text-muted-foreground">Plan + outcome must be ≥ 5 chars to end.</p>}
     </>
   );

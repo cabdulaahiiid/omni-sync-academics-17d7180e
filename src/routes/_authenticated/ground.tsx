@@ -9,7 +9,7 @@ import { NotificationsBell } from "@/components/notifications-bell";
 import { RoleSwitcher } from "@/components/role-switcher";
 import { OfflineBanner } from "@/components/offline-banner";
 import { COLLEGE_SHORT_NAME, COLLEGE_LOGO_URL } from "@/components/erp/brand";
-import { Home as HomeIcon, ClipboardCheck, User as UserIcon } from "lucide-react";
+import { Home as HomeIcon, CalendarDays, Users as UsersIcon, BarChart3, User as UserIcon } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/ground")({
   component: GroundShell,
@@ -39,35 +39,24 @@ function GroundShell() {
     return "Good evening";
   })();
   return (
-    <div className="trainer-theme min-h-screen bg-[#F8FAFC] pb-20">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <img src={COLLEGE_LOGO_URL} alt="" className="h-10 w-10 shrink-0 rounded-xl object-contain ring-1 ring-slate-200" />
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium text-slate-500">{greeting}</p>
-              <p className="truncate text-[15px] font-semibold text-[#123E7C]">{firstName}</p>
+    <div className="trainer-theme min-h-screen bg-[#F1F5F9] pb-20">
+      <header className="sticky top-0 z-30 bg-[#123E7C] px-4 py-3 text-white shadow-sm">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+          <Link to="/ground/profile" className="flex min-w-0 items-center gap-3" aria-label="My profile">
+            <Avatar className="h-10 w-10 ring-2 ring-white/40">
+              {me?.avatar_url && <AvatarImage src={me.avatar_url} alt="" />}
+              <AvatarFallback className="bg-white/15 text-[11px] font-semibold text-white">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 leading-tight">
+              <p className="text-[11px] text-white/70">{greeting},</p>
+              <p className="truncate text-[15px] font-semibold">{me?.profile?.full_name || firstName}</p>
+              <p className="text-[10px] text-white/70">{roleLabel}</p>
             </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <RoleSwitcher className="hidden xs:flex sm:flex" />
+          </Link>
+          <div className="flex items-center gap-1 text-white [&_button]:text-white [&_svg]:text-white">
+            <RoleSwitcher className="hidden sm:flex" />
             <NotificationsBell />
-            <Link
-              to="/ground/profile"
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 hover:bg-slate-50"
-              aria-label="My profile"
-            >
-              <Avatar className="h-8 w-8">
-                {me?.avatar_url && <AvatarImage src={me.avatar_url} alt="" />}
-                <AvatarFallback className="bg-[#123E7C]/10 text-[#123E7C] text-[11px] font-semibold">{initials}</AvatarFallback>
-              </Avatar>
-              <div className="hidden min-w-0 flex-col leading-tight sm:flex">
-                <span className="max-w-[120px] truncate text-[13px] font-semibold text-slate-800">
-                  {me?.profile?.full_name || me?.profile?.email || "User"}
-                </span>
-                <span className="text-[10px] uppercase tracking-wider text-slate-500">{roleLabel}</span>
-              </div>
-            </Link>
+            <img src={COLLEGE_LOGO_URL} alt="" className="hidden h-9 w-9 rounded-lg bg-white object-contain p-0.5 sm:block" />
           </div>
         </div>
       </header>
@@ -76,7 +65,9 @@ function GroundShell() {
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-md items-stretch justify-around">
           <TabLink to="/ground" icon={<HomeIcon className="h-5 w-5" />} label="Home" />
-          <TabLink to="/ground/completed" icon={<ClipboardCheck className="h-5 w-5" />} label="Completed" />
+          <TabLink to="/ground/sessions" icon={<CalendarDays className="h-5 w-5" />} label="Sessions" />
+          <TabLink to="/ground/students" icon={<UsersIcon className="h-5 w-5" />} label="Students" />
+          <TabLink to="/ground/reports" icon={<BarChart3 className="h-5 w-5" />} label="Reports" />
           <TabLink to="/ground/profile" icon={<UserIcon className="h-5 w-5" />} label="Profile" />
         </div>
       </nav>
