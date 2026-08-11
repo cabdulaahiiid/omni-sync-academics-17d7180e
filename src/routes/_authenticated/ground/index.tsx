@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, MapPin, Layers, Eye, Play } from "lucide-react";
+import { StatTile, SectionTitle } from "@/components/trainer/ui";
 
 export const Route = createFileRoute("/_authenticated/ground/")({
   component: TrainerGround,
@@ -67,14 +68,44 @@ function TrainerGround() {
   const serverNow = tick + offsetMs;
 
   const sessions = data?.today ?? [];
+
+  const { data: counts } = useQuery({
+    queryKey: ["trainer-counts", trainerRegistryId],
+    enabled: !!trainerRegistryId,
+    staleTime: 30000,
+    queryFn: async () => {
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const base = () =>
+        supabase.from("schedules").select("id", { count: "exact", head: true })
+          .eq("trainer_registry_id", trainerRegistryId!).eq("is_published", true);
+      const [upcoming, past, missed] = await Promise.all([
+        base().gt("date", today),
+        base().eq("status", "ENDED"),
+        base().lt("date", today).neq("status", "ENDED"),
+      ]);
+      return {
+        upcoming: upcoming.count ?? 0,
+        past: past.count ?? 0,
+        missed: missed.count ?? 0,
+      };
+    },
+  });
+
   return (
     <div className="space-y-4">
-      <div>
-        <div className="flex items-baseline justify-between">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Today's Sessions</h1>
-          <span className="rounded-full bg-[#123E7C]/10 px-2.5 py-0.5 text-xs font-semibold text-[#123E7C]">{sessions.length}</span>
-        </div>
-        <p className="text-sm text-slate-500">Progress {progress?.completed ?? 0} / {progress?.target ?? 15} sessions</p>
+      <SectionTitle>Today's Overview</SectionTitle>
+      <div className="grid grid-cols-2 gap-3">
+        <StatTile label="Today's Sessions" value={sessions.length} to="/ground/sessions" />
+        <StatTile label="Upcoming" value={counts?.upcoming ?? 0} to="/ground/sessions" />
+        <StatTile label="Past Sessions" value={counts?.past ?? 0} to="/ground/completed" />
+        <StatTile label="Missed Sessions" value={counts?.missed ?? 0} to="/ground/sessions" />
+      </div>
+      <div className="flex items-baseline justify-between pt-1">
+        <SectionTitle>Today's Sessions</SectionTitle>
+        <span className="text-[11px] text-slate-500">
+          Progress {progress?.completed ?? 0} / {progress?.target ?? 15}
+        </span>
       </div>
       {sessions.length === 0 && (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
