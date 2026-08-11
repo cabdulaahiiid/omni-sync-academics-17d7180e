@@ -18,6 +18,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { StepList, DetailTable, GeoRadar, type StepState } from "@/components/trainer/ui";
 import { ArrowLeft, MapPin, CheckCircle2, AlertTriangle, StopCircle, Home, Download, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
@@ -230,21 +236,31 @@ function SessionDetail() {
   const presentCount = Object.values(presence).filter(Boolean).length;
   const absentCount = data.students.length - presentCount;
   const stepTitle: Record<Step, string> = {
-    setup: "Context Setup",
-    checkin: "Session Started",
-    roster: "Attendance",
+    setup: "Pre-Class Preparation",
+    checkin: "Session In Progress",
+    roster: "Take Attendance",
     done: "Session Completed",
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Link to="/ground" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" /> Back
+      <div className="-mx-4 -mt-4 mb-1 flex items-center gap-3 bg-[#123E7C] px-4 py-3 text-white">
+        <Link to="/ground" aria-label="Back" className="rounded-lg p-1 hover:bg-white/10">
+          <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h2 className="text-sm font-semibold">{stepTitle[step]}</h2>
-        <div className="w-12" />
+        <h2 className="flex-1 text-center text-[15px] font-semibold">{stepTitle[step]}</h2>
+        <span className="w-7" />
       </div>
+
+      <StepList
+        steps={[
+          { label: "Pre-Class Preparation", state: (step === "setup" ? "current" : "done") as StepState },
+          { label: "Session Details", state: (step === "setup" ? "current" : "done") as StepState },
+          { label: "Geo-fence Check", state: (step === "setup" ? "locked" : step === "checkin" ? "current" : "done") as StepState },
+          { label: "Start Session", state: (step === "roster" ? "current" : step === "done" ? "done" : "locked") as StepState },
+          { label: "Take Attendance", state: (step === "roster" ? "current" : step === "done" ? "done" : "locked") as StepState },
+        ]}
+      />
 
       {step === "setup" && (
         <SetupStep
