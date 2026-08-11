@@ -508,6 +508,13 @@ function RosterStep({ data, presence, setPresence, presentCount, geo, rosterUnti
   onSubmit, canEnd, ending, onEnd, lessonPlan, setLessonPlan, outcome, setOutcome,
   sessionEndAt, offsetMs, sessionDurationMs, geofenceEnabled, bypass, sync }: any) {
   const setPresent = (id: string, val: boolean) => setPresence((p: any) => ({ ...p, [id]: val }));
+  const [query, setQuery] = useState("");
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const visible = data.students.filter((s: any) =>
+    !query.trim() ||
+    String(s.full_name ?? "").toLowerCase().includes(query.toLowerCase()) ||
+    String(s.registration_number ?? "").toLowerCase().includes(query.toLowerCase()),
+  );
   return (
     <>
       <Card className="rounded-2xl">
@@ -548,29 +555,43 @@ function RosterStep({ data, presence, setPresence, presentCount, geo, rosterUnti
       </Card>
 
       <Card className="rounded-2xl">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm">Students ({presentCount}/{data.students.length})</CardTitle>
-          <button onClick={() => setPresence(Object.fromEntries(data.students.map((s: any) => [s.id, true])))}
-            className="text-xs font-medium text-primary">Mark all present</button>
-        </CardHeader>
         <CardContent className="p-0">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 border-b bg-muted/30 px-4 py-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            <span>Student</span><span>Present</span><span>Absent</span>
+          <div className="flex items-center gap-2 border-b border-slate-100 p-3">
+            <Input
+              placeholder="Search students…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="h-9 flex-1 bg-white text-[13px]"
+            />
+            <button
+              type="button"
+              disabled={isEnded}
+              onClick={() => setPresence(Object.fromEntries(data.students.map((s: any) => [s.id, true])))}
+              className="whitespace-nowrap text-[12px] font-semibold text-[#123E7C] disabled:text-slate-300"
+            >
+              Select All
+            </button>
           </div>
-          <div className="max-h-[50vh] divide-y overflow-y-auto">
-            {data.students.map((s: any) => (
-              <div key={s.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 px-4 py-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{s.full_name}</p>
-                  <p className="text-[11px] text-muted-foreground">{s.registration_number}</p>
+          <div className="max-h-[46vh] divide-y divide-slate-100 overflow-y-auto">
+            {visible.map((s: any, i: number) => (
+              <label key={s.id} className="flex cursor-pointer items-center gap-3 px-4 py-2.5">
+                <span className="w-5 text-[12px] text-slate-400">{i + 1}.</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-medium text-slate-900">{s.full_name}</p>
+                  <p className="text-[11px] text-slate-500">{s.registration_number}</p>
                 </div>
-                <Checkbox checked={presence[s.id] === true} disabled={isEnded}
-                  onCheckedChange={() => setPresent(s.id, true)} />
-                <Checkbox checked={presence[s.id] === false} disabled={isEnded}
-                  onCheckedChange={() => setPresent(s.id, false)} />
-              </div>
+                <Checkbox
+                  checked={presence[s.id] === true}
+                  disabled={isEnded}
+                  onCheckedChange={(v) => setPresent(s.id, v === true)}
+                />
+              </label>
             ))}
-            {data.students.length === 0 && <p className="px-4 py-6 text-center text-xs text-muted-foreground">No students assigned.</p>}
+            {visible.length === 0 && <p className="px-4 py-6 text-center text-xs text-muted-foreground">No students found.</p>}
+          </div>
+          <div className="flex items-center gap-4 border-t border-slate-100 px-4 py-2.5 text-[11px] text-slate-600">
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#16A34A]" /> Present {presentCount}</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#DC2626]" /> Absent {data.students.length - presentCount}</span>
           </div>
         </CardContent>
       </Card>
@@ -592,10 +613,37 @@ function RosterStep({ data, presence, setPresence, presentCount, geo, rosterUnti
         </CardContent>
       </Card>
 
-      <Button variant="destructive" className="h-11 w-full" disabled={isEnded || ending || !canEnd} onClick={onEnd}>
+      <Button variant="destructive" className="h-11 w-full" disabled={isEnded || ending || !canEnd} onClick={() => setConfirmEnd(true)}>
         <StopCircle className="mr-2 h-4 w-4" />
         {ending ? "Ending…" : "End Session"}
       </Button>
+      <AlertDialog open={confirmEnd} onOpenChange={setConfirmEnd}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center">End Session</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Are you sure you want to end this session?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-xl bg-slate-50 p-3 text-[12px] text-slate-600">
+            <p className="mb-1 font-medium text-slate-700">This action will:</p>
+            <ul className="list-disc space-y-0.5 pl-4">
+              <li>Complete the session</li>
+              <li>Save all records</li>
+              <li>Generate final report</li>
+            </ul>
+          </div>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction
+              onClick={onEnd}
+              className="h-11 w-full rounded-xl bg-[#DC2626] text-white hover:bg-[#b91c1c]"
+            >
+              Yes, End Session
+            </AlertDialogAction>
+            <AlertDialogCancel className="h-11 w-full rounded-xl border-[#123E7C] text-[#123E7C]">Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {!canEnd && <p className="text-center text-[11px] text-muted-foreground">Plan + outcome must be ≥ 5 chars to end.</p>}
     </>
   );
