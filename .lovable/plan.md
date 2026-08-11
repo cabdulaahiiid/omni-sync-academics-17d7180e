@@ -1,99 +1,52 @@
-## ERP User Manual — Project Blueprint
+# Trainer Mobile App — Exact UI/UX Rebuild from Mockup
 
-One interactive, multi-section user manual for the Acme Corp ERP, built as a React + TypeScript app with shadcn/ui and Tailwind.
+Yes, this can be done. The 14-screen mockup maps cleanly onto the existing trainer app (`/ground/*`). This is a presentation-layer rebuild only: no server functions, no database, no geofence/attendance/timing logic, no auth changes.
 
-### One technical substitution
-Routing uses **TanStack Router** (file-based, already the fixed router on this stack) instead of React Router. Same result — real URLs per manual section, deep-linkable and shareable. Everything else follows your spec exactly.
+## What the mockup requires vs. what exists
 
----
-
-### Design system
-Tokens defined centrally (in `src/styles.css`), never hardcoded in components:
-
-| Token | Value | Use |
+| Mockup screen | Existing surface | Work |
 |---|---|---|
-| primary | `#1e40af` | headers, active nav, primary buttons |
-| secondary | `#3b82f6` | links, hover states, step markers |
-| accent | `#f59e0b` | callouts, tips, stat highlights |
-| background | `#f8fafc` | page canvas |
-| surface | `#ffffff` | cards, sidebar |
+| 1. Login | `/login` | Restyle to card + navy Login button + "Continue with Google" + "Contact Admin" |
+| 2. Dashboard | `/ground` | New: blue header with avatar + "Welcome back", 4 stat tiles (Today / Upcoming / Past / Missed), "Today's Sessions" cards |
+| 3. Sessions Overview | new `/ground/sessions` | Tabs: Today / Upcoming / Past / Missed, grouped session list |
+| 4. Pre-Class Preparation | `/ground/$scheduleId` step 1 | 5-step locked checklist (Prep, Details, Geo-fence, Start, Attendance) |
+| 5. Session Details | same route, step 2 | Label/value detail table + Theory/Practical radio + outcome/objective inputs + geo checkbox |
+| 6/7. Geo-fence Check / Passed | same route, step 3 | Radar graphic + accuracy line; passed state with green check |
+| 8/9. Session Countdown | same route, step 4 | Large circular ring timer (blue → green when attendance unlocks) |
+| 10. Take Attendance | same route, step 5 | Search + Select All, numbered student rows with checkboxes, Present/Absent legend |
+| 11. Syncing & Generating | new overlay | PDF icon + progress checklist of sync steps |
+| 12. Report Generated | `done` step | Green check, session summary block, Download PDF + End Session |
+| 13. End Session | dialog | Confirm sheet listing the 3 effects, red confirm / outline cancel |
+| 14. Back to Dashboard | `/ground` | Same as #2 with refreshed counts |
 
-Typography: Inter (loaded via a `<link>` in the root route head). Brand mark: Lucide `Settings` gear + "Acme Corp" wordmark, top-left of the sidebar.
+Bottom tab bar becomes 5 tabs to match the mockup: Home, Sessions, Students, Reports, Profile. Students and Reports are new read-only trainer views built on data the app already returns.
 
-### Layout
+## Visual system (from the mockup)
 
-```text
-+--------------------------------------------------------------+
-| [gear] Acme Corp — ERP User Manual        [search]  [print]   |
-+----------------+---------------------------------------------+
-| Sidebar        | Breadcrumb: Manual / Inventory Management    |
-|  Dashboard     |                                              |
-|  Inventory   * | H1 Module Title + 2-3 sentence description   |
-|  Sales Orders  | [Stat] [Stat] [Stat] [Stat]                  |
-|  Purchasing    | <img screenshot-inventory-dashboard.png>     |
-|  Reporting     | Key Tasks (accordion, numbered steps)        |
-|  User Admin    | Tip / warning callouts (accent)              |
-|                | < Prev module        Next module >           |
-+----------------+---------------------------------------------+
-```
+- Navy header bar `#123E7C` spanning the top on Dashboard, white/blue back-header on inner screens.
+- Page background light grey, white rounded cards with hairline borders and soft shadow.
+- Status pills: In Progress (green), Upcoming (grey/amber), Missed (red).
+- Primary buttons: full-width, navy, rounded, 48px tall. Destructive: red. Secondary: white with navy border.
+- Type scale: 15–16px card titles, 12px meta line `CODE • Level N • Section X`.
+- All colors go through scoped trainer theme tokens in `src/styles.css` (`.trainer-theme`), not hardcoded hex in components.
 
-Sidebar collapses to an icon rail on desktop and a slide-over sheet on mobile.
+## Technical scope
 
-### Routes
-- `/` — manual home: welcome, how to use this manual, grid of 6 module cards
-- `/modules/dashboard-overview`
-- `/modules/inventory-management`
-- `/modules/sales-orders`
-- `/modules/purchasing`
-- `/modules/reporting-analytics`
-- `/modules/user-administration`
+Edited (UI only):
+- `src/routes/_authenticated/ground.tsx` — header + 5-tab bar
+- `src/routes/_authenticated/ground/index.tsx` — dashboard layout
+- `src/routes/_authenticated/ground/$scheduleId.tsx` — screens 4–13 re-skinned around the current step machine (`setup → checkin → roster → done` stays as-is)
+- `src/routes/_authenticated/ground/completed.tsx`, `profile.tsx` — matching styling
+- `src/routes/login.tsx` — screen 1
+- `src/styles.css` — trainer tokens
 
-### Content model
-All manual content lives in typed data files, so pages are pure presentation and content is editable without touching components.
+Added:
+- `src/routes/_authenticated/ground/sessions.tsx`, `students.tsx`, `reports.tsx` (presentation views over existing server functions)
+- small trainer UI components (stat tile, session card, ring timer, step list, geo radar)
 
-```ts
-type Step = { title: string; detail: string; note?: string }
-type Task = { id: string; title: string; goal: string; steps: Step[] }
-type Stat = { label: string; value: string; icon: LucideIcon }
-type Module = {
-  slug: string; title: string; description: string; icon: LucideIcon
-  screenshots: { src: string; alt: string; caption: string }[]
-  stats: Stat[]          // 3-4 per module
-  tasks: Task[]          // 3-5 per module
-  related: string[]      // slugs
-}
-```
+Untouched: all `*.functions.ts`, database, RLS, geofence hook, offline queue, PDF generator, timing rules, DH/Admin workspaces.
 
-Module content to author:
-1. **Dashboard Overview** — stats: Active Users 128, Open Orders 342, Revenue MTD $1.2M, Alerts 7. Tasks: read the KPI strip, filter by date range, customise widgets, drill into a metric.
-2. **Inventory Management** — Total Products 1,247, Low Stock 32, Warehouses 4, Stock Value $894K. Tasks: add a product, adjust stock levels, set reorder points, run a stock count, transfer between warehouses.
-3. **Sales Order Processing** — Open Orders 342, Fulfilled MTD 1,880, Avg Order $612, Overdue Invoices 14. Tasks: create a sales order, apply pricing/discount, confirm and allocate stock, generate an invoice, process a return.
-4. **Purchasing** — Active Vendors 96, Open POs 71, Spend MTD $410K, Pending Approvals 9. Tasks: onboard a vendor, raise a purchase order, approve a PO, receive goods, match invoice to receipt.
-5. **Reporting & Analytics** — Saved Reports 58, Scheduled Exports 12, Dashboards 9, Data Refresh 15 min. Tasks: run a standard report, build a custom view, chart the results, schedule an export, share with a team.
-6. **User Administration** — Users 128, Roles 11, Permission Sets 42, MFA Adoption 87%. Tasks: invite a user, assign roles, create a custom role, review the audit trail, enforce security policy.
+## Notes
 
-Screenshots are `<img>` placeholders with descriptive alt text (e.g. `screenshot-inventory-dashboard.png`) inside a bordered figure with caption — swap in real images later without layout change.
-
-### Components to build
-- `ManualLayout` — sidebar + header shell, renders the outlet
-- `ManualSidebar` — nav list with active highlight and mobile sheet
-- `ModulePage` — generic renderer driven by a `Module` object
-- `StatCard`, `ScreenshotFigure`, `TaskAccordion`, `StepList`, `Callout`, `ModulePager`
-- `SearchCommand` — ⌘K palette over module and task titles
-- `ManualContext` — React Context holding current module, search query, sidebar state, and reading progress (completed tasks persisted to localStorage)
-
-### Extras included
-- Client-side search across all modules and tasks
-- "Mark task complete" checkboxes with per-module progress bar
-- Print-friendly stylesheet so any module prints cleanly
-- Per-route SEO head: unique title, description, and social tags
-
-### Build order
-1. Design tokens, Inter font, layout shell and sidebar navigation
-2. Content model plus data files for all 6 modules
-3. Generic `ModulePage` renderer with stats, screenshots, task accordion
-4. Manual home page and module card grid
-5. Context: search palette, progress tracking, sidebar state
-6. Print styles, responsive pass, SEO metadata
-
-Approve and I'll build it in that order.
+- The mockup's counters (Past 18, Missed 1) will be derived from existing schedule data; if a "missed" state isn't already derivable it renders as 0 rather than adding backend logic.
+- Screen 11's sync steps reflect the real offline-sync stages already in the code.
