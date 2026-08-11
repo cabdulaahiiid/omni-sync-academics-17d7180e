@@ -453,6 +453,13 @@ function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, canStar
     <>
       <Card className="rounded-2xl">
         <CardContent className="space-y-4 p-6">
+          <GeoRadar ok={!geofenceEnabled || bypass || !!geo?.inRadius} />
+          <p className="text-center text-[13px] font-semibold text-slate-900">
+            {!geofenceEnabled ? "Geo-fence disabled" : bypass ? "Geo-fence bypassed" : geo?.inRadius ? "Geo-fence Passed" : "You are outside the allowed area"}
+          </p>
+          {geo?.coords && (
+            <p className="text-center text-[11px] text-slate-500">Accuracy: {Math.round(geo.coords.accuracy)}m</p>
+          )}
           <CountdownTimer until={target} label={windowLabel} variant="ring" offsetMs={offsetMs} totalMs={ringTotalMs} />
           <p className="text-center text-xs text-muted-foreground">Attendance window: last 10 minutes of the session</p>
         </CardContent>
