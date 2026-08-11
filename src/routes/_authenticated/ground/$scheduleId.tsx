@@ -418,22 +418,6 @@ function SetupStep({ data, progress, mode, setMode, lessonPlan, setLessonPlan, o
   );
 }
 
-function Row({ label, value, inline }: { label: string; value: string; inline?: boolean }) {
-  if (inline) {
-    return (
-      <div className="flex justify-between gap-3 text-sm">
-        <span className="text-muted-foreground">{label}:</span>
-        <span className="font-medium">{value}</span>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col">
-      <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className="font-medium">{value}</span>
-    </div>
-  );
-}
 
 /* ---------------- Step 4: Session Started / Check-In ---------------- */
 function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, canStart, geo, geofenceEnabled, bypass, checking, onCheckIn, onBack }: any) {
