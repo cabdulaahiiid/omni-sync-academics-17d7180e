@@ -343,22 +343,22 @@ function SetupStep({ data, progress, mode, setMode, lessonPlan, setLessonPlan, o
   const ready = !!mode && lessonPlan.trim().length >= 5 && outcome.trim().length >= 5 && !geoBlocked;
   return (
     <>
-      <Card className="rounded-2xl">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">System Data (Read-only)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <Row label="Dept" value={data.department?.name ?? "—"} />
-          <Row label="Level" value={data.level?.display_name ?? data.level?.name ?? "—"} />
-          <Row label="UC/Module" value={s.module_name} />
-          <Row label="Module Code" value={s.module_code} />
-          <Row label="Total Hrs" value={`${data.module?.total_hours ?? "—"} Hr`} inline />
-          <Row label="Total Sessions" value={String(data.module?.total_sessions ?? target)} inline />
-          <Row label="Session" value={`${sessionNum} of ${target}`} />
-          <Row label="Venue" value={data.venue?.name ?? "—"} />
-          <Row label="When" value={`${s.date} · ${s.start_time?.slice(0,5)}–${s.end_time?.slice(0,5)}`} />
-        </CardContent>
-      </Card>
+      <p className="px-1 text-[13px] font-semibold text-[#123E7C]">Session Details</p>
+      <DetailTable
+        rows={[
+          ["Department", data.department?.name ?? "—"],
+          ["Level", data.level?.display_name ?? data.level?.name ?? "—"],
+          ["Module Code", s.module_code],
+          ["Module Name", s.module_name],
+          ["Total Hours (Module)", `${data.module?.total_hours ?? "—"}`],
+          ["Total Sessions (Module)", String(data.module?.total_sessions ?? target)],
+          ["Session Number", `${sessionNum} of ${target}`],
+          ["Venue", data.venue?.name ?? "—"],
+          ["Session Start Time", String(s.start_time ?? "").slice(0, 5)],
+          ["Session End Time", String(s.end_time ?? "").slice(0, 5)],
+          ["Date", String(s.date ?? "—")],
+        ]}
+      />
 
       <Card className="rounded-2xl">
         <CardHeader className="pb-2">
