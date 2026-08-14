@@ -940,6 +940,9 @@ export type Database = {
           gender: string | null
           id: string
           level_id: string
+          parent_guardian_name: string | null
+          parent_guardian_relationship: string | null
+          parent_guardian_telephone: string | null
           registration_number: string
           section_id: string
           status: Database["public"]["Enums"]["entity_active"]
@@ -951,6 +954,9 @@ export type Database = {
           gender?: string | null
           id?: string
           level_id: string
+          parent_guardian_name?: string | null
+          parent_guardian_relationship?: string | null
+          parent_guardian_telephone?: string | null
           registration_number: string
           section_id: string
           status?: Database["public"]["Enums"]["entity_active"]
@@ -962,6 +968,9 @@ export type Database = {
           gender?: string | null
           id?: string
           level_id?: string
+          parent_guardian_name?: string | null
+          parent_guardian_relationship?: string | null
+          parent_guardian_telephone?: string | null
           registration_number?: string
           section_id?: string
           status?: Database["public"]["Enums"]["entity_active"]
