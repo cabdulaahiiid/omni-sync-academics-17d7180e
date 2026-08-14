@@ -100,6 +100,30 @@ function StudentsHub() {
               </div>
               <div><Label>Gender (optional)</Label><Input value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} /></div>
             </div>
+            <div className="space-y-3 border-t pt-4">
+              <h3 className="text-sm font-semibold text-slate-800">Parent / Guardian Contact</h3>
+              <div className="grid gap-3">
+                <div>
+                  <Label>Parent/Guardian Name</Label>
+                  <Input placeholder="e.g. Ahmed Hassan" value={form.parent_guardian_name} onChange={(e) => setForm({ ...form, parent_guardian_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Telephone Number</Label>
+                  <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={form.parent_guardian_telephone} onChange={(e) => setForm({ ...form, parent_guardian_telephone: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Relationship to Student</Label>
+                  <Select value={form.parent_guardian_relationship} onValueChange={(v) => setForm({ ...form, parent_guardian_relationship: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger>
+                    <SelectContent>
+                      {["Father", "Mother", "Brother", "Sister", "Uncle", "Aunt", "Grandfather", "Grandmother", "Guardian", "Other"].map((r) => (
+                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button onClick={() => create.mutate()}
