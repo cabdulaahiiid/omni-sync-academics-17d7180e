@@ -50,7 +50,10 @@ function StudentsHub() {
     onSuccess: () => {
       toast.success("Student registered");
       setOpen(false);
-      setForm({ registration_number: "", full_name: "", level_name: "", section_name: "", gender: "" });
+      setForm({
+        registration_number: "", full_name: "", level_name: "", section_name: "", gender: "",
+        parent_guardian_name: "", parent_guardian_telephone: "", parent_guardian_relationship: "",
+      });
       qc.invalidateQueries({ queryKey: ["dh-students"] });
     },
     onError: (e: Error) => toast.error(e.message),
