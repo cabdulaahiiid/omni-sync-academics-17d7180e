@@ -44,12 +44,20 @@ export const listMyStudents = createServerFn({ method: "GET" })
     }));
   });
 
+const RelationshipOptions = [
+  "Father", "Mother", "Brother", "Sister", "Uncle", "Aunt",
+  "Grandfather", "Grandmother", "Guardian", "Other",
+] as const;
+
 const StudentRow = z.object({
   registration_number: z.string().min(1).max(80),
   full_name: z.string().min(1).max(160),
   level_name: z.string().min(1).max(80),
   section_name: z.string().min(1).max(80),
   gender: z.string().max(20).optional().nullable(),
+  parent_guardian_name: z.string().trim().max(160).optional().nullable(),
+  parent_guardian_telephone: z.string().trim().max(40).optional().nullable(),
+  parent_guardian_relationship: z.enum(RelationshipOptions).optional().nullable(),
 });
 
 export const createStudent = createServerFn({ method: "POST" })
