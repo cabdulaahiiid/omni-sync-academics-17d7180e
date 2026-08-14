@@ -79,6 +79,9 @@ export const createStudent = createServerFn({ method: "POST" })
       level_id: level.id,
       section_id: section.id,
       department_id: deptId,
+      parent_guardian_name: data.parent_guardian_name ?? null,
+      parent_guardian_telephone: data.parent_guardian_telephone ?? null,
+      parent_guardian_relationship: data.parent_guardian_relationship ?? null,
     }).select().single();
     if (error) throw new Error(error.message);
     await supabase.from("audit_logs").insert({
