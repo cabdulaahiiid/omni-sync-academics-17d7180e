@@ -31,7 +31,10 @@ function StudentsHub() {
   const { data: ls } = useQuery({ queryKey: ["dh-levels-sections"], queryFn: () => lsFn() });
 
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ registration_number: "", full_name: "", level_name: "", section_name: "", gender: "" });
+  const [form, setForm] = useState({
+    registration_number: "", full_name: "", level_name: "", section_name: "", gender: "",
+    parent_guardian_name: "", parent_guardian_telephone: "", parent_guardian_relationship: "",
+  });
   const [csvRows, setCsvRows] = useState<ParsedRow[]>([]);
   const [csvName, setCsvName] = useState("");
   const [bulkLevelId, setBulkLevelId] = useState<string>("");
