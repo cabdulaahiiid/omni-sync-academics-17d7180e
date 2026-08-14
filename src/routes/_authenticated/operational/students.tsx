@@ -31,7 +31,10 @@ function StudentsHub() {
   const { data: ls } = useQuery({ queryKey: ["dh-levels-sections"], queryFn: () => lsFn() });
 
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ registration_number: "", full_name: "", level_name: "", section_name: "", gender: "" });
+  const [form, setForm] = useState({
+    registration_number: "", full_name: "", level_name: "", section_name: "", gender: "",
+    parent_guardian_name: "", parent_guardian_telephone: "", parent_guardian_relationship: "",
+  });
   const [csvRows, setCsvRows] = useState<ParsedRow[]>([]);
   const [csvName, setCsvName] = useState("");
   const [bulkLevelId, setBulkLevelId] = useState<string>("");
@@ -47,7 +50,10 @@ function StudentsHub() {
     onSuccess: () => {
       toast.success("Student registered");
       setOpen(false);
-      setForm({ registration_number: "", full_name: "", level_name: "", section_name: "", gender: "" });
+      setForm({
+        registration_number: "", full_name: "", level_name: "", section_name: "", gender: "",
+        parent_guardian_name: "", parent_guardian_telephone: "", parent_guardian_relationship: "",
+      });
       qc.invalidateQueries({ queryKey: ["dh-students"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -93,6 +99,30 @@ function StudentsHub() {
                 <div><Label>Section</Label><Input placeholder="e.g. Section A" value={form.section_name} onChange={(e) => setForm({ ...form, section_name: e.target.value })} /></div>
               </div>
               <div><Label>Gender (optional)</Label><Input value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} /></div>
+            </div>
+            <div className="space-y-3 border-t pt-4">
+              <h3 className="text-sm font-semibold text-slate-800">Parent / Guardian Contact</h3>
+              <div className="grid gap-3">
+                <div>
+                  <Label>Parent/Guardian Name</Label>
+                  <Input placeholder="e.g. Ahmed Hassan" value={form.parent_guardian_name} onChange={(e) => setForm({ ...form, parent_guardian_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Telephone Number</Label>
+                  <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={form.parent_guardian_telephone} onChange={(e) => setForm({ ...form, parent_guardian_telephone: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Relationship to Student</Label>
+                  <Select value={form.parent_guardian_relationship} onValueChange={(v) => setForm({ ...form, parent_guardian_relationship: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger>
+                    <SelectContent>
+                      {["Father", "Mother", "Brother", "Sister", "Uncle", "Aunt", "Grandfather", "Grandmother", "Guardian", "Other"].map((r) => (
+                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
