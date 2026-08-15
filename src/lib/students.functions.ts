@@ -1,6 +1,39 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizeEtPhone, PHONE_ERROR } from "@/lib/phone";
+
+type GuardianAccess = { canView: boolean; sectionIds: string[] | null };
+
+/** Resolve whether the caller may see guardian fields, and for which sections. */
+async function guardianAccess(context: {
+  supabase: any;
+  userId: string;
+}): Promise<GuardianAccess> {
+  const { data: roleRows } = await context.supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", context.userId);
+  const roles: string[] = (roleRows ?? []).map((r: { role: string }) => r.role);
+  if (roles.includes("MA") || roles.includes("DH")) return { canView: true, sectionIds: null };
+  if (!roles.includes("T")) return { canView: false, sectionIds: [] };
+  const { data: profile } = await context.supabase
+    .from("profiles")
+    .select("trainer_registry_id")
+    .eq("id", context.userId)
+    .maybeSingle();
+  const trainerId = profile?.trainer_registry_id;
+  if (!trainerId) return { canView: false, sectionIds: [] };
+  const { data: scheds } = await context.supabase
+    .from("schedules")
+    .select("section_id")
+    .eq("trainer_registry_id", trainerId)
+    .limit(2000);
+  const sectionIds = Array.from(
+    new Set((scheds ?? []).map((s: { section_id: string }) => s.section_id).filter(Boolean)),
+  ) as string[];
+  return { canView: sectionIds.length > 0, sectionIds };
+}
 
 /** List levels + sections in the current user's department for select dropdowns. */
 export const listDeptLevelsSections = createServerFn({ method: "GET" })
@@ -21,9 +54,12 @@ export const listDeptLevelsSections = createServerFn({ method: "GET" })
 export const listMyStudents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const access = await guardianAccess(context as any);
     const { data, error } = await context.supabase
       .from("students")
-      .select("id, registration_number, full_name, gender, level_id, section_id, department_id, status, created_at")
+      .select(
+        "id, registration_number, full_name, gender, level_id, section_id, department_id, status, created_at, parent_guardian_name, parent_guardian_telephone, parent_guardian_relationship",
+      )
       .order("created_at", { ascending: false })
       .limit(2000);
     if (error) throw new Error(error.message);
@@ -37,11 +73,23 @@ export const listMyStudents = createServerFn({ method: "GET" })
     ]);
     const lMap = Object.fromEntries((levels ?? []).map((l) => [l.id, l.name]));
     const sMap = Object.fromEntries((sections ?? []).map((s) => [s.id, s.name]));
-    return (data ?? []).map((s) => ({
-      ...s,
-      level_name: lMap[s.level_id] ?? "—",
-      section_name: sMap[s.section_id] ?? "—",
-    }));
+    const rows = (data ?? []).map((s) => {
+      const allowed =
+        access.canView && (access.sectionIds === null || access.sectionIds.includes(s.section_id));
+      const base = {
+        ...s,
+        level_name: lMap[s.level_id] ?? "—",
+        section_name: sMap[s.section_id] ?? "—",
+      };
+      if (allowed) return base;
+      return {
+        ...base,
+        parent_guardian_name: null,
+        parent_guardian_telephone: null,
+        parent_guardian_relationship: null,
+      };
+    });
+    return { canViewGuardian: access.canView, students: rows };
   });
 
 const RelationshipOptions = [
@@ -56,7 +104,16 @@ const StudentRow = z.object({
   section_name: z.string().min(1).max(80),
   gender: z.string().max(20).optional().nullable(),
   parent_guardian_name: z.string().trim().max(160).optional().nullable(),
-  parent_guardian_telephone: z.string().trim().max(40).optional().nullable(),
+  parent_guardian_telephone: z
+    .string()
+    .trim()
+    .max(40)
+    .optional()
+    .nullable()
+    .refine((v) => v === undefined || v === null || v === "" || normalizeEtPhone(v) !== null, {
+      message: PHONE_ERROR,
+    })
+    .transform((v) => (v === undefined || v === null || v === "" ? null : normalizeEtPhone(v))),
   parent_guardian_relationship: z.enum(RelationshipOptions).optional().nullable(),
 });
 

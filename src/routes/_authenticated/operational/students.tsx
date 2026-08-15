@@ -16,6 +16,10 @@ import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { DownloadTemplateButton } from "@/components/download-template-button";
 import { STUDENTS_ROSTER_TEMPLATE } from "@/lib/xlsx-templates";
+import { isValidEtPhone, PHONE_ERROR } from "@/lib/phone";
+import { downloadCsv, downloadPdf } from "@/lib/report-export";
+import type { ReportResult } from "@/lib/reports.functions";
+import { FileDown, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/operational/students")({
   component: StudentsHub,
@@ -27,10 +31,13 @@ function StudentsHub() {
   const createFn = useServerFn(createStudent);
   const bulkFn = useServerFn(bulkInsertStudents);
   const lsFn = useServerFn(listDeptLevelsSections);
-  const { data: students, isLoading } = useQuery({ queryKey: ["dh-students"], queryFn: () => listFn() });
+  const { data: roster, isLoading } = useQuery({ queryKey: ["dh-students"], queryFn: () => listFn() });
+  const students = roster?.students ?? [];
+  const canViewGuardian = roster?.canViewGuardian ?? false;
   const { data: ls } = useQuery({ queryKey: ["dh-levels-sections"], queryFn: () => lsFn() });
 
   const [open, setOpen] = useState(false);
+  const [detail, setDetail] = useState<any | null>(null);
   const [form, setForm] = useState({
     registration_number: "", full_name: "", level_name: "", section_name: "", gender: "",
     parent_guardian_name: "", parent_guardian_telephone: "", parent_guardian_relationship: "",
@@ -44,6 +51,35 @@ function StudentsHub() {
   const sections = (ls?.sections ?? []).filter((s) => !bulkLevelId || s.level_id === bulkLevelId);
   const bulkLevelName = levels.find((l) => l.id === bulkLevelId)?.name ?? "";
   const bulkSectionName = sections.find((s) => s.id === bulkSectionId)?.name ?? "";
+  const phoneInvalid = !isValidEtPhone(form.parent_guardian_telephone);
+
+  function buildReport(): ReportResult {
+    const columns = [
+      { key: "registration_number", label: "Student ID" },
+      { key: "full_name", label: "Name" },
+      { key: "level_name", label: "Level" },
+      { key: "section_name", label: "Section" },
+      { key: "status", label: "Status" },
+      ...(canViewGuardian
+        ? [
+            { key: "parent_guardian_name", label: "Parent/Guardian Name" },
+            { key: "parent_guardian_telephone", label: "Parent/Guardian Telephone" },
+            { key: "parent_guardian_relationship", label: "Relationship" },
+          ]
+        : []),
+    ];
+    return {
+      key: "students_roster",
+      title: "Students Roster",
+      columns,
+      rows: students.map((s: any) =>
+        Object.fromEntries(columns.map((c) => [c.key, (s as any)[c.key] ?? ""])),
+      ),
+      summary: [{ label: "Total students", value: students.length }],
+      generated_at: new Date().toISOString(),
+      filters: {},
+    };
+  }
 
   const create = useMutation({
     mutationFn: () => createFn({ data: { ...form, gender: form.gender || null } }),
@@ -110,6 +146,7 @@ function StudentsHub() {
                 <div>
                   <Label>Telephone Number</Label>
                   <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={form.parent_guardian_telephone} onChange={(e) => setForm({ ...form, parent_guardian_telephone: e.target.value })} />
+                  {phoneInvalid && <p className="mt-1 text-xs text-destructive">{PHONE_ERROR}</p>}
                 </div>
                 <div>
                   <Label>Relationship to Student</Label>
@@ -127,7 +164,7 @@ function StudentsHub() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button onClick={() => create.mutate()}
-                disabled={!form.registration_number || !form.full_name || !form.level_name || !form.section_name || create.isPending}>
+                disabled={!form.registration_number || !form.full_name || !form.level_name || !form.section_name || phoneInvalid || create.isPending}>
                 {create.isPending ? "Saving…" : "Save"}
               </Button>
             </DialogFooter>
@@ -181,19 +218,36 @@ function StudentsHub() {
       </Card>
 
       <Card className="rounded-2xl">
-        <CardHeader><CardTitle className="text-base">Roster ({students?.length ?? 0})</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base">Roster ({students.length})</CardTitle>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => downloadCsv(buildReport())} disabled={!students.length}>
+              <FileDown className="mr-2 h-4 w-4" /> CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => downloadPdf(buildReport())} disabled={!students.length}>
+              <FileText className="mr-2 h-4 w-4" /> PDF
+            </Button>
+          </div>
+        </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Student ID</TableHead><TableHead>Name</TableHead><TableHead>Level</TableHead><TableHead>Section</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Student ID</TableHead><TableHead>Name</TableHead><TableHead>Level</TableHead><TableHead>Section</TableHead>
+              {canViewGuardian && <><TableHead>Guardian</TableHead><TableHead>Telephone</TableHead><TableHead>Relationship</TableHead></>}
+              <TableHead>Status</TableHead></TableRow></TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
-              {!isLoading && !students?.length && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No students yet.</TableCell></TableRow>}
-              {(students ?? []).map((s: any) => (
-                <TableRow key={s.id}>
+              {isLoading && <TableRow><TableCell colSpan={canViewGuardian ? 8 : 5} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
+              {!isLoading && !students.length && <TableRow><TableCell colSpan={canViewGuardian ? 8 : 5} className="text-center text-muted-foreground">No students yet.</TableCell></TableRow>}
+              {students.map((s: any) => (
+                <TableRow key={s.id} onClick={() => setDetail(s)} className="cursor-pointer">
                   <TableCell className="font-mono text-xs">{s.registration_number}</TableCell>
                   <TableCell className="font-medium">{s.full_name}</TableCell>
                   <TableCell>{s.level_name}</TableCell>
                   <TableCell>{s.section_name}</TableCell>
+                  {canViewGuardian && <>
+                    <TableCell>{s.parent_guardian_name || "—"}</TableCell>
+                    <TableCell className="font-mono text-xs">{s.parent_guardian_telephone || "—"}</TableCell>
+                    <TableCell>{s.parent_guardian_relationship || "—"}</TableCell>
+                  </>}
                   <TableCell><Badge variant={s.status === "ACTIVE" ? "default" : "secondary"}>{s.status}</Badge></TableCell>
                 </TableRow>
               ))}
@@ -201,6 +255,34 @@ function StudentsHub() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Student details</DialogTitle></DialogHeader>
+          {detail && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div><p className="text-xs text-muted-foreground">Student ID</p><p className="font-mono">{detail.registration_number}</p></div>
+                <div><p className="text-xs text-muted-foreground">Full name</p><p className="font-medium">{detail.full_name}</p></div>
+                <div><p className="text-xs text-muted-foreground">Level</p><p>{detail.level_name}</p></div>
+                <div><p className="text-xs text-muted-foreground">Section</p><p>{detail.section_name}</p></div>
+                <div><p className="text-xs text-muted-foreground">Gender</p><p>{detail.gender || "—"}</p></div>
+                <div><p className="text-xs text-muted-foreground">Status</p><p>{detail.status}</p></div>
+              </div>
+              {canViewGuardian && (
+                <div className="space-y-2 border-t pt-3">
+                  <h3 className="text-sm font-semibold">Parent / Guardian Contact</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><p className="text-xs text-muted-foreground">Name</p><p>{detail.parent_guardian_name || "—"}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Telephone</p><p className="font-mono">{detail.parent_guardian_telephone || "—"}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Relationship</p><p>{detail.parent_guardian_relationship || "—"}</p></div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
