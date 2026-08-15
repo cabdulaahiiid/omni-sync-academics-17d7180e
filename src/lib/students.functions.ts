@@ -110,11 +110,11 @@ const StudentRow = z.object({
     .max(40)
     .optional()
     .nullable()
-    .transform((v) => (v === undefined || v === null || v === "" ? null : normalizeEtPhone(v)))
-    .refine((v, ) => v !== null || true, { message: PHONE_ERROR }),
+    .refine((v) => v === undefined || v === null || v === "" || normalizeEtPhone(v) !== null, {
+      message: PHONE_ERROR,
+    })
+    .transform((v) => (v === undefined || v === null || v === "" ? null : normalizeEtPhone(v))),
   parent_guardian_relationship: z.enum(RelationshipOptions).optional().nullable(),
-}).superRefine((val, ctx) => {
-  if (val.parent_guardian_telephone === null) return;
 });
 
 export const createStudent = createServerFn({ method: "POST" })
