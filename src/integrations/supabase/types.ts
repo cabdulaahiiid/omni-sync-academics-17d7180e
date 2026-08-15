@@ -284,6 +284,53 @@ export type Database = {
         }
         Relationships: []
       }
+      external_contacts: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string
+          role_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone: string
+          role_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string
+          role_title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_contacts_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       global_config: {
         Row: {
           allow_offline_sync: boolean
@@ -535,6 +582,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          phone: string | null
           trainer_registry_id: string | null
         }
         Insert: {
@@ -546,6 +594,7 @@ export type Database = {
           email: string
           full_name?: string
           id: string
+          phone?: string | null
           trainer_registry_id?: string | null
         }
         Update: {
@@ -557,6 +606,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          phone?: string | null
           trainer_registry_id?: string | null
         }
         Relationships: [
@@ -928,6 +978,98 @@ export type Database = {
             columns: ["schedule_id"]
             isOneToOne: false
             referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_campaigns: {
+        Row: {
+          created_at: string
+          error: string | null
+          failed_count: number
+          filters: Json
+          groups: string[]
+          id: string
+          message: string
+          sender_id: string | null
+          sender_name: string | null
+          sent_count: number
+          status: string
+          total_recipients: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          failed_count?: number
+          filters?: Json
+          groups?: string[]
+          id?: string
+          message: string
+          sender_id?: string | null
+          sender_name?: string | null
+          sent_count?: number
+          status?: string
+          total_recipients?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          failed_count?: number
+          filters?: Json
+          groups?: string[]
+          id?: string
+          message?: string
+          sender_id?: string | null
+          sender_name?: string | null
+          sent_count?: number
+          status?: string
+          total_recipients?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sms_recipients: {
+        Row: {
+          campaign_id: string
+          contact_name: string | null
+          created_at: string
+          error: string | null
+          id: string
+          phone: string
+          provider_message_id: string | null
+          source_group: string | null
+          status: string
+        }
+        Insert: {
+          campaign_id: string
+          contact_name?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          phone: string
+          provider_message_id?: string | null
+          source_group?: string | null
+          status?: string
+        }
+        Update: {
+          campaign_id?: string
+          contact_name?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          phone?: string
+          provider_message_id?: string | null
+          source_group?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "sms_campaigns"
             referencedColumns: ["id"]
           },
         ]
