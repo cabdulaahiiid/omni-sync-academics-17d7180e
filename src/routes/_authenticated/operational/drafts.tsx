@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import React from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
+import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek, listDraftModules } from "@/lib/semester-drafts.functions";
 import { listWeekThreadsForDept, dhResubmitWeek } from "@/lib/feedback.functions";
 import { WeekFeedbackWorkspace } from "@/components/week-feedback-workspace";
 import { useMe } from "@/hooks/use-me";
@@ -80,6 +80,7 @@ function DraftsPage() {
   const { data: me } = useMe();
   const search = useSearch({ from: "/_authenticated/operational/drafts" });
   const listFn = useServerFn(listSemesterDrafts);
+  const listModulesFn = useServerFn(listDraftModules);
   const reqFn = useServerFn(requestSemesterApproval);
   const reqWeekFn = useServerFn(dhRequestApprovalPerWeek);
   const weekThreadsFn = useServerFn(listWeekThreadsForDept);
@@ -126,6 +127,15 @@ function DraftsPage() {
     queryKey: ["week-feedback-threads", deptId],
     queryFn: () => weekThreadsFn({ data: { department_id: deptId! } }),
     enabled: !!deptId,
+  });
+
+  // DH only: the Full Module representation of the very same draft rows.
+  const isDH = (me?.roles?.includes("DH") ?? false) && !isAdmin;
+  const [draftView, setDraftView] = useState<"weekly" | "module">("weekly");
+  const { data: moduleGroups } = useQuery({
+    queryKey: ["draft-modules", deptId],
+    queryFn: () => listModulesFn({ data: deptId ? { department_id: deptId } : {} }),
+    enabled: isDH && !!deptId,
   });
 
   const submitMut = useMutation({
@@ -245,6 +255,10 @@ function DraftsPage() {
           drafts={drafts}
           allWeeksBySem={allWeeksBySem}
           weekThreads={weekThreads ?? []}
+          showViewSwitch={isDH}
+          view={draftView}
+          onViewChange={setDraftView}
+          moduleGroups={(moduleGroups ?? []) as any[]}
           onOpenWeek={openWeek}
           onSubmitWeek={(id) => submitPerWeekMut.mutate(id)}
           onSubmitSemester={(id) => submitMut.mutate(id)}
@@ -309,6 +323,7 @@ function WeekChip({ row, onClick }: { row: WeekRow; onClick: () => void }) {
 
 function DraftsQuadrant({
   drafts, allWeeksBySem, weekThreads, onOpenWeek, onSubmitWeek, onSubmitSemester, submittingWeek, submittingSem,
+  showViewSwitch, view, onViewChange, moduleGroups,
 }: {
   drafts: { sem: SemesterRow; weeks: WeekRow[] }[];
   allWeeksBySem: Record<string, WeekRow[]>;
@@ -318,15 +333,66 @@ function DraftsQuadrant({
   onSubmitSemester: (id: string) => void;
   submittingWeek: boolean;
   submittingSem: boolean;
+  showViewSwitch?: boolean;
+  view?: "weekly" | "module";
+  onViewChange?: (v: "weekly" | "module") => void;
+  moduleGroups?: any[];
 }) {
+  const moduleDrafts = (moduleGroups ?? []).filter((g) => (g.draft ?? 0) > 0);
   return (
     <QuadrantShell
       title="Active Drafts"
       icon={<FileClock className="h-4 w-4 text-primary" />}
-      count={drafts.reduce((n, d) => n + d.weeks.length, 0)}
+      count={showViewSwitch && view === "module" ? moduleDrafts.length : drafts.reduce((n, d) => n + d.weeks.length, 0)}
       accent="border-primary/40 bg-primary/5"
     >
-      {drafts.length === 0 ? (
+      {showViewSwitch && (
+        <div className="mb-2 inline-flex rounded-lg border bg-background p-0.5 text-[11px]">
+          <button type="button" onClick={() => onViewChange?.("weekly")}
+            className={cn("rounded-md px-2.5 py-1", view === "weekly" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
+            Weekly (W1…Wn)
+          </button>
+          <button type="button" onClick={() => onViewChange?.("module")}
+            className={cn("rounded-md px-2.5 py-1", view === "module" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
+            Full Module
+          </button>
+        </div>
+      )}
+
+      {showViewSwitch && view === "module" ? (
+        moduleDrafts.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No module drafts.</div>
+        ) : (
+          <div className="space-y-2">
+            {moduleDrafts.map((g) => {
+              const canSubmit = (g.distribution_status ?? "DRAFT") === "DRAFT" || g.distribution_status === "FEEDBACK_ACTIVE";
+              return (
+                <div key={g.key} className="rounded-xl border bg-background p-2.5">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{g.module_name} — {g.level_name}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {g.module_code} · Section {g.section_name} · {g.trainer_name}
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">
+                        {g.start_date} → {g.end_date} · {g.weeks.length} week(s) · {g.sessions} sessions · {(g.total_minutes / 60).toFixed(1)} h
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <StatusPill bucket="DRAFT">{g.draft} draft</StatusPill>
+                      <Button size="sm" variant="secondary" className="h-7 text-[11px]"
+                        disabled={!canSubmit || submittingSem}
+                        onClick={() => onSubmitSemester(g.semester_id)}>
+                        <Send className="mr-1 h-3 w-3" /> Submit module
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : drafts.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
           <UploadIcon className="h-6 w-6 opacity-40" />
           <p>No drafts.</p>
