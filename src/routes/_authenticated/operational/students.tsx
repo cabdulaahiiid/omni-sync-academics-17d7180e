@@ -122,7 +122,7 @@ function StudentsHub() {
           parent_guardian_relationship: (form.parent_guardian_relationship || null) as any,
         },
       }),
-    invalidateKeys: [["dh-students"], ["contacts"]],
+    invalidateKeys: [["dh-students"], ["contacts"], ["next-student-id"]],
     successMessage: "Student registered",
     onSaved: () => {
       setOpen(false);
@@ -170,7 +170,16 @@ function StudentsHub() {
           <h1 className="text-2xl font-semibold tracking-tight">Students Hub</h1>
           <p className="text-sm text-muted-foreground">Department roster. Register one student or bulk-import a CSV.</p>
         </div>
-        <Dialog open={open} onOpenChange={(o) => { if (!create.isSaving) setOpen(o); }}>
+        <Dialog
+          open={open}
+          onOpenChange={(o) => {
+            if (create.isSaving) return;
+            if (o && !form.registration_number && nextId?.code) {
+              setForm((f) => ({ ...f, registration_number: nextId.code }));
+            }
+            setOpen(o);
+          }}
+        >
           <DialogTrigger asChild><Button><UserPlus className="mr-2 h-4 w-4" /> Register single student</Button></DialogTrigger>
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader><DialogTitle>Register student</DialogTitle></DialogHeader>
