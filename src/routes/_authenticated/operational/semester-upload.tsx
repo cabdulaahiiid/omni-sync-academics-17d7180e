@@ -130,11 +130,8 @@ function SemesterBuilderPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
 
-  // Live invalidation across the ERP whenever schedules / semester / approvals change.
-  useLiveTables(
-    ["schedules", "semester_registry", "approval_queue", "notifications"],
-    ["builder-options", "trainer-load", "semesters", "drafts", "dashboard"],
-  );
+  // One shared DH channel keeps every schedule surface in sync.
+  useDhScheduleLive(me?.profile?.department_id ?? null, ["trainer-load", "semesters", "drafts", "dashboard"]);
 
   const optionsFn = useServerFn(getBuilderOptions);
   const loadFn = useServerFn(getTrainerLoad);
@@ -276,7 +273,8 @@ function SemesterBuilderPage() {
     practical_session_name: practicalSessionName,
     start_date: startDate, start_time: startTime,
     duration_hours: durationHours, duration_minutes: durationMinutes,
-  }), [semesterId, me?.profile?.department_id, moduleId, trainerId, sectionId, levelId, venueId, delivery, theoryDays, practicalDays, theorySessionName, practicalSessionName, startDate, startTime, durationHours, durationMinutes]);
+    sessions_per_week: sessionsPerWeek,
+  }), [semesterId, me?.profile?.department_id, moduleId, trainerId, sectionId, levelId, venueId, delivery, theoryDays, practicalDays, theorySessionName, practicalSessionName, startDate, startTime, durationHours, durationMinutes, sessionsPerWeek]);
 
   const formComplete = !!(builderPayload.semester_id && builderPayload.department_id && builderPayload.module_id &&
     builderPayload.trainer_id && builderPayload.section_id && builderPayload.level_id && builderPayload.venue_id &&
@@ -296,8 +294,9 @@ function SemesterBuilderPage() {
     if (durationMin <= 0) m.push("Session duration");
     if (!startDate) m.push("Start date");
     if (!startTime) m.push("Start time");
+    if (moduleId && !((selectedModule?.total_hours as number) > 0)) m.push("Module total hours (set them in Module Registry)");
     return m;
-  }, [academicYear, semesterId, levelId, moduleId, trainerId, sectionId, venueId, daysSelected, durationMin, startDate, startTime]);
+  }, [academicYear, semesterId, levelId, moduleId, trainerId, sectionId, venueId, daysSelected, durationMin, startDate, startTime, selectedModule?.total_hours]);
 
   const validateMut = useMutation({
     mutationFn: () => validateFn({ data: builderPayload }),
