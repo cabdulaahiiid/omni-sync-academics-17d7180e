@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizeEtPhone } from "@/lib/phone";
 import { requireRole } from "@/lib/auth/require-role";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
