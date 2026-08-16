@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { explainError, type ExplainedError } from "@/lib/errors/explain";
 
 type Options<TData, TVars> = {
   mutationFn: (vars: TVars) => Promise<TData>;
@@ -19,7 +20,7 @@ type Options<TData, TVars> = {
  */
 export function useFormSubmit<TData = unknown, TVars = void>(opts: Options<TData, TVars>) {
   const qc = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ExplainedError | null>(null);
 
   const mutation = useMutation<TData, Error, TVars>({
     mutationFn: opts.mutationFn,
@@ -34,9 +35,12 @@ export function useFormSubmit<TData = unknown, TVars = void>(opts: Options<TData
       opts.onSaved?.(data);
     },
     onError: (e: Error) => {
-      const message = e?.message || "Something went wrong. Please try again.";
-      setError(message);
-      toast.error(message);
+      const explained = explainError(e);
+      setError(explained);
+      toast.error(explained.title, {
+        description: `${explained.problem} Fix: ${explained.solution}`,
+        duration: 8000,
+      });
     },
   });
 
