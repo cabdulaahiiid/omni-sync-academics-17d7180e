@@ -70,6 +70,7 @@ export const requestSemesterApproval = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({ semester_id: z.string().uuid() }).parse(d),
   )
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   .handler(async ({ data, context }) => {
     // If semester is in FEEDBACK_ACTIVE, route through dh_resubmit_semester
     // (otherwise submit_for_approval silently no-ops because nothing is in DRAFT).
