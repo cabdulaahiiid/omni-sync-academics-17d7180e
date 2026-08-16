@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import React from "react";
-import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek, listDraftModules } from "@/lib/semester-drafts.functions";
+import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek, listDraftModules, listPlanSessions } from "@/lib/semester-drafts.functions";
 import { listWeekThreadsForDept, dhResubmitWeek } from "@/lib/feedback.functions";
 import { WeekFeedbackWorkspace } from "@/components/week-feedback-workspace";
 import { useMe } from "@/hooks/use-me";
@@ -324,6 +324,7 @@ function DraftsQuadrant({
   moduleGroups?: any[];
 }) {
   const moduleDrafts = (moduleGroups ?? []).filter((g) => (g.draft ?? 0) > 0);
+  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <QuadrantShell
       title="Active Drafts"
@@ -365,6 +366,12 @@ function DraftsQuadrant({
                     </div>
                     <div className="flex items-center gap-1.5">
                       <StatusPill bucket="DRAFT">{g.draft} draft</StatusPill>
+                      {g.plan_id && (
+                        <Button size="sm" variant="ghost" className="h-7 text-[11px]"
+                          onClick={() => setExpanded(expanded === g.plan_id ? null : g.plan_id)}>
+                          {expanded === g.plan_id ? "Hide sessions" : "All sessions"}
+                        </Button>
+                      )}
                       <Button size="sm" variant="secondary" className="h-7 text-[11px]"
                         disabled={!canSubmit || submittingSem}
                         onClick={() => onSubmitSemester(g.semester_id)}>
@@ -372,6 +379,7 @@ function DraftsQuadrant({
                       </Button>
                     </div>
                   </div>
+                  {g.plan_id && expanded === g.plan_id && <PlanSessionList planId={g.plan_id} />}
                 </div>
               );
             })}
