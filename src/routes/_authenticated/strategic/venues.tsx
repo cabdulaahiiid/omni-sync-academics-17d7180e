@@ -91,7 +91,7 @@ function VenuesPage() {
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? "Edit venue" : "New venue"}</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Name</Label><Input placeholder="e.g. ICT Lab 1" value={name} onChange={(e) => setName(e.target.value)} /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Type</Label>
@@ -104,17 +104,17 @@ function VenuesPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Capacity</Label>
-                  <Input type="number" value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} />
+                  <Input type="number" placeholder="e.g. 40" value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Latitude</Label>
-                  <Input type="number" step="any" value={latitude} onChange={(e) => setLatitude(Number(e.target.value))} />
+                  <Input type="number" step="any" placeholder="e.g. 9.145000" value={latitude} onChange={(e) => setLatitude(Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Longitude</Label>
-                  <Input type="number" step="any" value={longitude} onChange={(e) => setLongitude(Number(e.target.value))} />
+                  <Input type="number" step="any" placeholder="e.g. 40.489700" value={longitude} onChange={(e) => setLongitude(Number(e.target.value))} />
                 </div>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={useGPS}>
@@ -122,7 +122,7 @@ function VenuesPage() {
               </Button>
               <div className="space-y-2">
                 <Label>Geo radius (meters)</Label>
-                <Input type="number" value={geoRadius} onChange={(e) => setGeoRadius(Number(e.target.value))} />
+                <Input type="number" placeholder="e.g. 50" value={geoRadius} onChange={(e) => setGeoRadius(Number(e.target.value))} />
               </div>
             </div>
             <DialogFooter>
