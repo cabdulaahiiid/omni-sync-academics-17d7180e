@@ -22,3 +22,11 @@ export const GUARDIAN_RELATIONSHIP_OPTIONS = [
 
 /** Shared query key so every form reads one cached copy of master data. */
 export const MASTER_DATA_KEY = ["master-data"] as const;
+
+/** Map free-text imported gender values onto the canonical option list. */
+export function normalizeGender(value: unknown): "Male" | "Female" | null {
+  const v = String(value ?? "").trim().toLowerCase();
+  if (v === "m" || v === "male") return "Male";
+  if (v === "f" || v === "female") return "Female";
+  return null;
+}
