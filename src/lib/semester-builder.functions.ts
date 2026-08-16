@@ -298,8 +298,21 @@ export const validateBuilder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => BuilderInput.parse(d))
   .handler(async ({ data, context }) => {
-    await requireRole(context, ["DH", "MA"], "validateBuilder");
+    const vRoles = await requireRole(context, ["DH", "MA"], "validateBuilder");
     const { supabase } = context;
+
+    // DH-only strict relationship enforcement (Admin keeps existing behaviour).
+    if (!vRoles.includes("MA")) {
+      const err = await assertDhRelationships(supabase, data);
+      if (err) {
+        return {
+          ok: false,
+          summary: { weekly_minutes: 0, total_minutes: 0, occurrences: 0, weeks: 0, end_date: data.start_date, end_time: data.start_time },
+          conflicts: [{ kind: "section" as const, severity: "red" as const, date: data.start_date, reason: err }],
+          warnings: [],
+        };
+      }
+    }
 
     const { data: sem } = await supabase
       .from("semester_registry")
@@ -395,6 +408,8 @@ export const saveBuilderDraft = createServerFn({ method: "POST" })
       if (!prof?.department_id || prof.department_id !== data.department_id) {
         throw new Error("Out of department");
       }
+      const relErr = await assertDhRelationships(supabase, data);
+      if (relErr) throw new Error(relErr);
     }
 
     const [{ data: sem }, { data: mod }, { data: trainer }, { data: trainerDept }, { data: venue }, { data: section }, { data: level }] = await Promise.all([
