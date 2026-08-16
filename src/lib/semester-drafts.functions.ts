@@ -287,7 +287,7 @@ export const listDraftModules = createServerFn({ method: "POST" })
         section_name: r.section_id ? secMap.get(r.section_id) ?? "—" : "—",
         trainer_name: r.trainer_name,
         start_date: r.date, end_date: r.date,
-        weeks: [], sessions: 0, total_minutes: 0,
+        weeks: [] as number[], sessions: 0, total_minutes: 0,
         draft: 0, pending: 0, published: 0,
         distribution_status: sem?.distribution_status ?? null,
       };
