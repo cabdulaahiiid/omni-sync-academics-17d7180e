@@ -450,17 +450,12 @@ function SemesterBuilderPage() {
             </div>
           </SectionItem>
 
-          <SectionItem step={5} title="Class Assignment" icon={Building2} value="s5" complete={!!(levelId && sectionId && venueId)}>
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Level</Label>
-                <Combobox value={levelId} onChange={(id) => { setLevelId(id); setSectionId(""); }}
-                  placeholder="Pick level" items={opts.levels} getLabel={(l) => l.name} />
-              </div>
+          <SectionItem step={5} title="Class Assignment" icon={Building2} value="s5" complete={!!(sectionId && venueId)}>
+            <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Section</Label>
                 <Combobox value={sectionId} onChange={setSectionId}
-                  placeholder={levelId ? "Pick section" : "Pick level first"}
+                  placeholder={levelId ? "Pick section" : "Pick a Level in Section 1 first"}
                   items={sectionsForLevel} getLabel={(s) => s.name} disabled={!levelId} />
               </div>
               <div className="space-y-1.5">
