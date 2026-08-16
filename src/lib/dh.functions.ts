@@ -155,6 +155,14 @@ export const createTrainer = createServerFn({ method: "POST" })
     await requireRole(context, ["MA"], "dh.functions");
     const { assertPhoneAvailable } = await import("@/lib/phone-uniqueness.server");
     await assertPhoneAvailable(data.phone);
+    let staffCode = data.staff_code?.trim() ?? "";
+    if (!staffCode) {
+      const { data: gen } = await context.supabase.rpc("next_entity_code", {
+        _department_id: data.department_id,
+        _kind: "trainer",
+      });
+      staffCode = (gen as string) ?? "";
+    }
     const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
