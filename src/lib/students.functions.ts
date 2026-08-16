@@ -113,7 +113,7 @@ const etPhone = (required: boolean) =>
     .transform((v) => (v === undefined || v === null || v === "" ? null : normalizeEtPhone(v)));
 
 const StudentRow = z.object({
-  registration_number: z.string().min(1).max(80),
+  registration_number: z.string().trim().max(80).optional().default(""),
   full_name: z.string().min(1).max(160),
   level_name: z.string().min(1).max(80),
   section_name: z.string().min(1).max(80),
