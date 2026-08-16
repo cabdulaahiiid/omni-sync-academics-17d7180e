@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Upload, FileSpreadsheet, Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { DownloadTemplateButton } from "@/components/download-template-button";
@@ -39,6 +39,7 @@ function ModulesPage() {
   const [open, setOpen] = useState(false);
   const [parsed, setParsed] = useState<Row[]>([]);
   const [fileName, setFileName] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
   const md = useMasterData();
   const invalidateMaster = useInvalidateMasterData();
   const createFn = useServerFn(createModule);
@@ -62,6 +63,7 @@ function ModulesPage() {
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
     setFileName(file.name);
     const reader = new FileReader();
@@ -81,6 +83,7 @@ function ModulesPage() {
           total_sessions: Number(r.total_sessions) || 0,
         })).filter((r) => r.code && r.name);
         setParsed(rows);
+        setOpen(true);
         toast.success(`Parsed ${rows.length} rows`);
       } catch {
         toast.error("Failed to parse file");
@@ -165,8 +168,17 @@ function ModulesPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleFile}
+            className="hidden"
+          />
+          <Button onClick={() => fileRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" /> Bulk upload
+          </Button>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button><Upload className="mr-2 h-4 w-4" /> Bulk upload</Button></DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader><DialogTitle>Bulk upload modules</DialogTitle></DialogHeader>
               <div className="space-y-4">
@@ -174,7 +186,6 @@ function ModulesPage() {
                   Required columns: <code>code, name, department_name, level_name, type, qualifications, total_hours, total_sessions</code>.
                   Use comma-separated values for qualifications. Type ∈ Theory | Practical | Both.
                 </div>
-                <input type="file" accept=".xlsx,.xls" onChange={handleFile} className="block w-full text-sm" />
                 {fileName && <p className="text-xs text-muted-foreground"><FileSpreadsheet className="mr-1 inline h-3 w-3" />{fileName} · {parsed.length} rows</p>}
                 {parsed.length > 0 && (
                   <div className="max-h-64 overflow-auto rounded border">
