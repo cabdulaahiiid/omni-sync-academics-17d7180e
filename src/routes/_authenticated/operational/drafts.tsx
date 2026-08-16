@@ -307,7 +307,6 @@ function WeekChip({ row, onClick }: { row: WeekRow; onClick: () => void }) {
 }
 
 function DraftsQuadrant({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   drafts, allWeeksBySem, weekThreads, onOpenWeek, onSubmitWeek, onSubmitSemester, submittingWeek, submittingSem,
   showViewSwitch, view, onViewChange, moduleGroups,
 }: {
