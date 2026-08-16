@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listAllUsers, createUserAccount, toggleBypassGeofence, updateUserRoles, setTrainerDepartments, setDHDepartment } from "@/lib/users-admin.functions";
+import { listAllUsers, createUserAccount, toggleBypassGeofence, updateUserRoles, setTrainerDepartments, setDHDepartment, adminSetUserPhone, adminSetUserActive } from "@/lib/users-admin.functions";
 import { listDepartments } from "@/lib/data.functions";
 import { getGlobalConfig } from "@/lib/global-config.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarUploader } from "@/components/avatar-uploader";
 import { adminSetUserAvatar, adminChangeUserPassword } from "@/lib/profile.functions";
+import { isValidEtPhone, PHONE_ERROR } from "@/lib/phone";
 
 export const Route = createFileRoute("/_authenticated/strategic/users")({
   component: UsersPage,
@@ -38,6 +39,8 @@ function UsersPage() {
   const rolesFn = useServerFn(updateUserRoles);
   const trDeptFn = useServerFn(setTrainerDepartments);
   const dhDeptFn = useServerFn(setDHDepartment);
+  const phoneFn = useServerFn(adminSetUserPhone);
+  const activeFn = useServerFn(adminSetUserActive);
   const { data: users, isLoading } = useQuery({ queryKey: ["all-users"], queryFn: () => listFn() });
   const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => deptsFn() });
   const { data: cfg } = useQuery({ queryKey: ["global-config"], queryFn: () => cfgFn() });
@@ -47,9 +50,10 @@ function UsersPage() {
   const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "T" as "MA" | "DH" | "T", department_id: "" });
   const [avatarPath, setAvatarPath] = useState("");
 
-  const [manage, setManage] = useState<null | { id: string; name: string; email: string; avatar_url: string | null; roles: string[]; department_ids: string[]; primary_department_id: string | null; department_id: string | null }>(null);
+  const [manage, setManage] = useState<null | { id: string; name: string; email: string; avatar_url: string | null; roles: string[]; department_ids: string[]; primary_department_id: string | null; department_id: string | null; phone: string | null; active: boolean }>(null);
   const [newAvatarPath, setNewAvatarPath] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [editRoles, setEditRoles] = useState<("MA" | "DH" | "T")[]>([]);
   const [editTrainerDepts, setEditTrainerDepts] = useState<string[]>([]);
   const [editPrimary, setEditPrimary] = useState<string>("");
@@ -81,6 +85,22 @@ function UsersPage() {
   const savePassword = useMutation({
     mutationFn: (vars: { user_id: string; new_password: string }) => setPasswordFn({ data: vars }),
     onSuccess: () => { toast.success("Password reset"); setNewPassword(""); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const savePhone = useMutation({
+    mutationFn: (vars: { user_id: string; phone: string }) => phoneFn({ data: vars }),
+    onSuccess: () => { toast.success("Telephone updated"); qc.invalidateQueries({ queryKey: ["all-users"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const setActive = useMutation({
+    mutationFn: (vars: { user_id: string; active: boolean }) => activeFn({ data: vars }),
+    onSuccess: (_r, vars) => {
+      toast.success(vars.active ? "Account activated" : "Account suspended");
+      setManage((m) => (m ? { ...m, active: vars.active } : m));
+      qc.invalidateQueries({ queryKey: ["all-users"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -158,10 +178,10 @@ function UsersPage() {
         <CardHeader><CardTitle className="text-base">All users</CardTitle></CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader><TableRow><TableHead></TableHead><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Department</TableHead><TableHead>Bypass geofence</TableHead><TableHead className="w-20 text-right">Manage</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead></TableHead><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Telephone</TableHead><TableHead>Role</TableHead><TableHead>Department</TableHead><TableHead>Status</TableHead><TableHead>Bypass geofence</TableHead><TableHead className="w-20 text-right">Manage</TableHead></TableRow></TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
-              {!isLoading && !users?.length && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No users yet.</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
+              {!isLoading && !users?.length && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">No users yet.</TableCell></TableRow>}
               {(users ?? []).map((u: any) => (
                 <TableRow key={u.id}>
                   <TableCell>
@@ -171,11 +191,15 @@ function UsersPage() {
                   </TableCell>
                   <TableCell className="font-medium">{u.full_name || "—"}</TableCell>
                   <TableCell className="text-sm">{u.email}</TableCell>
+                  <TableCell className="font-mono text-xs">{u.phone || "—"}</TableCell>
                   <TableCell>
                     {u.roles.length === 0 && <Badge variant="secondary">No role</Badge>}
                     {u.roles.map((r: string) => <Badge key={r} variant="outline" className="mr-1">{r}</Badge>)}
                   </TableCell>
                   <TableCell className="text-sm">{u.department_name}</TableCell>
+                  <TableCell>
+                    <Badge variant={u.active === false ? "destructive" : "default"}>{u.active === false ? "Suspended" : "Active"}</Badge>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Switch checked={geoEnabled ? !!u.bypass_geofence : true} disabled={!geoEnabled}
@@ -190,8 +214,10 @@ function UsersPage() {
                         roles: u.roles ?? [], department_ids: u.department_ids ?? [],
                         primary_department_id: u.primary_department_id ?? null,
                         department_id: u.department_id ?? null,
+                        phone: u.phone ?? null,
+                        active: u.active !== false,
                       });
-                      setNewAvatarPath(""); setNewPassword("");
+                      setNewAvatarPath(""); setNewPassword(""); setEditPhone(u.phone ?? "");
                       setEditRoles((u.roles ?? []).filter((r: string) => r === "MA" || r === "DH" || r === "T") as any);
                       setEditTrainerDepts(u.department_ids?.length ? u.department_ids : (u.department_id ? [u.department_id] : []));
                       setEditPrimary(u.primary_department_id ?? u.department_id ?? "");
@@ -225,12 +251,34 @@ function UsersPage() {
               </Button>
 
               <div className="space-y-2 border-t pt-4">
+                <Label>Telephone</Label>
+                <Input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="e.g. +251 91 XXX XXXX" />
+                {editPhone && !isValidEtPhone(editPhone) && <p className="text-xs text-destructive">{PHONE_ERROR}</p>}
+                <Button size="sm" disabled={!editPhone || !isValidEtPhone(editPhone) || savePhone.isPending}
+                  onClick={() => savePhone.mutate({ user_id: manage.id, phone: editPhone })}>
+                  {savePhone.isPending ? "Saving…" : "Save telephone"}
+                </Button>
+              </div>
+
+              <div className="space-y-2 border-t pt-4">
                 <Label>New password (min 8 chars)</Label>
                 <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Set a new password" />
                 <Button size="sm" disabled={newPassword.length < 8 || savePassword.isPending}
                   onClick={() => savePassword.mutate({ user_id: manage.id, new_password: newPassword })}>
                   {savePassword.isPending ? "Updating…" : "Reset password"}
                 </Button>
+              </div>
+
+              <div className="space-y-2 border-t pt-4">
+                <Label>Account status</Label>
+                <div className="flex items-center gap-3">
+                  <Badge variant={manage.active ? "default" : "destructive"}>{manage.active ? "Active" : "Suspended"}</Badge>
+                  <Button size="sm" variant={manage.active ? "destructive" : "default"} disabled={setActive.isPending}
+                    onClick={() => setActive.mutate({ user_id: manage.id, active: !manage.active })}>
+                    {setActive.isPending ? "Saving…" : manage.active ? "Suspend account" : "Activate account"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Suspended users are blocked from signing in until reactivated.</p>
               </div>
 
               <div className="space-y-3 border-t pt-4">
