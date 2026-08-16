@@ -1497,6 +1497,14 @@ export type Database = {
         Args: { _approval_id: string }
         Returns: Json
       }
+      phone_owner: {
+        Args: { _phone: string }
+        Returns: {
+          id: string
+          kind: string
+          name: string
+        }[]
+      }
       reset_academic_data: { Args: never; Returns: Json }
       set_session_mode: {
         Args: {
