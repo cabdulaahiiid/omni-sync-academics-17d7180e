@@ -39,6 +39,7 @@ function ModulesPage() {
   const [open, setOpen] = useState(false);
   const [parsed, setParsed] = useState<Row[]>([]);
   const [fileName, setFileName] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
   const md = useMasterData();
   const invalidateMaster = useInvalidateMasterData();
   const createFn = useServerFn(createModule);
