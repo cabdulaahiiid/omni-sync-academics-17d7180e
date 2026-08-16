@@ -194,13 +194,24 @@ function SemesterBuilderPage() {
   const selectedLevel = opts?.levels.find((l) => l.id === levelId) ?? null;
   const moduleDeptName = opts?.departments.find((d) => d.id === selectedModule?.department_id)?.name ?? "—";
 
-  // When module changes, sync level to module's level (modules are scoped to a level).
+  // Level drives the module list (Year -> Level -> Module). Changing the level
+  // clears module + section so a module from another level can never survive.
+  const onLevelChange = (id: string) => {
+    setLevelId(id);
+    setModuleId("");
+    setSectionId("");
+  };
+
+  /** Only modules whose stored level matches the selected Level. */
+  const modulesForLevel = useMemo(
+    () => (levelId ? (opts?.modules ?? []).filter((m: any) => m.level_id === levelId) : []),
+    [opts?.modules, levelId],
+  );
+
+  // Safety net: if the module list changes and the selection is no longer valid, drop it.
   useEffect(() => {
-    if (selectedModule && selectedModule.level_id && selectedModule.level_id !== levelId) {
-      setLevelId(selectedModule.level_id);
-      setSectionId("");
-    }
-  }, [selectedModule, levelId]);
+    if (moduleId && !modulesForLevel.some((m: any) => m.id === moduleId)) setModuleId("");
+  }, [modulesForLevel, moduleId]);
 
   const sectionsForLevel = useMemo(
     () => (opts?.sections ?? []).filter((s) => !levelId || s.level_id === levelId),
