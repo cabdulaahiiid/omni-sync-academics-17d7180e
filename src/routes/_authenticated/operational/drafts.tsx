@@ -5,7 +5,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import React from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek, listDraftModules } from "@/lib/semester-drafts.functions";
 import { listWeekThreadsForDept, dhResubmitWeek } from "@/lib/feedback.functions";
 import { WeekFeedbackWorkspace } from "@/components/week-feedback-workspace";
