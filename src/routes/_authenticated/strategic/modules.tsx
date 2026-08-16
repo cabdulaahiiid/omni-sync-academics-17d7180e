@@ -66,6 +66,14 @@ function ModulesPage() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!["xlsx", "xls", "csv"].includes(ext)) {
+      toast.error("This file type cannot be imported", {
+        description: `"${file.name}" is a .${ext} file. Fix: download the template on this screen and upload it as .xlsx, .xls or .csv.`,
+        duration: 10000,
+      });
+      return;
+    }
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -73,6 +81,23 @@ function ModulesPage() {
         const wb = XLSX.read(ev.target?.result, { type: "array" });
         const sheet = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+        if (!json.length) {
+          toast.error("The sheet has no data rows", {
+            description: `"${file.name}" contains only headers. Fix: add at least one module row under the header line and upload again.`,
+            duration: 10000,
+          });
+          return;
+        }
+        const headers = Object.keys(json[0]).map((h) => h.trim().toLowerCase());
+        const required = ["code", "name", "department_name", "level_name"];
+        const missing = required.filter((h) => !headers.includes(h));
+        if (missing.length) {
+          toast.error("The file headers do not match the template", {
+            description: `Missing column${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}. Found: ${headers.join(", ")}. Fix: download the template, paste your data into it without renaming headers, then upload again.`,
+            duration: 12000,
+          });
+          return;
+        }
         const rows: Row[] = json.map((r) => ({
           code: String(r.code ?? "").trim(),
           name: String(r.name ?? "").trim(),
@@ -83,11 +108,21 @@ function ModulesPage() {
           total_hours: Number(r.total_hours) || 0,
           total_sessions: Number(r.total_sessions) || 0,
         })).filter((r) => r.code && r.name);
+        if (!rows.length) {
+          toast.error("No usable rows found", {
+            description: "Every row is missing a code or a name. Fix: fill both columns for each module, then upload again.",
+            duration: 10000,
+          });
+          return;
+        }
         setParsed(rows);
         setOpen(true);
         toast.success(`Parsed ${rows.length} rows`);
       } catch {
-        toast.error("Failed to parse file");
+        toast.error("The file could not be read", {
+          description: `"${file.name}" is not a readable workbook — it may be corrupted or still open in Excel. Fix: close it in Excel, save it again as .xlsx, then upload.`,
+          duration: 10000,
+        });
       }
     };
     reader.readAsArrayBuffer(file);
@@ -96,9 +131,16 @@ function ModulesPage() {
   const uploadMut = useMutation({
     mutationFn: () => bulk({ data: { rows: parsed } }),
     onSuccess: (r) => {
-      toast.success(`Inserted ${r.inserted} modules${r.errors.length ? ` · ${r.errors.length} errors` : ""}`);
       if (r.errors.length) {
-        r.errors.slice(0, 5).forEach((e) => toast.error(`Row ${e.row}: ${e.reason}`));
+        toast.warning(`${r.inserted} of ${parsed.length} rows imported · ${r.errors.length} skipped`, {
+          description: r.errors.slice(0, 3).map((e) => `Row ${e.row}: ${e.reason}`).join(" | "),
+          duration: 12000,
+        });
+        r.errors.slice(3, 8).forEach((e) =>
+          toast.error(`Row ${e.row} skipped`, { description: e.reason, duration: 10000 }),
+        );
+      } else {
+        toast.success(`All ${r.inserted} modules imported`);
       }
       qc.invalidateQueries({ queryKey: ["modules"] });
       invalidateMaster();
