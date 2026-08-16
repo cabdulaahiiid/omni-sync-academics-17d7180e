@@ -60,6 +60,8 @@ export const createDepartmentHead = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireRole(context, ["MA"], "dh.functions");
     const tempPassword = data.password;
+    const { assertPhoneAvailable } = await import("@/lib/phone-uniqueness.server");
+    await assertPhoneAvailable(data.phone);
     const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: tempPassword,
