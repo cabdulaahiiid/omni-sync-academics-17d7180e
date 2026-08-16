@@ -194,6 +194,7 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
       registration_number: string;
       full_name: string;
       gender: string | null;
+      telephone: string | null;
       level_id: string;
       section_id: string;
       department_id: string;
@@ -208,6 +209,7 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
         registration_number: r.registration_number,
         full_name: r.full_name,
         gender: r.gender ?? null,
+        telephone: r.telephone ?? null,
         level_id: lvl,
         section_id: sec,
         department_id: deptId,
