@@ -47,8 +47,6 @@ function TrainersPage() {
   const [credentials, setCredentials] = useState<{ email: string; temp_password: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string; department_id: string | null } | null>(null);
   const [editQuals, setEditQuals] = useState<string[]>([]);
-  const [newQual, setNewQual] = useState("");
-
   const deptModules = md.modulesFor(deptId);
   const phoneInvalid = !isValidEtPhone(phone);
 
