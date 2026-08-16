@@ -83,16 +83,10 @@ function TrainersPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function openEdit(t: { id: string; full_name: string; qualifications: string[] | null }) {
-    setEditing({ id: t.id, name: t.full_name });
+  function openEdit(t: { id: string; full_name: string; qualifications: string[] | null; department_id?: string | null }) {
+    setEditing({ id: t.id, name: t.full_name, department_id: t.department_id ?? null });
     setEditQuals([...(t.qualifications ?? [])]);
     setNewQual("");
-  }
-  function addQual() {
-    const v = newQual.trim();
-    if (!v) return;
-    if (editQuals.includes(v)) { setNewQual(""); return; }
-    setEditQuals([...editQuals, v]); setNewQual("");
   }
 
   return (
