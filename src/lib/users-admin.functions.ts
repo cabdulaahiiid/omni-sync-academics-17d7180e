@@ -64,11 +64,22 @@ export const createUserAccount = createServerFn({ method: "POST" })
       password: z.string().min(8).max(72),
       role: z.enum(["MA", "DH", "T"]),
       department_id: z.string().uuid().nullable().optional(),
+      phone: z
+        .string()
+        .trim()
+        .min(1, "Telephone number is required.")
+        .max(40)
+        .refine((v) => normalizeEtPhone(v) !== null, {
+          message: "Please enter a valid Ethiopian telephone number.",
+        })
+        .transform((v) => normalizeEtPhone(v) as string),
       avatar_path: z.string().min(1).max(300),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
     await requireRole(context, ["MA"], "createUserAccount");
+    const { assertPhoneAvailable } = await import("@/lib/phone-uniqueness.server");
+    await assertPhoneAvailable(data.phone);
     const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -88,6 +99,7 @@ export const createUserAccount = createServerFn({ method: "POST" })
       id: uid,
       full_name: data.full_name,
       email: data.email,
+      phone: data.phone,
       department_id: data.department_id ?? null,
       avatar_path: finalAvatar,
     });
@@ -99,6 +111,7 @@ export const createUserAccount = createServerFn({ method: "POST" })
       const { data: tr } = await supabaseAdmin.from("trainer_registry").insert({
         full_name: data.full_name,
         email: data.email,
+        phone: data.phone,
         department_id: data.department_id,
       }).select().single();
       if (tr) {
@@ -107,7 +120,7 @@ export const createUserAccount = createServerFn({ method: "POST" })
     }
     await context.supabase.from("audit_logs").insert({
       actor_id: context.userId, action_type: "CREATE_USER", entity_type: "profiles", entity_id: uid,
-      after_state: { email: data.email, role: data.role, department_id: data.department_id ?? null },
+      after_state: { email: data.email, role: data.role, phone: data.phone, department_id: data.department_id ?? null },
     });
     return { ok: true, user_id: uid };
   });
@@ -207,6 +220,11 @@ export const adminSetUserPhone = createServerFn({ method: "POST" })
     const { data: profile, error: pErr } = await supabaseAdmin
       .from("profiles").select("trainer_registry_id, phone").eq("id", data.user_id).maybeSingle();
     if (pErr) throw new Error(pErr.message);
+    const { assertPhoneAvailable } = await import("@/lib/phone-uniqueness.server");
+    await assertPhoneAvailable(data.phone, {
+      profileId: data.user_id,
+      trainerId: profile?.trainer_registry_id ?? null,
+    });
     const { error } = await supabaseAdmin.from("profiles")
       .update({ phone: data.phone }).eq("id", data.user_id);
     if (error) throw new Error(error.message);
@@ -233,7 +251,7 @@ export const adminSetUserActive = createServerFn({ method: "POST" })
       throw new Error("You cannot suspend your own account.");
     }
     const { data: profile } = await supabaseAdmin
-      .from("profiles").select("trainer_registry_id").eq("id", data.user_id).maybeSingle();
+      .from("profiles").select("trainer_registry_id, active").eq("id", data.user_id).maybeSingle();
     const { error } = await supabaseAdmin.from("profiles")
       .update({ active: data.active }).eq("id", data.user_id);
     if (error) throw new Error(error.message);
@@ -249,6 +267,7 @@ export const adminSetUserActive = createServerFn({ method: "POST" })
       actor_id: context.userId,
       action_type: data.active ? "ACTIVATE_USER" : "SUSPEND_USER",
       entity_type: "profiles", entity_id: data.user_id,
+      before_state: { active: profile?.active ?? null },
       after_state: { active: data.active },
     });
     return { ok: true, active: data.active };
