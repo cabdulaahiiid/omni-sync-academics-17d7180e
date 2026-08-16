@@ -45,7 +45,7 @@ function TrainersPage() {
   const [quals, setQuals] = useState<string[]>([]);
   const [avatarPath, setAvatarPath] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; temp_password: string } | null>(null);
-  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+  const [editing, setEditing] = useState<{ id: string; name: string; department_id: string | null } | null>(null);
   const [editQuals, setEditQuals] = useState<string[]>([]);
   const [newQual, setNewQual] = useState("");
 
@@ -207,15 +207,17 @@ function TrainersPage() {
                 </Badge>
               ))}
             </div>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Add module code (e.g. ICT-101)"
-                value={newQual}
-                onChange={(e) => setNewQual(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addQual(); } }}
-              />
-              <Button type="button" variant="outline" onClick={addQual}>Add</Button>
-            </div>
+            <Select
+              value=""
+              onValueChange={(v) => setEditQuals((q) => (q.includes(v) ? q : [...q, v]))}
+            >
+              <SelectTrigger><SelectValue placeholder="Add a module" /></SelectTrigger>
+              <SelectContent>
+                {md.modulesFor(editing?.department_id ?? undefined).map((m: any) => (
+                  <SelectItem key={m.id} value={m.code}>{m.code} — {m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
