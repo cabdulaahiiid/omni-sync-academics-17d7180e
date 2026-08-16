@@ -265,7 +265,7 @@ function UsersPage() {
                         phone: u.phone ?? null,
                         active: u.active !== false,
                       });
-                      setNewAvatarPath(""); setNewPassword(""); setEditPhone(u.phone ?? "");
+                      setNewAvatarPath(""); setNewPassword(""); setEditPhone(u.phone ?? ""); setEditEmail(u.email ?? "");
                       setEditRoles((u.roles ?? []).filter((r: string) => r === "MA" || r === "DH" || r === "T") as any);
                       setEditTrainerDepts(u.department_ids?.length ? u.department_ids : (u.department_id ? [u.department_id] : []));
                       setEditPrimary(u.primary_department_id ?? u.department_id ?? "");
