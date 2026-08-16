@@ -379,12 +379,45 @@ export const validateBuilder = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!sem) throw new Error("Level not found");
 
+    const isDh = !vRoles.includes("MA");
+
+    // DH: the canonical engine owns the math (module hours ÷ duration, frequency,
+    // derived end date and weeks). Admin keeps the legacy calendar-fill path.
+    if (isDh) {
+      const { data: mod } = await supabase
+        .from("modules").select("id, code, name, total_hours").eq("id", data.module_id).maybeSingle();
+      const engine = runEngine(data, mod?.total_hours ?? 0, sem.end_date);
+      const conflicts = engine.sessions.length
+        ? await detectConflicts(data, asOccurrences(engine.sessions), data.plan_id ?? null)
+        : [];
+      const warnings = engine.errors.map((reason) => ({ severity: "yellow" as const, reason }));
+      const last = engine.sessions[engine.sessions.length - 1];
+      return {
+        ok: engine.ok && conflicts.length === 0,
+        summary: {
+          weekly_minutes: Math.round(engine.total_minutes / Math.max(1, engine.weeks)),
+          total_minutes: engine.total_minutes,
+          occurrences: engine.total_sessions,
+          weeks: engine.weeks,
+          end_date: engine.end_date ?? data.start_date,
+          end_time: last ? last.end_time.slice(0, 5) : data.start_time,
+          required_sessions: engine.required_sessions,
+          module_total_minutes: Math.round((mod?.total_hours ?? 0) * 60),
+          shortfall_minutes: engine.shortfall_minutes,
+        },
+        sessions: engine.sessions,
+        conflicts,
+        warnings,
+      };
+    }
+
     const plan = planOccurrences(data, sem.start_date, sem.end_date);
     if (!plan.occurrences.length) {
       return {
         ok: false,
-        summary: { weekly_minutes: 0, total_minutes: 0, occurrences: 0, weeks: 0, end_date: data.start_date, end_time: data.start_time },
+        summary: { weekly_minutes: 0, total_minutes: 0, occurrences: 0, weeks: 0, end_date: data.start_date, end_time: data.start_time, required_sessions: 0, module_total_minutes: 0, shortfall_minutes: 0 },
         conflicts: [], warnings: [{ severity: "yellow" as const, reason: "No sessions generated — check delivery days, dates, and duration." }],
+        sessions: [] as GeneratedSession[],
       };
     }
 
@@ -446,7 +479,11 @@ export const validateBuilder = createServerFn({ method: "POST" })
         weeks: plan.weeks,
         end_date: last.date,
         end_time: last.end_time.slice(0, 5),
+        required_sessions: plan.occurrences.length,
+        module_total_minutes: Math.round((module_?.total_hours ?? 0) * 60),
+        shortfall_minutes: 0,
       },
+      sessions: [] as GeneratedSession[],
       conflicts,
       warnings,
     };
