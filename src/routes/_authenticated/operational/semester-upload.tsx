@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useMe } from "@/hooks/use-me";
 import { useLiveTables } from "@/hooks/use-live-tables";
+import { generatePlan, type Day as EngineDay } from "@/lib/scheduling/engine";
 import { getBuilderOptions, getTrainerLoad, validateBuilder, saveBuilderDraft } from "@/lib/semester-builder.functions";
 import { requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
 
