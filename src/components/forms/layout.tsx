@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { AlertCircle } from "lucide-react";
+import { ErrorPanel } from "./error-panel";
 
 /** Scrollable body for long dialogs — keeps header/footer fixed on small screens. */
 export function FormBody({ children, className }: { children: ReactNode; className?: string }) {
@@ -54,16 +54,10 @@ export function FormFull({ children }: { children: ReactNode }) {
   return <div className="sm:col-span-2">{children}</div>;
 }
 
-/** Inline error banner shown at the top of a form when a save fails. */
-export function FormError({ message }: { message?: string | null }) {
-  if (!message) return null;
-  return (
-    <div
-      role="alert"
-      className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
-    >
-      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-      <span>{message}</span>
-    </div>
-  );
+/**
+ * Inline error banner shown at the top of a form when a save fails.
+ * Renders the explained problem + solution for any error shape.
+ */
+export function FormError({ message }: { message?: unknown }) {
+  return <ErrorPanel error={message} />;
 }
