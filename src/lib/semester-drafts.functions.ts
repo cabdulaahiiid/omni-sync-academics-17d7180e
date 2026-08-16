@@ -222,3 +222,89 @@ export const dhRequestApprovalPerWeek = createServerFn({ method: "POST" })
     const r = (result ?? {}) as { created?: number };
     return { created: r.created ?? 0 };
   });
+
+/**
+ * Full Module representation of the SAME draft rows the weekly view uses.
+ * No extra records: schedules are grouped by module + level + section so the
+ * DH can review a module end-to-end instead of week by week.
+ */
+export const listDraftModules = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ department_id: z.string().uuid().optional() }).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { requireRole } = await import("@/lib/auth/require-role");
+    const roles = await requireRole(context, ["DH", "MA"], "listDraftModules");
+
+    let departmentId = data.department_id ?? null;
+    if (!roles.includes("MA")) {
+      const { data: prof } = await supabase
+        .from("profiles").select("department_id").eq("id", context.userId).maybeSingle();
+      departmentId = prof?.department_id ?? null;
+      if (!departmentId) throw new Error("No department assigned to this Department Head account.");
+    }
+
+    let q = supabase
+      .from("schedules")
+      .select("id, semester_id, module_code, module_name, level_id, section_id, trainer_name, date, week_num, start_time, end_time, status, is_published")
+      .neq("status", "CANCELLED")
+      .order("date");
+    if (departmentId) q = q.eq("department_id", departmentId);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    if (!rows?.length) return [];
+
+    const [{ data: sems }, { data: levels }, { data: sections }] = await Promise.all([
+      supabase.from("semester_registry").select("id, name, start_date, end_date, distribution_status"),
+      supabase.from("levels").select("id, name, display_name"),
+      supabase.from("sections").select("id, name"),
+    ]);
+    const semMap = new Map((sems ?? []).map((s: any) => [s.id, s]));
+    const lvlMap = new Map((levels ?? []).map((l: any) => [l.id, l.display_name || `Level ${l.name}`]));
+    const secMap = new Map((sections ?? []).map((s: any) => [s.id, s.name]));
+
+    type Group = {
+      key: string; semester_id: string; semester_name: string;
+      module_code: string; module_name: string; level_name: string; section_name: string;
+      trainer_name: string; start_date: string; end_date: string;
+      weeks: number[]; sessions: number; total_minutes: number;
+      draft: number; pending: number; published: number;
+      distribution_status: string | null;
+    };
+    const groups = new Map<string, Group>();
+    for (const r of rows) {
+      const key = `${r.semester_id}|${r.module_code}|${r.level_id}|${r.section_id}`;
+      const sem: any = semMap.get(r.semester_id);
+      const g = groups.get(key) ?? {
+        key,
+        semester_id: r.semester_id,
+        semester_name: sem?.name ?? "—",
+        module_code: r.module_code,
+        module_name: r.module_name,
+        level_name: r.level_id ? lvlMap.get(r.level_id) ?? "—" : "—",
+        section_name: r.section_id ? secMap.get(r.section_id) ?? "—" : "—",
+        trainer_name: r.trainer_name,
+        start_date: r.date, end_date: r.date,
+        weeks: [] as number[], sessions: 0, total_minutes: 0,
+        draft: 0, pending: 0, published: 0,
+        distribution_status: sem?.distribution_status ?? null,
+      };
+      const [sh, sm] = String(r.start_time).split(":").map(Number);
+      const [eh, em] = String(r.end_time).split(":").map(Number);
+      g.total_minutes += Math.max(0, eh * 60 + em - (sh * 60 + sm));
+      g.sessions += 1;
+      if (r.week_num != null && !g.weeks.includes(r.week_num)) g.weeks.push(r.week_num);
+      if (r.date < g.start_date) g.start_date = r.date;
+      if (r.date > g.end_date) g.end_date = r.date;
+      if (r.status === "DRAFT" && !r.is_published) g.draft += 1;
+      if (r.status === "PENDING_MA") g.pending += 1;
+      if (r.is_published) g.published += 1;
+      groups.set(key, g);
+    }
+
+    return Array.from(groups.values())
+      .map((g) => ({ ...g, weeks: g.weeks.sort((a, b) => a - b) }))
+      .sort((a, b) => a.start_date.localeCompare(b.start_date) || a.module_code.localeCompare(b.module_code));
+  });

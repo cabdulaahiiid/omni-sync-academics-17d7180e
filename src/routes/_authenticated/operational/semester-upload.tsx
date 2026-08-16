@@ -194,13 +194,24 @@ function SemesterBuilderPage() {
   const selectedLevel = opts?.levels.find((l) => l.id === levelId) ?? null;
   const moduleDeptName = opts?.departments.find((d) => d.id === selectedModule?.department_id)?.name ?? "—";
 
-  // When module changes, sync level to module's level (modules are scoped to a level).
+  // Level drives the module list (Year -> Level -> Module). Changing the level
+  // clears module + section so a module from another level can never survive.
+  const onLevelChange = (id: string) => {
+    setLevelId(id);
+    setModuleId("");
+    setSectionId("");
+  };
+
+  /** Only modules whose stored level matches the selected Level. */
+  const modulesForLevel = useMemo(
+    () => (levelId ? (opts?.modules ?? []).filter((m: any) => m.level_id === levelId) : []),
+    [opts?.modules, levelId],
+  );
+
+  // Safety net: if the module list changes and the selection is no longer valid, drop it.
   useEffect(() => {
-    if (selectedModule && selectedModule.level_id && selectedModule.level_id !== levelId) {
-      setLevelId(selectedModule.level_id);
-      setSectionId("");
-    }
-  }, [selectedModule, levelId]);
+    if (moduleId && !modulesForLevel.some((m: any) => m.id === moduleId)) setModuleId("");
+  }, [modulesForLevel, moduleId]);
 
   const sectionsForLevel = useMemo(
     () => (opts?.sections ?? []).filter((s) => !levelId || s.level_id === levelId),
@@ -252,6 +263,23 @@ function SemesterBuilderPage() {
   const formComplete = !!(builderPayload.semester_id && builderPayload.department_id && builderPayload.module_id &&
     builderPayload.trainer_id && builderPayload.section_id && builderPayload.level_id && builderPayload.venue_id &&
     builderPayload.start_date && builderPayload.start_time && durationMin > 0 && daysSelected.length > 0);
+
+  /** Field-specific list of what still blocks "Save as Draft". */
+  const missingFields = useMemo(() => {
+    const m: string[] = [];
+    if (!academicYear) m.push("Academic Year");
+    if (!semesterId) m.push("Academic period");
+    if (!levelId) m.push("Level");
+    if (!moduleId) m.push("Module");
+    if (!trainerId) m.push("Trainer");
+    if (!sectionId) m.push("Section");
+    if (!venueId) m.push("Venue");
+    if (daysSelected.length === 0) m.push("Schedule days");
+    if (durationMin <= 0) m.push("Session duration");
+    if (!startDate) m.push("Start date");
+    if (!startTime) m.push("Start time");
+    return m;
+  }, [academicYear, semesterId, levelId, moduleId, trainerId, sectionId, venueId, daysSelected, durationMin, startDate, startTime]);
 
   const validateMut = useMutation({
     mutationFn: () => validateFn({ data: builderPayload }),
@@ -348,13 +376,25 @@ function SemesterBuilderPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Level</Label>
+                <Label className="text-xs">Academic period</Label>
                 <Select value={semesterId} onValueChange={setSemesterId}>
-                  <SelectTrigger><SelectValue placeholder={academicYear ? "Pick level" : "Pick a year first"} /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={academicYear ? "Pick period" : "Pick a year first"} /></SelectTrigger>
                   <SelectContent>
                     {semestersForYear.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="text-xs">Level</Label>
+                <Select value={levelId} onValueChange={onLevelChange}>
+                  <SelectTrigger><SelectValue placeholder="Pick level" /></SelectTrigger>
+                  <SelectContent>
+                    {(opts.levels ?? []).map((l: any) => (
+                      <SelectItem key={l.id} value={l.id}>{l.display_name || `Level ${l.name}`}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Modules are filtered to the level you pick here.</p>
               </div>
             </div>
             {selectedSem && (
@@ -368,10 +408,14 @@ function SemesterBuilderPage() {
 
           <SectionItem step={2} title="Module Information" icon={BookOpen} value="s2" complete={!!moduleId}>
             <Combobox value={moduleId} onChange={setModuleId}
-              placeholder="Search module by code or name"
-              items={opts.modules}
-              getKey={(m) => `${m.code} ${m.name}`}
-              getLabel={(m) => `${m.code} — ${m.name}`} />
+              placeholder={levelId ? "Search module by code or name" : "Pick a Level first"}
+              disabled={!levelId}
+              items={modulesForLevel as any}
+              getKey={(m: any) => `${m.code} ${m.name}`}
+              getLabel={(m: any) => `${m.code} — ${m.name}`} />
+            {levelId && modulesForLevel.length === 0 && (
+              <p className="text-[11px] text-muted-foreground">No modules are registered for this level yet.</p>
+            )}
             {selectedModule && (
               <div className="grid gap-2 rounded-xl border bg-muted/30 p-3 text-xs md:grid-cols-4">
                 <div><span className="text-muted-foreground">Name:</span> <b>{selectedModule.name}</b></div>
@@ -423,17 +467,12 @@ function SemesterBuilderPage() {
             </div>
           </SectionItem>
 
-          <SectionItem step={5} title="Class Assignment" icon={Building2} value="s5" complete={!!(levelId && sectionId && venueId)}>
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Level</Label>
-                <Combobox value={levelId} onChange={(id) => { setLevelId(id); setSectionId(""); }}
-                  placeholder="Pick level" items={opts.levels} getLabel={(l) => l.name} />
-              </div>
+          <SectionItem step={5} title="Class Assignment" icon={Building2} value="s5" complete={!!(sectionId && venueId)}>
+            <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Section</Label>
                 <Combobox value={sectionId} onChange={setSectionId}
-                  placeholder={levelId ? "Pick section" : "Pick level first"}
+                  placeholder={levelId ? "Pick section" : "Pick a Level in Section 1 first"}
                   items={sectionsForLevel} getLabel={(s) => s.name} disabled={!levelId} />
               </div>
               <div className="space-y-1.5">
@@ -550,7 +589,14 @@ function SemesterBuilderPage() {
                 <PreviewRow k="Occurrences" v={validation?.summary.occurrences != null ? String(validation.summary.occurrences) : "—"} />
               </TabsContent>
               <TabsContent value="validate" className="mt-3 space-y-2 text-xs">
-                {!formComplete && <p className="text-muted-foreground">Complete every section to run validation.</p>}
+                {!formComplete && (
+                  <div className="space-y-1.5">
+                    <p className="text-muted-foreground">Complete these fields before saving:</p>
+                    <ul className="list-disc space-y-0.5 pl-4">
+                      {missingFields.map((f) => <li key={f} className="text-destructive">{f}</li>)}
+                    </ul>
+                  </div>
+                )}
                 {formComplete && validateMut.isPending && <p className="text-muted-foreground">Checking conflicts…</p>}
                 {formComplete && !validateMut.isPending && validation && (
                   <>
@@ -583,10 +629,10 @@ function SemesterBuilderPage() {
           <div className="mr-auto text-xs text-muted-foreground">
             {draftCount > 0
               ? <span className="text-emerald-600">{draftCount} draft session(s) saved for this level.</span>
-              : formComplete
+                : formComplete
                 ? validationOk ? <span className="text-emerald-600">Ready to save.</span>
                   : <span className="text-destructive">Resolve conflicts before saving.</span>
-                : <span>Complete all sections to enable actions.</span>}
+                : <span className="text-destructive">Missing: {missingFields.join(", ")}</span>}
           </div>
           <Button variant="ghost" size="sm" onClick={() => { resetForm(); setDraftCount(0); }}><X className="mr-1.5 h-4 w-4" /> Cancel</Button>
           <Button variant="outline" size="sm" onClick={() => validateMut.mutate()} disabled={!formComplete || validateMut.isPending}>
