@@ -168,8 +168,17 @@ function ModulesPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleFile}
+            className="hidden"
+          />
+          <Button onClick={() => fileRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" /> Bulk upload
+          </Button>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button><Upload className="mr-2 h-4 w-4" /> Bulk upload</Button></DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader><DialogTitle>Bulk upload modules</DialogTitle></DialogHeader>
               <div className="space-y-4">
@@ -177,7 +186,6 @@ function ModulesPage() {
                   Required columns: <code>code, name, department_name, level_name, type, qualifications, total_hours, total_sessions</code>.
                   Use comma-separated values for qualifications. Type ∈ Theory | Practical | Both.
                 </div>
-                <input type="file" accept=".xlsx,.xls" onChange={handleFile} className="block w-full text-sm" />
                 {fileName && <p className="text-xs text-muted-foreground"><FileSpreadsheet className="mr-1 inline h-3 w-3" />{fileName} · {parsed.length} rows</p>}
                 {parsed.length > 0 && (
                   <div className="max-h-64 overflow-auto rounded border">
