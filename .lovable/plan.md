@@ -2,14 +2,17 @@
 
 The screenshot did not come through on my side, so this plan targets every registration/data-entry form in the system rather than one screen. The Trainer, Users & Roles, Department Head, Student, Venue, Department, Section, Level, Module and Contact forms all get the same treatment.
 
-## 1. Email vs Telephone — strict separation
+## 1. Email vs Telephone — strict separation (person forms only)
+
+Email and telephone belong **only** to forms that hold information about a person: Trainers, Department Heads, Admin/User accounts, Students (own telephone) and Parents/Guardians (guardian telephone), plus Contact Book people. Non-person forms — Department, Level, Section, Venue, Module — carry no email or telephone field at create or edit time; any leftover contact input there is removed.
 
 Today each form keeps email and phone in separate state, but the inputs are visually identical and nothing stops a user from typing an email into the telephone box until after submit. Fixes:
 
 - A shared `EmailField` and `PhoneField` pair of components: correct `type`, `inputMode`, `autoComplete`, placeholder, and per-field inline error text.
 - Telephone rejects anything containing `@` or letters immediately, with the Ethiopian-format message; email requires a valid address. Neither field can accept the other's format.
 - Live validation on blur plus a submit-time gate, mirroring the existing server-side Zod rules so client and server agree.
-- Confirm each form writes email to the email column and phone to the phone column (staff → `profiles.phone` / `trainer_registry.phone`, students → `students.telephone`, guardians → `students.parent_guardian_telephone`). No schema changes.
+- Confirm each person form writes email to the email column and phone to the phone column (staff → `profiles.email` / `profiles.phone` / `trainer_registry.phone`, students → `students.telephone`, guardians → `students.parent_guardian_telephone`). Students have a telephone but no email. No schema changes.
+- The same rules apply on both first registration and later editing/updating of the same record.
 
 ## 2. Form UX
 
@@ -38,7 +41,7 @@ Also prevents closing the dialog (Esc / overlay click) while a save is in flight
 
 ## 5. Verification
 
-For each form — Trainer, User account, Department Head, Student (+ guardian), Department, Level, Section, Venue, Module, Contact — verify Create → Save → Close → Refresh → Row visible, plus a deliberate failure case (duplicate phone) confirming the dialog stays open with data intact.
+For each form — Trainer, User account, Department Head, Student (+ guardian), Contact, Department, Level, Section, Venue, Module — verify Create → Save → Close → Refresh → Row visible, plus a deliberate failure case (duplicate phone) confirming the dialog stays open with data intact. Also confirm the non-person forms show no email/telephone inputs.
 
 ## Technical notes
 
