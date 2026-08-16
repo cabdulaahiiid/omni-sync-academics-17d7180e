@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { DownloadTemplateButton } from "@/components/download-template-button";
 import { STUDENTS_ROSTER_TEMPLATE } from "@/lib/xlsx-templates";
 import { isValidEtPhone, PHONE_ERROR } from "@/lib/phone";
+import { useMasterData } from "@/hooks/use-master-data";
+import { GENDER_OPTIONS, GUARDIAN_RELATIONSHIP_OPTIONS } from "@/lib/master-data";
 import { downloadCsv, downloadPdf } from "@/lib/report-export";
 import type { ReportResult } from "@/lib/reports.functions";
 import { FileDown, FileText } from "lucide-react";
@@ -39,7 +41,7 @@ function StudentsHub() {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<any | null>(null);
   const [form, setForm] = useState({
-    registration_number: "", full_name: "", level_name: "", section_name: "", gender: "",
+    registration_number: "", full_name: "", level_id: "", section_id: "", gender: "", telephone: "",
     parent_guardian_name: "", parent_guardian_telephone: "", parent_guardian_relationship: "",
   });
   const [csvRows, setCsvRows] = useState<ParsedRow[]>([]);
@@ -49,9 +51,18 @@ function StudentsHub() {
 
   const levels = ls?.levels ?? [];
   const sections = (ls?.sections ?? []).filter((s) => !bulkLevelId || s.level_id === bulkLevelId);
+  // Live master data for the registration form (dependent Level → Section).
+  const md = useMasterData();
+  const formLevels = levels.length ? levels : md.levels;
+  const formSections = (ls?.sections ?? md.sections).filter(
+    (s: any) => !form.level_id || s.level_id === form.level_id,
+  );
+  const levelName = (formLevels as any[]).find((l) => l.id === form.level_id)?.name ?? "";
+  const sectionName = (formSections as any[]).find((s) => s.id === form.section_id)?.name ?? "";
   const bulkLevelName = levels.find((l) => l.id === bulkLevelId)?.name ?? "";
   const bulkSectionName = sections.find((s) => s.id === bulkSectionId)?.name ?? "";
   const phoneInvalid = !isValidEtPhone(form.parent_guardian_telephone);
+  const studentPhoneInvalid = !isValidEtPhone(form.telephone);
 
   function buildReport(): ReportResult {
     const columns = [
@@ -82,12 +93,25 @@ function StudentsHub() {
   }
 
   const create = useMutation({
-    mutationFn: () => createFn({ data: { ...form, gender: form.gender || null } }),
+    mutationFn: () =>
+      createFn({
+        data: {
+          registration_number: form.registration_number,
+          full_name: form.full_name,
+          level_name: levelName,
+          section_name: sectionName,
+          gender: (form.gender || null) as "Male" | "Female" | null,
+          telephone: form.telephone || null,
+          parent_guardian_name: form.parent_guardian_name || null,
+          parent_guardian_telephone: form.parent_guardian_telephone || null,
+          parent_guardian_relationship: (form.parent_guardian_relationship || null) as any,
+        },
+      }),
     onSuccess: () => {
       toast.success("Student registered");
       setOpen(false);
       setForm({
-        registration_number: "", full_name: "", level_name: "", section_name: "", gender: "",
+        registration_number: "", full_name: "", level_id: "", section_id: "", gender: "", telephone: "",
         parent_guardian_name: "", parent_guardian_telephone: "", parent_guardian_relationship: "",
       });
       qc.invalidateQueries({ queryKey: ["dh-students"] });
