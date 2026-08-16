@@ -184,3 +184,72 @@ export const setDHDepartment = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** MA updates any user's telephone (profile + linked trainer registry). */
+export const adminSetUserPhone = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      user_id: z.string().uuid(),
+      phone: z
+        .string()
+        .trim()
+        .min(1, "Telephone number is required.")
+        .max(40)
+        .refine((v) => normalizeEtPhone(v) !== null, {
+          message: "Please enter a valid Ethiopian telephone number.",
+        })
+        .transform((v) => normalizeEtPhone(v) as string),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "adminSetUserPhone");
+    const { data: profile, error: pErr } = await supabaseAdmin
+      .from("profiles").select("trainer_registry_id, phone").eq("id", data.user_id).maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    const { error } = await supabaseAdmin.from("profiles")
+      .update({ phone: data.phone }).eq("id", data.user_id);
+    if (error) throw new Error(error.message);
+    if (profile?.trainer_registry_id) {
+      await supabaseAdmin.from("trainer_registry")
+        .update({ phone: data.phone }).eq("id", profile.trainer_registry_id);
+    }
+    await context.supabase.from("audit_logs").insert({
+      actor_id: context.userId, action_type: "UPDATE_PHONE", entity_type: "profiles", entity_id: data.user_id,
+      before_state: { phone: profile?.phone ?? null }, after_state: { phone: data.phone },
+    });
+    return { ok: true, phone: data.phone };
+  });
+
+/** MA suspends or reactivates a user account (blocks sign-in when suspended). */
+export const adminSetUserActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ user_id: z.string().uuid(), active: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "adminSetUserActive");
+    if (data.user_id === context.userId && !data.active) {
+      throw new Error("You cannot suspend your own account.");
+    }
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("trainer_registry_id").eq("id", data.user_id).maybeSingle();
+    const { error } = await supabaseAdmin.from("profiles")
+      .update({ active: data.active }).eq("id", data.user_id);
+    if (error) throw new Error(error.message);
+    if (profile?.trainer_registry_id) {
+      await supabaseAdmin.from("trainer_registry")
+        .update({ status: data.active ? "ACTIVE" : "SUSPENDED" }).eq("id", profile.trainer_registry_id);
+    }
+    const { error: banErr } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      ban_duration: data.active ? "none" : "876000h",
+    } as any);
+    if (banErr) throw new Error(banErr.message);
+    await context.supabase.from("audit_logs").insert({
+      actor_id: context.userId,
+      action_type: data.active ? "ACTIVATE_USER" : "SUSPEND_USER",
+      entity_type: "profiles", entity_id: data.user_id,
+      after_state: { active: data.active },
+    });
+    return { ok: true, active: data.active };
+  });

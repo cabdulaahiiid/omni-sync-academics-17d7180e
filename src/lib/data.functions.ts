@@ -22,6 +22,9 @@ export const getMe = createServerFn({ method: "GET" })
       throw new Error(`profile_query_failed: ${profileRes.error.message}`);
     }
     const profile = profileRes.data;
+    if (profile && profile.active === false) {
+      throw new Error("account_suspended");
+    }
 
     const rolesRes = await supabase
       .from("user_roles")
