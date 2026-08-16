@@ -104,16 +104,6 @@ const departmentInput = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1).max(120),
   description: z.string().max(500).optional().nullable(),
-  telephone: z
-    .string()
-    .trim()
-    .max(40)
-    .optional()
-    .nullable()
-    .refine((v) => v === undefined || v === null || v === "" || normalizeEtPhone(v) !== null, {
-      message: PHONE_ERROR,
-    })
-    .transform((v) => (v === undefined || v === null || v === "" ? null : normalizeEtPhone(v))),
   status: z.enum(["ACTIVE", "SUSPENDED"]).default("ACTIVE"),
 });
 
@@ -125,7 +115,6 @@ export const upsertDepartment = createServerFn({ method: "POST" })
     const payload = {
       name: data.name,
       description: data.description ?? null,
-      telephone: data.telephone ?? null,
       status: data.status,
     };
     let result;
