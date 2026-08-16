@@ -267,6 +267,7 @@ export type Database = {
           id: string
           name: string
           status: Database["public"]["Enums"]["entity_status"]
+          telephone: string | null
         }
         Insert: {
           created_at?: string
@@ -274,6 +275,7 @@ export type Database = {
           id?: string
           name: string
           status?: Database["public"]["Enums"]["entity_status"]
+          telephone?: string | null
         }
         Update: {
           created_at?: string
@@ -281,6 +283,7 @@ export type Database = {
           id?: string
           name?: string
           status?: Database["public"]["Enums"]["entity_status"]
+          telephone?: string | null
         }
         Relationships: []
       }
@@ -1168,6 +1171,7 @@ export type Database = {
           registration_number: string
           section_id: string
           status: Database["public"]["Enums"]["entity_active"]
+          telephone: string | null
         }
         Insert: {
           created_at?: string
@@ -1182,6 +1186,7 @@ export type Database = {
           registration_number: string
           section_id: string
           status?: Database["public"]["Enums"]["entity_active"]
+          telephone?: string | null
         }
         Update: {
           created_at?: string
@@ -1196,6 +1201,7 @@ export type Database = {
           registration_number?: string
           section_id?: string
           status?: Database["public"]["Enums"]["entity_active"]
+          telephone?: string | null
         }
         Relationships: [
           {

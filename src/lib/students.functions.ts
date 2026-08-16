@@ -58,7 +58,7 @@ export const listMyStudents = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("students")
       .select(
-        "id, registration_number, full_name, gender, level_id, section_id, department_id, status, created_at, parent_guardian_name, parent_guardian_telephone, parent_guardian_relationship",
+        "id, registration_number, full_name, gender, telephone, level_id, section_id, department_id, status, created_at, parent_guardian_name, parent_guardian_telephone, parent_guardian_relationship",
       )
       .order("created_at", { ascending: false })
       .limit(2000);
@@ -97,12 +97,28 @@ const RelationshipOptions = [
   "Grandfather", "Grandmother", "Guardian", "Other",
 ] as const;
 
+const etPhone = (required: boolean) =>
+  z
+    .string()
+    .trim()
+    .max(40)
+    .optional()
+    .nullable()
+    .refine((v) => !required || (v !== undefined && v !== null && v !== ""), {
+      message: "Telephone number is required.",
+    })
+    .refine((v) => v === undefined || v === null || v === "" || normalizeEtPhone(v) !== null, {
+      message: PHONE_ERROR,
+    })
+    .transform((v) => (v === undefined || v === null || v === "" ? null : normalizeEtPhone(v)));
+
 const StudentRow = z.object({
   registration_number: z.string().min(1).max(80),
   full_name: z.string().min(1).max(160),
   level_name: z.string().min(1).max(80),
   section_name: z.string().min(1).max(80),
-  gender: z.string().max(20).optional().nullable(),
+  gender: z.enum(["Male", "Female"]).optional().nullable(),
+  telephone: etPhone(false),
   parent_guardian_name: z.string().trim().max(160).optional().nullable(),
   parent_guardian_telephone: z
     .string()
@@ -133,6 +149,7 @@ export const createStudent = createServerFn({ method: "POST" })
       registration_number: data.registration_number,
       full_name: data.full_name,
       gender: data.gender ?? null,
+      telephone: data.telephone ?? null,
       level_id: level.id,
       section_id: section.id,
       department_id: deptId,
@@ -140,7 +157,12 @@ export const createStudent = createServerFn({ method: "POST" })
       parent_guardian_telephone: data.parent_guardian_telephone ?? null,
       parent_guardian_relationship: data.parent_guardian_relationship ?? null,
     }).select().single();
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.code === "23505" && error.message.includes("telephone")) {
+        throw new Error("This telephone number is already registered to another student.");
+      }
+      throw new Error(error.message);
+    }
     await supabase.from("audit_logs").insert({
       actor_id: userId, action_type: "STUDENT_ADDED", entity_type: "students",
       entity_id: row.id, after_state: {
@@ -172,6 +194,7 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
       registration_number: string;
       full_name: string;
       gender: string | null;
+      telephone: string | null;
       level_id: string;
       section_id: string;
       department_id: string;
@@ -186,6 +209,7 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
         registration_number: r.registration_number,
         full_name: r.full_name,
         gender: r.gender ?? null,
+        telephone: r.telephone ?? null,
         level_id: lvl,
         section_id: sec,
         department_id: deptId,

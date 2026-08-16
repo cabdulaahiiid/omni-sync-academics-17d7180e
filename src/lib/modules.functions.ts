@@ -31,6 +31,35 @@ const moduleRow = z.object({
   total_sessions: z.number().int().min(0).default(0),
 });
 
+/** Create a single module from master-data ids (no name matching, no duplicates). */
+export const createModule = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      code: z.string().trim().min(1).max(40),
+      name: z.string().trim().min(1).max(200),
+      department_id: z.string().uuid(),
+      level_id: z.string().uuid(),
+      type: z.enum(["Theory", "Practical", "Both"]),
+      qualifications: z.array(z.string().min(1).max(60)).default([]),
+      total_hours: z.number().min(0).max(10000).default(0),
+      total_sessions: z.number().int().min(0).max(10000).default(0),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: row, error } = await supabase.from("modules").insert(data).select().single();
+    if (error) {
+      if (error.code === "23505") throw new Error(`Module code '${data.code}' already exists.`);
+      throw new Error(error.message);
+    }
+    await supabase.from("audit_logs").insert({
+      actor_id: userId, action_type: "CREATE", entity_type: "modules",
+      entity_id: row.id, after_state: row,
+    });
+    return row;
+  });
+
 export const bulkInsertModules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ rows: z.array(moduleRow).min(1).max(2000) }).parse(d))

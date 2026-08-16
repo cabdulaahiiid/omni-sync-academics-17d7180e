@@ -16,6 +16,8 @@ import { Plus, Trash2, Copy, Pencil, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AvatarUploader } from "@/components/avatar-uploader";
+import { isValidEtPhone, PHONE_ERROR } from "@/lib/phone";
+import { useMasterData } from "@/hooks/use-master-data";
 
 export const Route = createFileRoute("/_authenticated/strategic/trainers")({
   component: TrainersPage,
@@ -32,6 +34,7 @@ function TrainersPage() {
   const updateQuals = useServerFn(updateTrainerQualifications);
   const { data: rows, isLoading } = useQuery({ queryKey: ["trainers"], queryFn: () => list(), enabled: canQuery, throwOnError: false });
   const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => listD(), enabled: canQuery, throwOnError: false });
+  const md = useMasterData();
 
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -39,25 +42,26 @@ function TrainersPage() {
   const [phone, setPhone] = useState("");
   const [deptId, setDeptId] = useState("");
   const [password, setPassword] = useState("Trainer@123");
-  const [quals, setQuals] = useState("");
+  const [quals, setQuals] = useState<string[]>([]);
   const [avatarPath, setAvatarPath] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; temp_password: string } | null>(null);
-  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+  const [editing, setEditing] = useState<{ id: string; name: string; department_id: string | null } | null>(null);
   const [editQuals, setEditQuals] = useState<string[]>([]);
-  const [newQual, setNewQual] = useState("");
+  const deptModules = md.modulesFor(deptId);
+  const phoneInvalid = !isValidEtPhone(phone);
 
   const createMut = useMutation({
     mutationFn: () => create({ data: {
       email, full_name: fullName, department_id: deptId, password,
-      phone: phone || null,
-      qualifications: quals.split(",").map((q) => q.trim()).filter(Boolean),
+      phone,
+      qualifications: quals,
       avatar_path: avatarPath,
     } }),
     onSuccess: (r) => {
       toast.success("Trainer account created");
       setCredentials({ email: r.email, temp_password: r.temp_password });
       setOpen(false);
-      setEmail(""); setFullName(""); setPhone(""); setDeptId(""); setPassword("Trainer@123"); setQuals(""); setAvatarPath("");
+      setEmail(""); setFullName(""); setPhone(""); setDeptId(""); setPassword("Trainer@123"); setQuals([]); setAvatarPath("");
       qc.invalidateQueries({ queryKey: ["trainers"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -71,22 +75,16 @@ function TrainersPage() {
     mutationFn: () => updateQuals({ data: { id: editing!.id, qualifications: editQuals } }),
     onSuccess: () => {
       toast.success("Qualifications updated");
-      setEditing(null); setEditQuals([]); setNewQual("");
+      setEditing(null); setEditQuals([]);
       qc.invalidateQueries({ queryKey: ["trainers"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function openEdit(t: { id: string; full_name: string; qualifications: string[] | null }) {
-    setEditing({ id: t.id, name: t.full_name });
+  function openEdit(t: { id: string; full_name: string; qualifications: string[] | null; department_id?: string | null }) {
+    setEditing({ id: t.id, name: t.full_name, department_id: t.department_id ?? null });
     setEditQuals([...(t.qualifications ?? [])]);
-    setNewQual("");
-  }
-  function addQual() {
-    const v = newQual.trim();
-    if (!v) return;
-    if (editQuals.includes(v)) { setNewQual(""); return; }
-    setEditQuals([...editQuals, v]); setNewQual("");
+   
   }
 
   return (
@@ -105,24 +103,52 @@ function TrainersPage() {
               <div className="space-y-2"><Label>Full name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
               <div className="space-y-2"><Label>Email</Label><Input type="email" placeholder="trainerx@tvet.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
               <div className="space-y-2"><Label>Password</Label><Input value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Phone (optional)</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+              <div className="space-y-2">
+                <Label>Trainer Telephone</Label>
+                <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                {phone && phoneInvalid && <p className="text-xs text-destructive">{PHONE_ERROR}</p>}
+              </div>
               <div className="space-y-2">
                 <Label>Department</Label>
-                <Select value={deptId} onValueChange={setDeptId}>
+                <Select value={deptId} onValueChange={(v) => { setDeptId(v); setQuals([]); }}>
                   <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
                   <SelectContent>
-                    {(depts ?? []).map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                    {(depts ?? md.departments).map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Qualifications (comma-separated module codes)</Label>
-                <Input placeholder="ICT-101, ICT-102" value={quals} onChange={(e) => setQuals(e.target.value)} />
+                <Label>Qualifications (modules)</Label>
+                <Select
+                  value=""
+                  onValueChange={(v) => setQuals((q) => (q.includes(v) ? q : [...q, v]))}
+                  disabled={!deptId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={deptId ? "Add a module" : "Select department first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {deptModules.length === 0 && <SelectItem value="__none" disabled>No modules registered</SelectItem>}
+                    {deptModules.map((m: any) => (
+                      <SelectItem key={m.id} value={m.code}>{m.code} — {m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex flex-wrap gap-2">
+                  {quals.map((q) => (
+                    <Badge key={q} variant="secondary" className="gap-1">
+                      {q}
+                      <button type="button" onClick={() => setQuals(quals.filter((x) => x !== q))} aria-label={`Remove ${q}`}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || !password || !avatarPath || createMut.isPending}>
+              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || !password || !phone || phoneInvalid || !avatarPath || createMut.isPending}>
                 {createMut.isPending ? "Creating…" : "Create"}
               </Button>
             </DialogFooter>
@@ -164,7 +190,7 @@ function TrainersPage() {
         </Table>
       </Card>
 
-      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); setNewQual(""); } }}>
+      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Qualifications — {editing?.name}</DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -179,15 +205,17 @@ function TrainersPage() {
                 </Badge>
               ))}
             </div>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Add module code (e.g. ICT-101)"
-                value={newQual}
-                onChange={(e) => setNewQual(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addQual(); } }}
-              />
-              <Button type="button" variant="outline" onClick={addQual}>Add</Button>
-            </div>
+            <Select
+              value=""
+              onValueChange={(v) => setEditQuals((q) => (q.includes(v) ? q : [...q, v]))}
+            >
+              <SelectTrigger><SelectValue placeholder="Add a module" /></SelectTrigger>
+              <SelectContent>
+                {md.modulesFor(editing?.department_id ?? undefined).map((m: any) => (
+                  <SelectItem key={m.id} value={m.code}>{m.code} — {m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>

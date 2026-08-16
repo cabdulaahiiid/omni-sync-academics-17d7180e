@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useInvalidateMasterData } from "@/hooks/use-master-data";
 
 export const Route = createFileRoute("/_authenticated/strategic/sections")({
   component: SectionsPage,
@@ -36,6 +37,7 @@ function SectionsPage() {
   const [filterLevel, setFilterLevel] = useState<string>("all");
 
   const [open, setOpen] = useState(false);
+  const invalidateMaster = useInvalidateMasterData();
   const [formDept, setFormDept] = useState("");
   const [formLevel, setFormLevel] = useState("");
   const [formName, setFormName] = useState("");
@@ -60,6 +62,7 @@ function SectionsPage() {
     onSuccess: () => {
       toast.success("Section created");
       qc.invalidateQueries({ queryKey: ["sections"] });
+      invalidateMaster();
       setOpen(false); setFormDept(""); setFormLevel(""); setFormName("");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -67,7 +70,7 @@ function SectionsPage() {
 
   const delMut = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
-    onSuccess: () => { toast.success("Section deleted"); qc.invalidateQueries({ queryKey: ["sections"] }); },
+    onSuccess: () => { toast.success("Section deleted"); qc.invalidateQueries({ queryKey: ["sections"] }); invalidateMaster(); },
     onError: (e: Error) => toast.error(e.message),
   });
 

@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { VENUE_TYPE_OPTIONS } from "@/lib/master-data";
+import { useInvalidateMasterData } from "@/hooks/use-master-data";
 import { Plus, Pencil, Trash2, MapPin } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -35,6 +37,7 @@ function VenuesPage() {
     throwOnError: false,
   });
   const [open, setOpen] = useState(false);
+  const invalidateMaster = useInvalidateMasterData();
   const [editing, setEditing] = useState<Venue | null>(null);
   const [name, setName] = useState("");
   const [type, setType] = useState<VType>("Classroom");
@@ -45,12 +48,12 @@ function VenuesPage() {
 
   const saveMut = useMutation({
     mutationFn: () => upsert({ data: { id: editing?.id, name, type, capacity, latitude, longitude, geo_radius: geoRadius } }),
-    onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["venues"] }); setOpen(false); },
+    onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["venues"] }); invalidateMaster(); setOpen(false); },
     onError: (e: Error) => toast.error(e.message),
   });
   const delMut = useMutation({
     mutationFn: (id: string) => del({ data: { id } }),
-    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["venues"] }); },
+    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["venues"] }); invalidateMaster(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -94,9 +97,7 @@ function VenuesPage() {
                   <Select value={type} onValueChange={(v) => setType(v as VType)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Classroom">Classroom</SelectItem>
-                      <SelectItem value="Lab">Lab</SelectItem>
-                      <SelectItem value="Workshop">Workshop</SelectItem>
+                    {VENUE_TYPE_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>

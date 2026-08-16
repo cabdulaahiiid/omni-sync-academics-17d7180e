@@ -1,19 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listModules, bulkInsertModules } from "@/lib/modules.functions";
+import { listModules, bulkInsertModules, createModule } from "@/lib/modules.functions";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet } from "lucide-react";
+import { Upload, FileSpreadsheet, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { DownloadTemplateButton } from "@/components/download-template-button";
 import { MODULES_TEMPLATE } from "@/lib/xlsx-templates";
+import { useMasterData, useInvalidateMasterData } from "@/hooks/use-master-data";
+import { MODULE_TYPE_OPTIONS } from "@/lib/master-data";
 
 export const Route = createFileRoute("/_authenticated/strategic/modules")({
   component: ModulesPage,
@@ -34,6 +39,26 @@ function ModulesPage() {
   const [open, setOpen] = useState(false);
   const [parsed, setParsed] = useState<Row[]>([]);
   const [fileName, setFileName] = useState("");
+  const md = useMasterData();
+  const invalidateMaster = useInvalidateMasterData();
+  const createFn = useServerFn(createModule);
+  const [addOpen, setAddOpen] = useState(false);
+  const emptyForm = {
+    code: "", name: "", department_id: "", level_id: "",
+    type: "Both" as "Theory" | "Practical" | "Both",
+    total_hours: 0, total_sessions: 0,
+  };
+  const [form, setForm] = useState(emptyForm);
+  const createMut = useMutation({
+    mutationFn: () => createFn({ data: { ...form, qualifications: [] } }),
+    onSuccess: () => {
+      toast.success("Module created");
+      setAddOpen(false); setForm(emptyForm);
+      qc.invalidateQueries({ queryKey: ["modules"] });
+      invalidateMaster();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -72,6 +97,7 @@ function ModulesPage() {
         r.errors.slice(0, 5).forEach((e) => toast.error(`Row ${e.row}: ${e.reason}`));
       }
       qc.invalidateQueries({ queryKey: ["modules"] });
+      invalidateMaster();
       setOpen(false); setParsed([]); setFileName("");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -86,6 +112,59 @@ function ModulesPage() {
         </div>
         <div className="flex gap-2">
           <DownloadTemplateButton spec={MODULES_TEMPLATE} label="Template" size="default" />
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+            <DialogTrigger asChild><Button variant="outline"><Plus className="mr-2 h-4 w-4" /> New module</Button></DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>New module</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2"><Label>Code</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Department</Label>
+                    <Select value={form.department_id} onValueChange={(v) => setForm({ ...form, department_id: v, level_id: "" })}>
+                      <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                      <SelectContent>
+                        {md.departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Level</Label>
+                    <Select value={form.level_id} onValueChange={(v) => setForm({ ...form, level_id: v })} disabled={!form.department_id}>
+                      <SelectTrigger><SelectValue placeholder={form.department_id ? "Select level" : "Select department first"} /></SelectTrigger>
+                      <SelectContent>
+                        {md.levelsFor(form.department_id).map((l: any) => (
+                          <SelectItem key={l.id} value={l.id}>{md.labelForLevel(l)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as typeof form.type })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {MODULE_TYPE_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2"><Label>Hours</Label><Input type="number" min={0} value={form.total_hours} onChange={(e) => setForm({ ...form, total_hours: Number(e.target.value) || 0 })} /></div>
+                  <div className="space-y-2"><Label>Sessions</Label><Input type="number" min={0} value={form.total_sessions} onChange={(e) => setForm({ ...form, total_sessions: Number(e.target.value) || 0 })} /></div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+                <Button onClick={() => createMut.mutate()} disabled={!form.code || !form.name || !form.department_id || !form.level_id || createMut.isPending}>
+                  {createMut.isPending ? "Saving…" : "Save"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild><Button><Upload className="mr-2 h-4 w-4" /> Bulk upload</Button></DialogTrigger>
             <DialogContent className="max-w-3xl">

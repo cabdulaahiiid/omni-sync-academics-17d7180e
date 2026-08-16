@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { DownloadTemplateButton } from "@/components/download-template-button";
 import { STUDENTS_ROSTER_TEMPLATE } from "@/lib/xlsx-templates";
 import { isValidEtPhone, PHONE_ERROR } from "@/lib/phone";
+import { useMasterData } from "@/hooks/use-master-data";
+import { GENDER_OPTIONS, GUARDIAN_RELATIONSHIP_OPTIONS, normalizeGender } from "@/lib/master-data";
 import { downloadCsv, downloadPdf } from "@/lib/report-export";
 import type { ReportResult } from "@/lib/reports.functions";
 import { FileDown, FileText } from "lucide-react";
@@ -39,7 +41,7 @@ function StudentsHub() {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<any | null>(null);
   const [form, setForm] = useState({
-    registration_number: "", full_name: "", level_name: "", section_name: "", gender: "",
+    registration_number: "", full_name: "", level_id: "", section_id: "", gender: "", telephone: "",
     parent_guardian_name: "", parent_guardian_telephone: "", parent_guardian_relationship: "",
   });
   const [csvRows, setCsvRows] = useState<ParsedRow[]>([]);
@@ -49,9 +51,18 @@ function StudentsHub() {
 
   const levels = ls?.levels ?? [];
   const sections = (ls?.sections ?? []).filter((s) => !bulkLevelId || s.level_id === bulkLevelId);
+  // Live master data for the registration form (dependent Level → Section).
+  const md = useMasterData();
+  const formLevels = levels.length ? levels : md.levels;
+  const formSections = (ls?.sections ?? md.sections).filter(
+    (s: any) => !form.level_id || s.level_id === form.level_id,
+  );
+  const levelName = (formLevels as any[]).find((l) => l.id === form.level_id)?.name ?? "";
+  const sectionName = (formSections as any[]).find((s) => s.id === form.section_id)?.name ?? "";
   const bulkLevelName = levels.find((l) => l.id === bulkLevelId)?.name ?? "";
   const bulkSectionName = sections.find((s) => s.id === bulkSectionId)?.name ?? "";
   const phoneInvalid = !isValidEtPhone(form.parent_guardian_telephone);
+  const studentPhoneInvalid = !isValidEtPhone(form.telephone);
 
   function buildReport(): ReportResult {
     const columns = [
@@ -82,12 +93,25 @@ function StudentsHub() {
   }
 
   const create = useMutation({
-    mutationFn: () => createFn({ data: { ...form, gender: form.gender || null } }),
+    mutationFn: () =>
+      createFn({
+        data: {
+          registration_number: form.registration_number,
+          full_name: form.full_name,
+          level_name: levelName,
+          section_name: sectionName,
+          gender: (form.gender || null) as "Male" | "Female" | null,
+          telephone: form.telephone || null,
+          parent_guardian_name: form.parent_guardian_name || null,
+          parent_guardian_telephone: form.parent_guardian_telephone || null,
+          parent_guardian_relationship: (form.parent_guardian_relationship || null) as any,
+        },
+      }),
     onSuccess: () => {
       toast.success("Student registered");
       setOpen(false);
       setForm({
-        registration_number: "", full_name: "", level_name: "", section_name: "", gender: "",
+        registration_number: "", full_name: "", level_id: "", section_id: "", gender: "", telephone: "",
         parent_guardian_name: "", parent_guardian_telephone: "", parent_guardian_relationship: "",
       });
       qc.invalidateQueries({ queryKey: ["dh-students"] });
@@ -103,7 +127,8 @@ function StudentsHub() {
         full_name: r.full_name || "",
         level_name: bulkLevelName,
         section_name: bulkSectionName,
-        gender: r.gender || null,
+        gender: normalizeGender(r.gender),
+        telephone: r.telephone || r.phone || null,
       })).filter((r) => r.registration_number && r.full_name);
       return bulkFn({ data: { rows } });
     },
@@ -131,10 +156,45 @@ function StudentsHub() {
               <div><Label>Student ID code</Label><Input value={form.registration_number} onChange={(e) => setForm({ ...form, registration_number: e.target.value })} /></div>
               <div><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-2">
-                <div><Label>Level</Label><Input placeholder="e.g. I" value={form.level_name} onChange={(e) => setForm({ ...form, level_name: e.target.value })} /></div>
-                <div><Label>Section</Label><Input placeholder="e.g. Section A" value={form.section_name} onChange={(e) => setForm({ ...form, section_name: e.target.value })} /></div>
+                <div>
+                  <Label>Level</Label>
+                  <Select value={form.level_id} onValueChange={(v) => setForm({ ...form, level_id: v, section_id: "" })}>
+                    <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
+                    <SelectContent>
+                      {(formLevels as any[]).map((l) => (
+                        <SelectItem key={l.id} value={l.id}>{l.display_name || l.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Section</Label>
+                  <Select value={form.section_id} onValueChange={(v) => setForm({ ...form, section_id: v })} disabled={!form.level_id}>
+                    <SelectTrigger><SelectValue placeholder={form.level_id ? "Select section" : "Select level first"} /></SelectTrigger>
+                    <SelectContent>
+                      {(formSections as any[]).map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div><Label>Gender (optional)</Label><Input value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Gender</Label>
+                  <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                    <SelectContent>
+                      {GENDER_OPTIONS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Student Telephone</Label>
+                  <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} />
+                  {studentPhoneInvalid && <p className="mt-1 text-xs text-destructive">{PHONE_ERROR}</p>}
+                </div>
+              </div>
             </div>
             <div className="space-y-3 border-t pt-4">
               <h3 className="text-sm font-semibold text-slate-800">Parent / Guardian Contact</h3>
@@ -153,7 +213,7 @@ function StudentsHub() {
                   <Select value={form.parent_guardian_relationship} onValueChange={(v) => setForm({ ...form, parent_guardian_relationship: v })}>
                     <SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger>
                     <SelectContent>
-                      {["Father", "Mother", "Brother", "Sister", "Uncle", "Aunt", "Grandfather", "Grandmother", "Guardian", "Other"].map((r) => (
+                      {GUARDIAN_RELATIONSHIP_OPTIONS.map((r) => (
                         <SelectItem key={r} value={r}>{r}</SelectItem>
                       ))}
                     </SelectContent>
@@ -164,7 +224,7 @@ function StudentsHub() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button onClick={() => create.mutate()}
-                disabled={!form.registration_number || !form.full_name || !form.level_name || !form.section_name || phoneInvalid || create.isPending}>
+                disabled={!form.registration_number || !form.full_name || !form.level_id || !form.section_id || !form.telephone || studentPhoneInvalid || phoneInvalid || create.isPending}>
                 {create.isPending ? "Saving…" : "Save"}
               </Button>
             </DialogFooter>
@@ -267,6 +327,7 @@ function StudentsHub() {
                 <div><p className="text-xs text-muted-foreground">Level</p><p>{detail.level_name}</p></div>
                 <div><p className="text-xs text-muted-foreground">Section</p><p>{detail.section_name}</p></div>
                 <div><p className="text-xs text-muted-foreground">Gender</p><p>{detail.gender || "—"}</p></div>
+                <div><p className="text-xs text-muted-foreground">Telephone</p><p className="font-mono">{detail.telephone || "—"}</p></div>
                 <div><p className="text-xs text-muted-foreground">Status</p><p>{detail.status}</p></div>
               </div>
               {canViewGuardian && (
