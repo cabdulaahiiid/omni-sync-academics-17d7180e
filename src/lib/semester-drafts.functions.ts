@@ -234,6 +234,39 @@ export const listDraftModules = createServerFn({ method: "POST" })
     z.object({ department_id: z.string().uuid().optional() }).parse(d ?? {}),
   )
   .handler(async ({ data, context }) => {
+    return listDraftModulesImpl(data, context);
+  });
+
+/**
+ * Chronological session list for one canonical plan (or one legacy module
+ * group) — the same rows the weekly view groups by week, nothing recalculated.
+ */
+export const listPlanSessions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ plan_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("schedules")
+      .select("id, session_number, week_num, date, day, start_time, end_time, status, is_published, module_code, module_name, trainer_name")
+      .eq("plan_id", data.plan_id)
+      .order("date")
+      .order("start_time");
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+const listDraftModulesLegacy = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ department_id: z.string().uuid().optional() }).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    return listDraftModulesImpl(data, context);
+  });
+
+async function listDraftModulesImpl(data: { department_id?: string }, context: any) {
     const { supabase } = context;
     const { requireRole } = await import("@/lib/auth/require-role");
     const roles = await requireRole(context, ["DH", "MA"], "listDraftModules");
@@ -310,4 +343,4 @@ export const listDraftModules = createServerFn({ method: "POST" })
     return Array.from(groups.values())
       .map((g) => ({ ...g, weeks: g.weeks.sort((a, b) => a - b) }))
       .sort((a, b) => a.start_date.localeCompare(b.start_date) || a.module_code.localeCompare(b.module_code));
-  });
+}
