@@ -191,7 +191,7 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
     ]);
     const lMap = new Map((levels ?? []).map((l) => [String(l.name).toLowerCase(), l.id as string]));
     const sMap = new Map((sections ?? []).map((s) => [`${s.level_id}|${String(s.name).toLowerCase()}`, s.id as string]));
-    const errors: { row: number; reason: string }[] = [];
+    const errors: { row: number; column: string; value: string; reason: string }[] = [];
     type StudentInsert = {
       registration_number: string;
       full_name: string;
@@ -201,13 +201,51 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
       section_id: string;
       department_id: string;
     };
-    const inserts: StudentInsert[] = [];
+    const knownLevels = (levels ?? []).map((l) => String(l.name)).join(", ") || "none defined";
+    const inserts: (StudentInsert & { __row: number })[] = [];
+    const seenPhones = new Map<string, number>();
+    const seenIds = new Map<string, number>();
     data.rows.forEach((r, i) => {
+      const rowNo = i + 1;
       const lvl = lMap.get(r.level_name.toLowerCase());
-      if (!lvl) { errors.push({ row: i + 1, reason: `Unknown level '${r.level_name}'` }); return; }
+      if (!lvl) {
+        errors.push({
+          row: rowNo, column: "level_name", value: r.level_name,
+          reason: `No level named "${r.level_name}" in your department. Use one of: ${knownLevels}.`,
+        });
+        return;
+      }
       const sec = sMap.get(`${lvl}|${r.section_name.toLowerCase()}`);
-      if (!sec) { errors.push({ row: i + 1, reason: `Unknown section '${r.section_name}' for '${r.level_name}'` }); return; }
+      if (!sec) {
+        const options = (sections ?? []).filter((s) => s.level_id === lvl).map((s) => String(s.name)).join(", ") || "none defined";
+        errors.push({
+          row: rowNo, column: "section_name", value: r.section_name,
+          reason: `No section named "${r.section_name}" under ${r.level_name}. Use one of: ${options}.`,
+        });
+        return;
+      }
+      const dupIdRow = seenIds.get(r.registration_number.toLowerCase());
+      if (dupIdRow) {
+        errors.push({
+          row: rowNo, column: "student_id_code", value: r.registration_number,
+          reason: `Same student ID also appears on row ${dupIdRow} of this file. Remove one of the two rows.`,
+        });
+        return;
+      }
+      seenIds.set(r.registration_number.toLowerCase(), rowNo);
+      if (r.telephone) {
+        const dupPhoneRow = seenPhones.get(r.telephone);
+        if (dupPhoneRow) {
+          errors.push({
+            row: rowNo, column: "telephone", value: r.telephone,
+            reason: `Same telephone also appears on row ${dupPhoneRow} of this file. Each student needs a unique number.`,
+          });
+          return;
+        }
+        seenPhones.set(r.telephone, rowNo);
+      }
       inserts.push({
+        __row: rowNo,
         registration_number: r.registration_number,
         full_name: r.full_name,
         gender: r.gender ?? null,
@@ -217,21 +255,47 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
         department_id: deptId,
       });
     });
+    const describeInsertError = (err: { code?: string; message: string; details?: string | null }) => {
+      const text = `${err.message} ${err.details ?? ""}`;
+      if (err.code === "23505" && text.includes("telephone")) {
+        return { column: "telephone", reason: "This telephone is already registered to another student in the system. Use a different number or remove the row." };
+      }
+      if (err.code === "23505") {
+        return { column: "student_id_code", reason: "This student ID already exists in the system. Use a different ID or remove the row." };
+      }
+      return { column: "row", reason: err.message };
+    };
+
     let inserted = 0;
     if (inserts.length) {
       const chunk = 500;
       for (let i = 0; i < inserts.length; i += chunk) {
         const slice = inserts.slice(i, i + chunk);
-        const { error, data: ins } = await supabase.from("students").insert(slice).select("id");
-        if (error) {
-          if (error.code === "23505" && error.message.includes("telephone")) {
-            throw new Error("Import stopped: one of the telephone numbers in this file is already registered to another student. Please remove duplicates and try again.");
-          }
-          throw new Error(error.message);
+        const payload = slice.map(({ __row, ...rest }) => rest);
+        const { error, data: ins } = await supabase.from("students").insert(payload).select("id");
+        if (!error) {
+          inserted += ins?.length ?? 0;
+          continue;
         }
-        inserted += ins?.length ?? 0;
+        // Retry row by row so the exact failing rows can be reported back.
+        for (const row of slice) {
+          const { __row, ...rest } = row;
+          const single = await supabase.from("students").insert(rest).select("id");
+          if (single.error) {
+            const d = describeInsertError(single.error);
+            errors.push({
+              row: __row,
+              column: d.column,
+              value: d.column === "telephone" ? rest.telephone ?? "" : rest.registration_number,
+              reason: d.reason,
+            });
+          } else {
+            inserted += 1;
+          }
+        }
       }
     }
+    errors.sort((a, b) => a.row - b.row);
     if (inserted > 0) {
       await supabase.from("audit_logs").insert({
         actor_id: userId, action_type: "BULK_IMPORT", entity_type: "students",
