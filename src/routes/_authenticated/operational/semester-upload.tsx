@@ -264,6 +264,23 @@ function SemesterBuilderPage() {
     builderPayload.trainer_id && builderPayload.section_id && builderPayload.level_id && builderPayload.venue_id &&
     builderPayload.start_date && builderPayload.start_time && durationMin > 0 && daysSelected.length > 0);
 
+  /** Field-specific list of what still blocks "Save as Draft". */
+  const missingFields = useMemo(() => {
+    const m: string[] = [];
+    if (!academicYear) m.push("Academic Year");
+    if (!semesterId) m.push("Academic period");
+    if (!levelId) m.push("Level");
+    if (!moduleId) m.push("Module");
+    if (!trainerId) m.push("Trainer");
+    if (!sectionId) m.push("Section");
+    if (!venueId) m.push("Venue");
+    if (daysSelected.length === 0) m.push("Schedule days");
+    if (durationMin <= 0) m.push("Session duration");
+    if (!startDate) m.push("Start date");
+    if (!startTime) m.push("Start time");
+    return m;
+  }, [academicYear, semesterId, levelId, moduleId, trainerId, sectionId, venueId, daysSelected, durationMin, startDate, startTime]);
+
   const validateMut = useMutation({
     mutationFn: () => validateFn({ data: builderPayload }),
     onError: (e: Error) => toastError(e),
