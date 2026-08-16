@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -41,7 +42,7 @@ function LevelsPage() {
       qc.invalidateQueries({ queryKey: ["levels-by-dept"] });
       setEditingId(null);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const visible = useMemo(

@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -77,7 +78,7 @@ function ApprovalsPage() {
     mutationFn: (vars: { id: string; decision: "approved" | "rejected"; comment: string }) =>
       decide({ data: vars }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["approval-queue"] }); toast.success("Decision recorded"); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const rejectSem = useMutation({
@@ -87,7 +88,7 @@ function ApprovalsPage() {
       toast.success("Level returned to DH with feedback");
       qc.invalidateQueries({ queryKey: ["approval-queue"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const splitMut = useMutation({
@@ -99,7 +100,7 @@ function ApprovalsPage() {
       qc.invalidateQueries({ queryKey: ["approvals-weeks"] });
       setTab("session");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   // Client-side filter/sort/paginate semester rows
@@ -419,7 +420,7 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
       setPendingDecision(null);
       setComment("");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const deleteFn = useServerFn(deleteSchedule);
@@ -436,7 +437,7 @@ function SessionApprovalsByDeptWeek({ fixedDeptId, onSwitchTab }: { fixedDeptId?
       setPendingDelete(null);
       setDeleteReason("");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   return (

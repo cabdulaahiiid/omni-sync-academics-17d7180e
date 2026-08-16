@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -68,12 +69,12 @@ function DepartmentsPage() {
   const saveMut = useMutation({
     mutationFn: () => upsert({ data: { id: editing?.id, name, description, status } }),
     onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["departments"] }); invalidateMaster(); setOpen(false); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const delMut = useMutation({
     mutationFn: (id: string) => del({ data: { id } }),
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["departments"] }); invalidateMaster(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const filteredRows = (rows ?? []).filter((d: any) => {

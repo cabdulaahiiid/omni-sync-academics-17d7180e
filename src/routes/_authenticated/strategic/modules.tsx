@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -58,7 +59,7 @@ function ModulesPage() {
       qc.invalidateQueries({ queryKey: ["modules"] });
       invalidateMaster();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -103,7 +104,7 @@ function ModulesPage() {
       invalidateMaster();
       setOpen(false); setParsed([]); setFileName("");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   return (

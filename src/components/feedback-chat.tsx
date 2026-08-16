@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -51,7 +52,7 @@ export function FeedbackChat({ semesterId, weekNum = null, title = "Feedback cha
   const mut = useMutation({
     mutationFn: () => replyFn({ data: { thread_id: data!.thread!.id, message: text.trim() } }),
     onSuccess: () => { setText(""); refetch(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const { data: semData, refetch: refetchSem } = useQuery({
@@ -68,7 +69,7 @@ export function FeedbackChat({ semesterId, weekNum = null, title = "Feedback cha
       else await resubmitWeekFn({ data: { semester_id: semesterId, week_num: weekNum } });
     },
     onSuccess: () => { toast.success("Resubmitted to Admin"); refetchSem(); qc.invalidateQueries({ queryKey: ["semester-sessions", semesterId] }); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   if (!data?.thread) {

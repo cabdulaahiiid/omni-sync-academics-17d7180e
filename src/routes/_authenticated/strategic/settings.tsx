@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,14 +50,14 @@ function SettingsPage() {
       toast.success("Settings saved");
       qc.invalidateQueries({ queryKey: ["global-config"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   function useMyLocation() {
     if (!navigator.geolocation) { toast.error("Geolocation not available"); return; }
     navigator.geolocation.getCurrentPosition(
       (p) => { setLat(String(p.coords.latitude)); setLng(String(p.coords.longitude)); toast.success("Captured current coordinates"); },
-      (e) => toast.error(e.message),
+      (e) => toastError(e),
       { enableHighAccuracy: true },
     );
   }

@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -72,7 +73,7 @@ function TrainersPage() {
   const revokeMut = useMutation({
     mutationFn: (id: string) => revoke({ data: { id } }),
     onSuccess: () => { toast.success("Trainer suspended"); qc.invalidateQueries({ queryKey: ["trainers"] }); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const editMut = useMutation({
     mutationFn: () => updateQuals({ data: { id: editing!.id, qualifications: editQuals } }),
@@ -81,7 +82,7 @@ function TrainersPage() {
       setEditing(null); setEditQuals([]);
       qc.invalidateQueries({ queryKey: ["trainers"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   function openEdit(t: { id: string; full_name: string; qualifications: string[] | null; department_id?: string | null }) {

@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -94,7 +95,7 @@ function WorkspaceBody({ semesterId, weekNum, title }: { semesterId: string; wee
       qc.invalidateQueries({ queryKey: ["week-feedback-threads"] });
       qc.invalidateQueries({ queryKey: ["semester-drafts"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const chatPanel = <ChatPanel semesterId={semesterId} weekNum={weekNum} />;
@@ -181,7 +182,7 @@ function ChatPanel({ semesterId, weekNum }: { semesterId: string; weekNum: numbe
   const send = useMutation({
     mutationFn: () => replyFn({ data: { thread_id: data!.thread!.id, message: text.trim() } }),
     onSuccess: () => { setText(""); refetch(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const messages = (data?.messages ?? []) as Msg[];
@@ -265,7 +266,7 @@ function EditorPanel({
   const del = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { schedule_id: id } }),
     onSuccess: () => { toast.success("Session deleted"); invalidate(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   return (

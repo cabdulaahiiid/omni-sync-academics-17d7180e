@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -96,7 +97,7 @@ function WeeklyMatrix() {
       if (r.ok) toast.success("No conflicts. Ready to apply & resubmit.");
       else toast.warning(`${r.conflicts.length} conflict(s) remain`);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const applyMut = useMutation({
@@ -121,7 +122,7 @@ function WeeklyMatrix() {
       qc.invalidateQueries({ queryKey: ["dh-matrix"] });
       setSwapTarget(null);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const days = Array.from({ length: 7 }, (_, i) => {

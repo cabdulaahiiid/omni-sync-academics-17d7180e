@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -64,7 +65,7 @@ function SystemDataPage() {
         window.location.href = "/login";
       }, 1500);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const resetMut = useMutation({
@@ -74,7 +75,7 @@ function SystemDataPage() {
       closeDialog();
       refetch();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const isPending = wipeMut.isPending || resetMut.isPending || verifying;
@@ -239,7 +240,7 @@ function DataIntegrityCard() {
   type CheckResult = { generated_at: string; drift: number; checks: CheckRow[] };
   const m = useMutation({
     mutationFn: () => runFn() as Promise<CheckResult>,
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const data = m.data;
   return (
