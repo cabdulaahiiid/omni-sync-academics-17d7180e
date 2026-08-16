@@ -50,10 +50,14 @@ export const adminChangeUserPassword = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, { password: data.new_password });
     if (error) throw new Error(error.message);
+    // Force re-authentication everywhere: revoke all existing sessions of the user.
+    const { error: soErr } = await supabaseAdmin.auth.admin.signOut(data.user_id as any, "global" as any);
+    const sessionsRevoked = !soErr;
     await context.supabase.from("audit_logs").insert({
       actor_id: context.userId, action_type: "ADMIN_PASSWORD_RESET", entity_type: "profiles", entity_id: data.user_id,
+      after_state: { sessions_revoked: sessionsRevoked },
     });
-    return { ok: true };
+    return { ok: true, sessions_revoked: sessionsRevoked };
   });
 
 // Self password change: re-auth then update

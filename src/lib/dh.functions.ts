@@ -152,6 +152,8 @@ export const createTrainer = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await requireRole(context, ["MA"], "dh.functions");
+    const { assertPhoneAvailable } = await import("@/lib/phone-uniqueness.server");
+    await assertPhoneAvailable(data.phone);
     const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -178,7 +180,8 @@ export const createTrainer = createServerFn({ method: "POST" })
     if (trErr) throw new Error(trErr.message);
     await supabaseAdmin.from("profiles").upsert({
       id: newId, full_name: data.full_name, email: data.email,
-      department_id: data.department_id, trainer_registry_id: tr.id, avatar_path: finalAvatar,
+      phone: data.phone, department_id: data.department_id,
+      trainer_registry_id: tr.id, avatar_path: finalAvatar,
     });
     await supabaseAdmin.from("user_roles").insert({ user_id: newId, role: "T" });
     await context.supabase.from("audit_logs").insert({
