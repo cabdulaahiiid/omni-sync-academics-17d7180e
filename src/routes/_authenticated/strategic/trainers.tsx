@@ -75,7 +75,7 @@ function TrainersPage() {
     mutationFn: () => updateQuals({ data: { id: editing!.id, qualifications: editQuals } }),
     onSuccess: () => {
       toast.success("Qualifications updated");
-      setEditing(null); setEditQuals([]); setNewQual("");
+      setEditing(null); setEditQuals([]);
       qc.invalidateQueries({ queryKey: ["trainers"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -84,7 +84,7 @@ function TrainersPage() {
   function openEdit(t: { id: string; full_name: string; qualifications: string[] | null; department_id?: string | null }) {
     setEditing({ id: t.id, name: t.full_name, department_id: t.department_id ?? null });
     setEditQuals([...(t.qualifications ?? [])]);
-    setNewQual("");
+   
   }
 
   return (
@@ -190,7 +190,7 @@ function TrainersPage() {
         </Table>
       </Card>
 
-      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); setNewQual(""); } }}>
+      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Qualifications — {editing?.name}</DialogTitle></DialogHeader>
           <div className="space-y-3">
