@@ -17,8 +17,8 @@ export const listDepartmentHeads = createServerFn({ method: "GET" })
     const deptIds = (heads ?? []).map((h) => h.department_id);
     const [{ data: profiles }, { data: depts }] = await Promise.all([
       userIds.length
-        ? context.supabase.from("profiles").select("id, full_name, email").in("id", userIds)
-        : Promise.resolve({ data: [] as { id: string; full_name: string; email: string }[] }),
+        ? context.supabase.from("profiles").select("id, full_name, email, phone").in("id", userIds)
+        : Promise.resolve({ data: [] as { id: string; full_name: string; email: string; phone: string | null }[] }),
       deptIds.length
         ? context.supabase.from("departments").select("id, name").in("id", deptIds)
         : Promise.resolve({ data: [] as { id: string; name: string }[] }),
@@ -32,6 +32,7 @@ export const listDepartmentHeads = createServerFn({ method: "GET" })
       department_name: dMap[h.department_id]?.name ?? "—",
       full_name: pMap[h.user_id]?.full_name ?? "",
       email: pMap[h.user_id]?.email ?? "",
+      phone: pMap[h.user_id]?.phone ?? null,
       created_at: h.created_at,
     }));
   });
@@ -44,6 +45,15 @@ export const createDepartmentHead = createServerFn({ method: "POST" })
       full_name: z.string().min(1).max(120),
       department_id: z.string().uuid(),
       password: z.string().min(6).max(72),
+      phone: z
+        .string()
+        .trim()
+        .min(1, "Department Head telephone number is required.")
+        .max(40)
+        .refine((v) => normalizeEtPhone(v) !== null, {
+          message: "Please enter a valid Ethiopian telephone number.",
+        })
+        .transform((v) => normalizeEtPhone(v) as string),
       avatar_path: z.string().min(1).max(300),
     }).parse(d),
   )
@@ -67,7 +77,8 @@ export const createDepartmentHead = createServerFn({ method: "POST" })
       if (mvErr) throw new Error(mvErr.message);
     }
     await supabaseAdmin.from("profiles").upsert({
-      id: newId, full_name: data.full_name, email: data.email, department_id: data.department_id, avatar_path: finalAvatar,
+      id: newId, full_name: data.full_name, email: data.email, phone: data.phone,
+      department_id: data.department_id, avatar_path: finalAvatar,
     });
     await supabaseAdmin.from("user_roles").insert({ user_id: newId, role: "DH" });
     const { data: dh, error: dhErr } = await supabaseAdmin.from("department_heads")

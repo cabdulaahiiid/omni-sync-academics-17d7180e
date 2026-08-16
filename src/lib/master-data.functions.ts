@@ -11,7 +11,7 @@ export const getMasterData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const [departments, levels, sections, modules, trainers, venues, semesters, trainerLinks] =
       await Promise.all([
-        supabase.from("departments").select("id, name, status, telephone").order("name"),
+        supabase.from("departments").select("id, name, status").order("name"),
         supabase.from("levels").select("id, name, display_name, department_id, status"),
         supabase.from("sections").select("id, name, level_id, department_id").order("name"),
         supabase.from("modules").select("id, code, name, level_id, department_id, type, status").order("code"),

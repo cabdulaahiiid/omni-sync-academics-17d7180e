@@ -1,7 +1,10 @@
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { useMe } from "@/hooks/use-me";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 
 /**
  * Client-side gate for any subtree that requires an authenticated session.
@@ -16,12 +19,20 @@ import { useNavigate } from "@tanstack/react-router";
 export function AuthGate({ children }: { children: ReactNode }) {
   const { authReady, hasSession } = useAuthSession();
   const navigate = useNavigate();
+  const { data: me } = useMe();
+  const suspended = Boolean((me as { suspended?: boolean } | undefined)?.suspended);
 
   useEffect(() => {
     if (authReady && !hasSession) {
       void navigate({ to: "/login", replace: true });
     }
   }, [authReady, hasSession, navigate]);
+
+  useEffect(() => {
+    if (!suspended) return;
+    toast.error("Account suspended — contact administrator");
+    void supabase.auth.signOut().then(() => navigate({ to: "/login", replace: true }));
+  }, [suspended, navigate]);
 
   if (!authReady || (authReady && !hasSession)) {
     return (
