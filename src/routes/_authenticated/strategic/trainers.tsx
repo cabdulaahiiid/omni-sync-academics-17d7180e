@@ -5,7 +5,6 @@ import { listTrainers, createTrainer, revokeTrainer, updateTrainerQualifications
 import { listDepartments } from "@/lib/data.functions";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
