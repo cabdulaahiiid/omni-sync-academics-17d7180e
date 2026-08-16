@@ -984,13 +984,16 @@ export type Database = {
       }
       sms_campaigns: {
         Row: {
+          claimed_at: string | null
           created_at: string
+          environment: string | null
           error: string | null
           failed_count: number
           filters: Json
           groups: string[]
           id: string
           message: string
+          scheduled_at: string | null
           sender_id: string | null
           sender_name: string | null
           sent_count: number
@@ -999,13 +1002,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          claimed_at?: string | null
           created_at?: string
+          environment?: string | null
           error?: string | null
           failed_count?: number
           filters?: Json
           groups?: string[]
           id?: string
           message: string
+          scheduled_at?: string | null
           sender_id?: string | null
           sender_name?: string | null
           sent_count?: number
@@ -1014,13 +1020,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          claimed_at?: string | null
           created_at?: string
+          environment?: string | null
           error?: string | null
           failed_count?: number
           filters?: Json
           groups?: string[]
           id?: string
           message?: string
+          scheduled_at?: string | null
           sender_id?: string | null
           sender_name?: string | null
           sent_count?: number
@@ -1073,6 +1082,77 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sms_scheduled_recipients: {
+        Row: {
+          campaign_id: string
+          contact_name: string | null
+          created_at: string
+          id: string
+          phone: string
+          source_group: string | null
+        }
+        Insert: {
+          campaign_id: string
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          phone: string
+          source_group?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          phone?: string
+          source_group?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_scheduled_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "sms_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_settings: {
+        Row: {
+          api_key: string | null
+          created_at: string
+          dev_base_url: string
+          environment: string
+          id: string
+          prod_base_url: string
+          sender_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          created_at?: string
+          dev_base_url?: string
+          environment?: string
+          id?: string
+          prod_base_url?: string
+          sender_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          created_at?: string
+          dev_base_url?: string
+          environment?: string
+          id?: string
+          prod_base_url?: string
+          sender_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       students: {
         Row: {
