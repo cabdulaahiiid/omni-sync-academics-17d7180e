@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listAllUsers, createUserAccount, toggleBypassGeofence, updateUserRoles, setTrainerDepartments, setDHDepartment, adminSetUserPhone, adminSetUserActive } from "@/lib/users-admin.functions";
+import { listAllUsers, createUserAccount, toggleBypassGeofence, updateUserRoles, setTrainerDepartments, setDHDepartment, adminSetUserPhone, adminSetUserEmail, adminSetUserActive } from "@/lib/users-admin.functions";
 import { listDepartments } from "@/lib/data.functions";
 import { getGlobalConfig } from "@/lib/global-config.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +43,7 @@ function UsersPage() {
   const trDeptFn = useServerFn(setTrainerDepartments);
   const dhDeptFn = useServerFn(setDHDepartment);
   const phoneFn = useServerFn(adminSetUserPhone);
+  const emailFn = useServerFn(adminSetUserEmail);
   const activeFn = useServerFn(adminSetUserActive);
   const { data: users, isLoading } = useQuery({ queryKey: ["all-users"], queryFn: () => listFn() });
   const { data: depts } = useQuery({ queryKey: ["departments"], queryFn: () => deptsFn() });
@@ -57,6 +58,7 @@ function UsersPage() {
   const [newAvatarPath, setNewAvatarPath] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
   const [editRoles, setEditRoles] = useState<("MA" | "DH" | "T")[]>([]);
   const [editTrainerDepts, setEditTrainerDepts] = useState<string[]>([]);
   const [editPrimary, setEditPrimary] = useState<string>("");
@@ -107,6 +109,19 @@ function UsersPage() {
       qc.invalidateQueries({ queryKey: ["all-users"] });
       qc.invalidateQueries({ queryKey: ["contacts"] });
       qc.invalidateQueries({ queryKey: ["dh"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const saveEmail = useMutation({
+    mutationFn: (vars: { user_id: string; email: string }) => emailFn({ data: vars }),
+    onSuccess: (_r, vars) => {
+      toast.success("Email address updated");
+      setManage((m) => (m ? { ...m, email: vars.email } : m));
+      qc.invalidateQueries({ queryKey: ["all-users"] });
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: ["dh"] });
+      qc.invalidateQueries({ queryKey: ["trainers"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
