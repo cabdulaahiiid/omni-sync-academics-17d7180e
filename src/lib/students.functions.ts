@@ -147,8 +147,13 @@ export const createStudent = createServerFn({ method: "POST" })
     if (!section) throw new Error(`Unknown section '${data.section_name}'`);
     const { assertPhoneAvailable } = await import("@/lib/phone-uniqueness.server");
     await assertPhoneAvailable(data.telephone ?? null);
+    let regNumber = data.registration_number?.trim() ?? "";
+    if (!regNumber) {
+      const { data: gen } = await supabase.rpc("next_entity_code", { _department_id: deptId, _kind: "student" });
+      regNumber = (gen as string) ?? "";
+    }
     const { data: row, error } = await supabase.from("students").insert({
-      registration_number: data.registration_number,
+      registration_number: regNumber,
       full_name: data.full_name,
       gender: data.gender ?? null,
       telephone: data.telephone ?? null,
