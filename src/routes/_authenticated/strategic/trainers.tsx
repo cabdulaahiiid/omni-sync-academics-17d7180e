@@ -5,8 +5,6 @@ import { listTrainers, createTrainer, revokeTrainer, updateTrainerQualifications
 import { listDepartments } from "@/lib/data.functions";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -16,7 +14,10 @@ import { Plus, Trash2, Copy, Pencil, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AvatarUploader } from "@/components/avatar-uploader";
-import { isValidEtPhone, PHONE_ERROR } from "@/lib/phone";
+import { isValidEtPhone } from "@/lib/phone";
+import { EmailField, PhoneField, TextField, PasswordField, SelectField, isValidEmail } from "@/components/forms/fields";
+import { FormBody, FormSection, FormGrid, FormFull, FormError } from "@/components/forms/layout";
+import { useFormSubmit } from "@/hooks/use-form-submit";
 import { useMasterData } from "@/hooks/use-master-data";
 
 export const Route = createFileRoute("/_authenticated/strategic/trainers")({
@@ -49,22 +50,24 @@ function TrainersPage() {
   const [editQuals, setEditQuals] = useState<string[]>([]);
   const deptModules = md.modulesFor(deptId);
   const phoneInvalid = !isValidEtPhone(phone);
+  const emailInvalid = !isValidEmail(email);
+  const canSubmit =
+    !!fullName.trim() && !!email && !emailInvalid && !!phone && !phoneInvalid && !!deptId && !!password && !!avatarPath;
 
-  const createMut = useMutation({
+  const createMut = useFormSubmit({
     mutationFn: () => create({ data: {
       email, full_name: fullName, department_id: deptId, password,
       phone,
       qualifications: quals,
       avatar_path: avatarPath,
     } }),
-    onSuccess: (r) => {
-      toast.success("Trainer account created");
+    invalidateKeys: [["trainers"], ["all-users"], ["contacts"]],
+    successMessage: "Trainer account created",
+    onSaved: (r: any) => {
       setCredentials({ email: r.email, temp_password: r.temp_password });
       setOpen(false);
       setEmail(""); setFullName(""); setPhone(""); setDeptId(""); setPassword("Trainer@123"); setQuals([]); setAvatarPath("");
-      qc.invalidateQueries({ queryKey: ["trainers"] });
     },
-    onError: (e: Error) => toast.error(e.message),
   });
   const revokeMut = useMutation({
     mutationFn: (id: string) => revoke({ data: { id } }),
@@ -94,31 +97,41 @@ function TrainersPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Trainers</h1>
           <p className="text-sm text-muted-foreground">Provision trainer accounts with email + password.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(o) => { if (!createMut.isSaving) setOpen(o); }}>
           <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" /> Create trainer</Button></DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader><DialogTitle>Create trainer account</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <AvatarUploader ownerId="pending" required onUploaded={(p) => setAvatarPath(p)} />
-              <div className="space-y-2"><Label>Full name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Email</Label><Input type="email" placeholder="trainerx@tvet.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Password</Label><Input value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+            <FormBody>
+              <FormError message={createMut.error} />
+              <FormSection title="Identity">
+                <AvatarUploader ownerId="pending" required onUploaded={(p) => setAvatarPath(p)} />
+                <FormGrid>
+                  <FormFull>
+                    <TextField label="Full name" required value={fullName} onChange={setFullName} placeholder="e.g. Amina Yusuf" />
+                  </FormFull>
+                </FormGrid>
+              </FormSection>
+              <FormSection title="Contact details" description="Email and telephone are stored separately.">
+                <FormGrid>
+                  <EmailField label="Email address" required value={email} onChange={setEmail} placeholder="trainerx@tvet.com" />
+                  <PhoneField label="Telephone number" required value={phone} onChange={setPhone} hint="Ethiopian number, e.g. 0912345678" />
+                </FormGrid>
+              </FormSection>
+              <FormSection title="Account & assignment">
+                <FormGrid>
+                  <PasswordField label="Temporary password" required value={password} onChange={setPassword} />
+                  <SelectField
+                    label="Department"
+                    required
+                    value={deptId}
+                    onChange={(v) => { setDeptId(v); setQuals([]); }}
+                    placeholder="Select department"
+                    options={((depts ?? md.departments) as any[]).map((d) => ({ value: d.id, label: d.name }))}
+                  />
+                </FormGrid>
+              </FormSection>
+              <FormSection title="Qualifications (modules)">
               <div className="space-y-2">
-                <Label>Trainer Telephone</Label>
-                <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                {phone && phoneInvalid && <p className="text-xs text-destructive">{PHONE_ERROR}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <Select value={deptId} onValueChange={(v) => { setDeptId(v); setQuals([]); }}>
-                  <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
-                  <SelectContent>
-                    {(depts ?? md.departments).map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Qualifications (modules)</Label>
                 <Select
                   value=""
                   onValueChange={(v) => setQuals((q) => (q.includes(v) ? q : [...q, v]))}
@@ -145,11 +158,12 @@ function TrainersPage() {
                   ))}
                 </div>
               </div>
-            </div>
+              </FormSection>
+            </FormBody>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || !password || !phone || phoneInvalid || !avatarPath || createMut.isPending}>
-                {createMut.isPending ? "Creating…" : "Create"}
+              <Button variant="outline" disabled={createMut.isSaving} onClick={() => setOpen(false)}>Cancel</Button>
+              <Button onClick={() => createMut.submit()} disabled={!canSubmit || createMut.isSaving}>
+                {createMut.isSaving ? "Creating…" : "Create"}
               </Button>
             </DialogFooter>
           </DialogContent>
