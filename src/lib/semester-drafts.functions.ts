@@ -228,15 +228,6 @@ export const dhRequestApprovalPerWeek = createServerFn({ method: "POST" })
  * No extra records: schedules are grouped by module + level + section so the
  * DH can review a module end-to-end instead of week by week.
  */
-export const listDraftModules = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ department_id: z.string().uuid().optional() }).parse(d ?? {}),
-  )
-  .handler(async ({ data, context }) => {
-    return listDraftModulesImpl(data, context);
-  });
-
 /**
  * Chronological session list for one canonical plan (or one legacy module
  * group) — the same rows the weekly view groups by week, nothing recalculated.
@@ -257,16 +248,12 @@ export const listPlanSessions = createServerFn({ method: "POST" })
     return rows ?? [];
   });
 
-const listDraftModulesLegacy = createServerFn({ method: "POST" })
+export const listDraftModules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ department_id: z.string().uuid().optional() }).parse(d ?? {}),
   )
   .handler(async ({ data, context }) => {
-    return listDraftModulesImpl(data, context);
-  });
-
-async function listDraftModulesImpl(data: { department_id?: string }, context: any) {
     const { supabase } = context;
     const { requireRole } = await import("@/lib/auth/require-role");
     const roles = await requireRole(context, ["DH", "MA"], "listDraftModules");
@@ -343,4 +330,4 @@ async function listDraftModulesImpl(data: { department_id?: string }, context: a
     return Array.from(groups.values())
       .map((g) => ({ ...g, weeks: g.weeks.sort((a, b) => a - b) }))
       .sort((a, b) => a.start_date.localeCompare(b.start_date) || a.module_code.localeCompare(b.module_code));
-}
+  });
