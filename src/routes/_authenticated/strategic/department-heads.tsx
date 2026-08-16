@@ -5,17 +5,17 @@ import { listDepartmentHeads, createDepartmentHead, revokeDepartmentHead } from 
 import { listDepartments } from "@/lib/data.functions";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Copy } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AvatarUploader } from "@/components/avatar-uploader";
-import { isValidEtPhone, PHONE_ERROR } from "@/lib/phone";
+import { isValidEtPhone } from "@/lib/phone";
+import { EmailField, PhoneField, TextField, PasswordField, SelectField, isValidEmail } from "@/components/forms/fields";
+import { FormBody, FormSection, FormGrid, FormFull, FormError } from "@/components/forms/layout";
+import { useFormSubmit } from "@/hooks/use-form-submit";
 
 export const Route = createFileRoute("/_authenticated/strategic/department-heads")({
   component: DHPage,
@@ -41,17 +41,16 @@ function DHPage() {
   const [credentials, setCredentials] = useState<{ email: string; temp_password: string } | null>(null);
 
   const phoneInvalid = !phone || !isValidEtPhone(phone);
+  const canSubmit = !!fullName.trim() && !!email && isValidEmail(email) && !phoneInvalid && !!deptId && !!password && !!avatarPath;
 
-  const createMut = useMutation({
+  const createMut = useFormSubmit({
     mutationFn: () => create({ data: { email, full_name: fullName, department_id: deptId, password, phone, avatar_path: avatarPath } }),
-    onSuccess: (r) => {
-      toast.success("Department Head created");
+    invalidateKeys: [["dh"], ["contacts"], ["all-users"]],
+    successMessage: "Department Head created",
+    onSaved: (r: any) => {
       setCredentials({ email: r.email, temp_password: r.temp_password });
       setOpen(false); setEmail(""); setFullName(""); setDeptId(""); setPhone(""); setPassword("Head@123"); setAvatarPath("");
-      qc.invalidateQueries({ queryKey: ["dh"] });
-      qc.invalidateQueries({ queryKey: ["contacts"] });
     },
-    onError: (e: Error) => toast.error(e.message),
   });
   const revokeMut = useMutation({
     mutationFn: (id: string) => revoke({ data: { id } }),
@@ -66,34 +65,44 @@ function DHPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Department Heads</h1>
           <p className="text-sm text-muted-foreground">Provision DH accounts and assign departments.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(o) => { if (!createMut.isSaving) setOpen(o); }}>
           <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" /> Create DH account</Button></DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader><DialogTitle>Create Department Head account</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <AvatarUploader ownerId="pending" required onUploaded={(p) => setAvatarPath(p)} />
-              <div className="space-y-2"><Label>Full name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-              <div className="space-y-2">
-                <Label>Telephone</Label>
-                <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                {phone && !isValidEtPhone(phone) && <p className="text-xs text-destructive">{PHONE_ERROR}</p>}
-              </div>
-              <div className="space-y-2"><Label>Password</Label><Input value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <Select value={deptId} onValueChange={setDeptId}>
-                  <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
-                  <SelectContent>
-                    {(depts ?? []).map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <FormBody>
+              <FormError message={createMut.error} />
+              <FormSection title="Identity">
+                <AvatarUploader ownerId="pending" required onUploaded={(p) => setAvatarPath(p)} />
+                <FormGrid>
+                  <FormFull>
+                    <TextField label="Full name" required value={fullName} onChange={setFullName} placeholder="e.g. Mohamed Ali" />
+                  </FormFull>
+                </FormGrid>
+              </FormSection>
+              <FormSection title="Contact details" description="Email and telephone are stored separately.">
+                <FormGrid>
+                  <EmailField label="Email address" required value={email} onChange={setEmail} />
+                  <PhoneField label="Telephone number" required value={phone} onChange={setPhone} hint="Ethiopian number, e.g. 0912345678" />
+                </FormGrid>
+              </FormSection>
+              <FormSection title="Account & assignment">
+                <FormGrid>
+                  <PasswordField label="Temporary password" required value={password} onChange={setPassword} />
+                  <SelectField
+                    label="Department"
+                    required
+                    value={deptId}
+                    onChange={setDeptId}
+                    placeholder="Select department"
+                    options={(depts ?? []).map((d) => ({ value: d.id, label: d.name }))}
+                  />
+                </FormGrid>
+              </FormSection>
+            </FormBody>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || !password || phoneInvalid || !avatarPath || createMut.isPending}>
-                {createMut.isPending ? "Creating…" : "Create"}
+              <Button variant="outline" disabled={createMut.isSaving} onClick={() => setOpen(false)}>Cancel</Button>
+              <Button onClick={() => createMut.submit()} disabled={!canSubmit || createMut.isSaving}>
+                {createMut.isSaving ? "Creating…" : "Create"}
               </Button>
             </DialogFooter>
           </DialogContent>
