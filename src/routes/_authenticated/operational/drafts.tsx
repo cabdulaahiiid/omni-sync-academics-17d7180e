@@ -323,6 +323,65 @@ function DraftsQuadrant({
   onViewChange?: (v: "weekly" | "module") => void;
   moduleGroups?: any[];
 }) {
+  return (
+    <DraftsQuadrantInner
+      drafts={drafts} allWeeksBySem={allWeeksBySem} weekThreads={weekThreads} onOpenWeek={onOpenWeek}
+      onSubmitWeek={onSubmitWeek} onSubmitSemester={onSubmitSemester} submittingWeek={submittingWeek}
+      submittingSem={submittingSem} showViewSwitch={showViewSwitch} view={view} onViewChange={onViewChange}
+      moduleGroups={moduleGroups}
+    />
+  );
+}
+
+/** Chronological session list for one canonical plan — same rows as Weekly. */
+function PlanSessionList({ planId }: { planId: string }) {
+  const fn = useServerFn(listPlanSessions);
+  const { data, isLoading } = useQuery({
+    queryKey: ["plan-sessions", planId],
+    queryFn: () => fn({ data: { plan_id: planId } }),
+  });
+  if (isLoading) return <p className="mt-2 text-[10px] text-muted-foreground">Loading sessions…</p>;
+  if (!data?.length) return <p className="mt-2 text-[10px] text-muted-foreground">No sessions.</p>;
+  return (
+    <div className="mt-2 max-h-56 overflow-auto rounded-lg border">
+      <table className="w-full text-[10px]">
+        <thead className="sticky top-0 bg-muted/60 text-muted-foreground">
+          <tr><th className="p-1 text-left">#</th><th className="p-1 text-left">Week</th><th className="p-1 text-left">Date</th><th className="p-1 text-left">Day</th><th className="p-1 text-left">Time</th><th className="p-1 text-left">Status</th></tr>
+        </thead>
+        <tbody>
+          {data.map((s: any) => (
+            <tr key={s.id} className="border-t">
+              <td className="p-1">{s.session_number ?? "—"}</td>
+              <td className="p-1">W{s.week_num}</td>
+              <td className="p-1">{s.date}</td>
+              <td className="p-1">{s.day}</td>
+              <td className="p-1">{String(s.start_time).slice(0, 5)}–{String(s.end_time).slice(0, 5)}</td>
+              <td className="p-1">{s.is_published ? "LIVE" : s.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DraftsQuadrantInner({
+  drafts, allWeeksBySem, weekThreads, onOpenWeek, onSubmitWeek, onSubmitSemester, submittingWeek, submittingSem,
+  showViewSwitch, view, onViewChange, moduleGroups,
+}: {
+  drafts: { sem: SemesterRow; weeks: WeekRow[] }[];
+  allWeeksBySem: Record<string, WeekRow[]>;
+  weekThreads: any[];
+  onOpenWeek: (sid: string, w: number, name: string) => void;
+  onSubmitWeek: (id: string) => void;
+  onSubmitSemester: (id: string) => void;
+  submittingWeek: boolean;
+  submittingSem: boolean;
+  showViewSwitch?: boolean;
+  view?: "weekly" | "module";
+  onViewChange?: (v: "weekly" | "module") => void;
+  moduleGroups?: any[];
+}) {
   const moduleDrafts = (moduleGroups ?? []).filter((g) => (g.draft ?? 0) > 0);
   const [expanded, setExpanded] = useState<string | null>(null);
   return (
