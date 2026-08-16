@@ -23,8 +23,11 @@ import {
   CONTACT_GROUPS, listContacts, upsertExternalContact, deleteExternalContact,
   importExternalContacts, type Contact, type ContactGroup,
 } from "@/lib/contacts.functions";
-import { getSmsStatus, listSmsCampaigns, listSmsRecipients, sendSmsCampaign } from "@/lib/sms.functions";
-import { BookUser, MessageSquarePlus, Pencil, Plus, Send, Trash2, Users } from "lucide-react";
+import {
+  cancelScheduledCampaign, getSmsSettings, getSmsStatus, listSmsCampaigns, listSmsRecipients,
+  rescheduleCampaign, scheduleSmsCampaign, sendSmsCampaign, sendTestSms, updateSmsSettings,
+} from "@/lib/sms.functions";
+import { BookUser, Clock, MessageSquarePlus, Pencil, Plus, Send, Settings2, Trash2, Users } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/strategic/contacts")({
   component: ContactBookPage,
@@ -99,9 +102,12 @@ function ContactBookPage() {
             Contacts are sourced live from staff, trainer, student and guardian registrations.
           </p>
         </div>
-        <Badge variant={smsStatus?.configured ? "secondary" : "destructive"}>
-          SMS gateway: {smsStatus?.configured ? "Ready" : "Not configured"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {smsStatus?.environment === "development" && <Badge variant="outline">Dev mode</Badge>}
+          <Badge variant={smsStatus?.configured ? "secondary" : "destructive"}>
+            SMS gateway: {smsStatus?.configured ? "Ready" : "Not configured"}
+          </Badge>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -119,6 +125,7 @@ function ContactBookPage() {
           <TabsTrigger value="other">Other Staff</TabsTrigger>
           <TabsTrigger value="compose">Create SMS</TabsTrigger>
           <TabsTrigger value="history">SMS History</TabsTrigger>
+          <TabsTrigger value="settings">Gateway Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="book" className="mt-4 space-y-4">
@@ -227,6 +234,10 @@ function ContactBookPage() {
 
         <TabsContent value="history" className="mt-4">
           <HistoryTab />
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-4">
+          <GatewaySettingsTab onSaved={() => qc.invalidateQueries({ queryKey: ["sms-status"] })} />
         </TabsContent>
       </Tabs>
 
