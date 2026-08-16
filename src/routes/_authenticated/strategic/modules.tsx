@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Upload, FileSpreadsheet, Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { DownloadTemplateButton } from "@/components/download-template-button";
