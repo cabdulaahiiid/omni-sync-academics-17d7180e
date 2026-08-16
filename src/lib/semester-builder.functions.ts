@@ -200,6 +200,32 @@ const BuilderInput = z.object({
 
 type BuilderInputT = z.infer<typeof BuilderInput>;
 
+/**
+ * Strict Department-Head rules: Year -> Level -> Module, and everything must
+ * live inside the DH's own department. Returns a user-facing message when the
+ * combination is invalid, otherwise null. Admin callers never go through this.
+ */
+async function assertDhRelationships(supabase: any, data: BuilderInputT): Promise<string | null> {
+  const [{ data: mod }, { data: level }, { data: section }, { data: venue }] = await Promise.all([
+    supabase.from("modules").select("id, code, name, department_id, level_id").eq("id", data.module_id).maybeSingle(),
+    supabase.from("levels").select("id, name, department_id").eq("id", data.level_id).maybeSingle(),
+    supabase.from("sections").select("id, name, level_id, department_id").eq("id", data.section_id).maybeSingle(),
+    supabase.from("venues").select("id, name").eq("id", data.venue_id).maybeSingle(),
+  ]);
+  if (!level) return "The selected Level no longer exists. Pick a Level again.";
+  if (level.department_id !== data.department_id) return "That Level does not belong to your department.";
+  if (!mod) return "The selected Module no longer exists. Pick a Module again.";
+  if (mod.department_id !== data.department_id) return "That Module does not belong to your department.";
+  if (mod.level_id !== data.level_id) {
+    return `Module ${mod.code} belongs to a different Level. Choose a module that belongs to the selected Level.`;
+  }
+  if (!section) return "The selected Section no longer exists. Pick a Section again.";
+  if (section.department_id !== data.department_id) return "That Section does not belong to your department.";
+  if (section.level_id !== data.level_id) return "That Section does not belong to the selected Level.";
+  if (!venue) return "The selected Venue no longer exists. Pick a Venue again.";
+  return null;
+}
+
 type Occurrence = {
   date: string;
   day: Day;
