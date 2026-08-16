@@ -5,11 +5,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import React from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek, listDraftModules } from "@/lib/semester-drafts.functions";
+import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek, listDraftModules, listPlanSessions } from "@/lib/semester-drafts.functions";
 import { listWeekThreadsForDept, dhResubmitWeek } from "@/lib/feedback.functions";
 import { WeekFeedbackWorkspace } from "@/components/week-feedback-workspace";
 import { useMe } from "@/hooks/use-me";
+import { useDhScheduleLive } from "@/hooks/use-dh-schedule-live";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -100,24 +100,9 @@ function DraftsPage() {
   }, [search.chat, search.semester, search.week]);
 
   const deptId = me?.profile?.department_id;
-  useEffect(() => {
-    if (!me) return;
-    const ch = supabase.channel(`dh-drafts-${deptId ?? "all"}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "semester_registry" },
-        () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
-      .on("postgres_changes", deptId
-        ? { event: "*", schema: "public", table: "schedules", filter: `department_id=eq.${deptId}` }
-        : { event: "*", schema: "public", table: "schedules" },
-        () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
-      .on("postgres_changes", deptId
-        ? { event: "*", schema: "public", table: "schedule_feedback_threads", filter: `department_id=eq.${deptId}` }
-        : { event: "*", schema: "public", table: "schedule_feedback_threads" },
-        () => qc.invalidateQueries({ queryKey: ["week-feedback-threads", deptId] }))
-      .on("postgres_changes", { event: "*", schema: "public", table: "schedule_feedback_messages" },
-        () => qc.invalidateQueries({ queryKey: ["week-feedback-threads", deptId] }))
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [deptId, me, qc]);
+  // Single shared DH channel: covers schedules, plans, terms, approvals and
+  // feedback, and invalidates every DH query root (including draft-modules).
+  useDhScheduleLive(deptId ?? null, [`week-feedback-threads`]);
   const { data, isLoading } = useQuery({
     queryKey: ["semester-drafts", deptId],
     queryFn: () => listFn({ data: deptId ? { department_id: deptId } : {} }),
@@ -338,7 +323,67 @@ function DraftsQuadrant({
   onViewChange?: (v: "weekly" | "module") => void;
   moduleGroups?: any[];
 }) {
+  return (
+    <DraftsQuadrantInner
+      drafts={drafts} allWeeksBySem={allWeeksBySem} weekThreads={weekThreads} onOpenWeek={onOpenWeek}
+      onSubmitWeek={onSubmitWeek} onSubmitSemester={onSubmitSemester} submittingWeek={submittingWeek}
+      submittingSem={submittingSem} showViewSwitch={showViewSwitch} view={view} onViewChange={onViewChange}
+      moduleGroups={moduleGroups}
+    />
+  );
+}
+
+/** Chronological session list for one canonical plan — same rows as Weekly. */
+function PlanSessionList({ planId }: { planId: string }) {
+  const fn = useServerFn(listPlanSessions);
+  const { data, isLoading } = useQuery({
+    queryKey: ["plan-sessions", planId],
+    queryFn: () => fn({ data: { plan_id: planId } }),
+  });
+  if (isLoading) return <p className="mt-2 text-[10px] text-muted-foreground">Loading sessions…</p>;
+  if (!data?.length) return <p className="mt-2 text-[10px] text-muted-foreground">No sessions.</p>;
+  return (
+    <div className="mt-2 max-h-56 overflow-auto rounded-lg border">
+      <table className="w-full text-[10px]">
+        <thead className="sticky top-0 bg-muted/60 text-muted-foreground">
+          <tr><th className="p-1 text-left">#</th><th className="p-1 text-left">Week</th><th className="p-1 text-left">Date</th><th className="p-1 text-left">Day</th><th className="p-1 text-left">Time</th><th className="p-1 text-left">Status</th></tr>
+        </thead>
+        <tbody>
+          {data.map((s: any) => (
+            <tr key={s.id} className="border-t">
+              <td className="p-1">{s.session_number ?? "—"}</td>
+              <td className="p-1">W{s.week_num}</td>
+              <td className="p-1">{s.date}</td>
+              <td className="p-1">{s.day}</td>
+              <td className="p-1">{String(s.start_time).slice(0, 5)}–{String(s.end_time).slice(0, 5)}</td>
+              <td className="p-1">{s.is_published ? "LIVE" : s.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DraftsQuadrantInner({
+  drafts, allWeeksBySem, weekThreads, onOpenWeek, onSubmitWeek, onSubmitSemester, submittingWeek, submittingSem,
+  showViewSwitch, view, onViewChange, moduleGroups,
+}: {
+  drafts: { sem: SemesterRow; weeks: WeekRow[] }[];
+  allWeeksBySem: Record<string, WeekRow[]>;
+  weekThreads: any[];
+  onOpenWeek: (sid: string, w: number, name: string) => void;
+  onSubmitWeek: (id: string) => void;
+  onSubmitSemester: (id: string) => void;
+  submittingWeek: boolean;
+  submittingSem: boolean;
+  showViewSwitch?: boolean;
+  view?: "weekly" | "module";
+  onViewChange?: (v: "weekly" | "module") => void;
+  moduleGroups?: any[];
+}) {
   const moduleDrafts = (moduleGroups ?? []).filter((g) => (g.draft ?? 0) > 0);
+  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <QuadrantShell
       title="Active Drafts"
@@ -380,6 +425,12 @@ function DraftsQuadrant({
                     </div>
                     <div className="flex items-center gap-1.5">
                       <StatusPill bucket="DRAFT">{g.draft} draft</StatusPill>
+                      {g.plan_id && (
+                        <Button size="sm" variant="ghost" className="h-7 text-[11px]"
+                          onClick={() => setExpanded(expanded === g.plan_id ? null : g.plan_id)}>
+                          {expanded === g.plan_id ? "Hide sessions" : "All sessions"}
+                        </Button>
+                      )}
                       <Button size="sm" variant="secondary" className="h-7 text-[11px]"
                         disabled={!canSubmit || submittingSem}
                         onClick={() => onSubmitSemester(g.semester_id)}>
@@ -387,6 +438,7 @@ function DraftsQuadrant({
                       </Button>
                     </div>
                   </div>
+                  {g.plan_id && expanded === g.plan_id && <PlanSessionList planId={g.plan_id} />}
                 </div>
               );
             })}

@@ -730,6 +730,140 @@ export type Database = {
           },
         ]
       }
+      schedule_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          delivery: string
+          department_id: string
+          end_date: string | null
+          id: string
+          level_id: string
+          module_code: string
+          module_id: string
+          module_name: string
+          module_total_minutes: number
+          practical_days: string[]
+          section_id: string
+          semester_id: string
+          session_minutes: number
+          sessions_per_week: number
+          start_date: string
+          start_time: string
+          theory_days: string[]
+          total_minutes: number
+          total_sessions: number
+          trainer_registry_id: string
+          updated_at: string
+          venue_id: string
+          weeks: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          delivery?: string
+          department_id: string
+          end_date?: string | null
+          id?: string
+          level_id: string
+          module_code: string
+          module_id: string
+          module_name: string
+          module_total_minutes: number
+          practical_days?: string[]
+          section_id: string
+          semester_id: string
+          session_minutes: number
+          sessions_per_week?: number
+          start_date: string
+          start_time: string
+          theory_days?: string[]
+          total_minutes?: number
+          total_sessions?: number
+          trainer_registry_id: string
+          updated_at?: string
+          venue_id: string
+          weeks?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          delivery?: string
+          department_id?: string
+          end_date?: string | null
+          id?: string
+          level_id?: string
+          module_code?: string
+          module_id?: string
+          module_name?: string
+          module_total_minutes?: number
+          practical_days?: string[]
+          section_id?: string
+          semester_id?: string
+          session_minutes?: number
+          sessions_per_week?: number
+          start_date?: string
+          start_time?: string
+          theory_days?: string[]
+          total_minutes?: number
+          total_sessions?: number
+          trainer_registry_id?: string
+          updated_at?: string
+          venue_id?: string
+          weeks?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_plans_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_plans_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_plans_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_plans_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_plans_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "semester_registry"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_plans_trainer_registry_id_fkey"
+            columns: ["trainer_registry_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_registry"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_plans_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedules: {
         Row: {
           admin_feedback: string | null
@@ -749,10 +883,12 @@ export type Database = {
           mode: Database["public"]["Enums"]["session_mode"] | null
           module_code: string
           module_name: string
+          plan_id: string | null
           published_at: string | null
           published_by: string | null
           section_id: string
           semester_id: string
+          session_number: number | null
           start_time: string
           status: Database["public"]["Enums"]["schedule_status"]
           trainer_name: string
@@ -778,10 +914,12 @@ export type Database = {
           mode?: Database["public"]["Enums"]["session_mode"] | null
           module_code: string
           module_name: string
+          plan_id?: string | null
           published_at?: string | null
           published_by?: string | null
           section_id: string
           semester_id: string
+          session_number?: number | null
           start_time: string
           status?: Database["public"]["Enums"]["schedule_status"]
           trainer_name: string
@@ -807,10 +945,12 @@ export type Database = {
           mode?: Database["public"]["Enums"]["session_mode"] | null
           module_code?: string
           module_name?: string
+          plan_id?: string | null
           published_at?: string | null
           published_by?: string | null
           section_id?: string
           semester_id?: string
+          session_number?: number | null
           start_time?: string
           status?: Database["public"]["Enums"]["schedule_status"]
           trainer_name?: string
@@ -831,6 +971,13 @@ export type Database = {
             columns: ["level_id"]
             isOneToOne: false
             referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedules_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_plans"
             referencedColumns: ["id"]
           },
           {
@@ -1462,6 +1609,10 @@ export type Database = {
       dh_resubmit_week: {
         Args: { _semester_id: string; _week_num: number }
         Returns: number
+      }
+      dh_save_schedule_plan: {
+        Args: { _plan: Json; _plan_id?: string; _sessions: Json }
+        Returns: Json
       }
       dh_submit_semester_per_week: {
         Args: { _semester_id: string }

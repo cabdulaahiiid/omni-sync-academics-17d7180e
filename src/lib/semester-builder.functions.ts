@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireRole } from "@/lib/auth/require-role";
+import { generatePlan, type Day as EngineDay, type GeneratedSession } from "@/lib/scheduling/engine";
 
 type Day = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
 const DAY_OFFSET: Record<Day, number> = { MON: 0, TUE: 1, WED: 2, THU: 3, FRI: 4, SAT: 5, SUN: 6 };
@@ -196,9 +197,38 @@ const BuilderInput = z.object({
   start_time: z.string().regex(/^\d{2}:\d{2}$/),
   duration_hours: z.number().int().min(0).max(8),
   duration_minutes: z.number().int().min(0).max(59),
+  /** Frequency: sessions taught per week. */
+  sessions_per_week: z.number().int().min(1).max(14).default(1),
+  /** Set when regenerating an existing canonical plan. */
+  plan_id: z.string().uuid().nullish(),
 });
 
 type BuilderInputT = z.infer<typeof BuilderInput>;
+
+/**
+ * Run the canonical engine for a DH request. Session count comes from the
+ * module's total hours ÷ session duration — never from the calendar window.
+ */
+function runEngine(input: BuilderInputT, moduleTotalHours: number, termEnd: string | null) {
+  return generatePlan({
+    module_total_minutes: Math.round((moduleTotalHours || 0) * 60),
+    session_minutes: input.duration_hours * 60 + input.duration_minutes,
+    sessions_per_week: input.sessions_per_week,
+    delivery: input.delivery,
+    theory_days: input.theory_days as EngineDay[],
+    practical_days: input.practical_days as EngineDay[],
+    start_date: input.start_date,
+    start_time: input.start_time,
+    term_end_date: termEnd,
+  });
+}
+
+/** Engine sessions -> the occurrence shape the shared conflict checker uses. */
+const asOccurrences = (sessions: GeneratedSession[]): Occurrence[] =>
+  sessions.map((s) => ({
+    date: s.date, day: s.day as Day, week_num: s.week_num,
+    start_time: s.start_time, end_time: s.end_time, mode: s.mode,
+  }));
 
 /**
  * Strict Department-Head rules: Year -> Level -> Module, and everything must
@@ -282,15 +312,17 @@ function planOccurrences(input: BuilderInputT, semStart: string, semEnd: string)
   return { occurrences, duration_min, weeks: uniqWeeks, days: allDays };
 }
 
-async function detectConflicts(input: BuilderInputT, occurrences: Occurrence[]) {
+async function detectConflicts(input: BuilderInputT, occurrences: Occurrence[], excludePlanId?: string | null) {
   if (!occurrences.length) return [] as Array<{ kind: "trainer" | "venue" | "section"; severity: "red"; date: string; reason: string }>;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const dates = Array.from(new Set(occurrences.map((o) => o.date)));
-  const { data: existing } = await supabaseAdmin
+  const { data: existingAll } = await supabaseAdmin
     .from("schedules")
-    .select("id, date, start_time, end_time, trainer_registry_id, venue_id, section_id, semester_id, module_code, department_id")
+    .select("id, date, start_time, end_time, trainer_registry_id, venue_id, section_id, semester_id, module_code, department_id, plan_id")
     .in("date", dates)
     .in("status", ["DRAFT", "PENDING_MA", "LIVE", "ACTIVE"]);
+  // Regenerating a plan must not conflict with its own sessions.
+  const existing = (existingAll ?? []).filter((e: any) => !excludePlanId || e.plan_id !== excludePlanId);
 
   const overlap = (a: { start_time: string; end_time: string }, b: { start_time: string; end_time: string }) =>
     !(a.end_time <= b.start_time || b.end_time <= a.start_time);
@@ -347,12 +379,45 @@ export const validateBuilder = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!sem) throw new Error("Level not found");
 
+    const isDh = !vRoles.includes("MA");
+
+    // DH: the canonical engine owns the math (module hours ÷ duration, frequency,
+    // derived end date and weeks). Admin keeps the legacy calendar-fill path.
+    if (isDh) {
+      const { data: mod } = await supabase
+        .from("modules").select("id, code, name, total_hours").eq("id", data.module_id).maybeSingle();
+      const engine = runEngine(data, mod?.total_hours ?? 0, sem.end_date);
+      const conflicts = engine.sessions.length
+        ? await detectConflicts(data, asOccurrences(engine.sessions), data.plan_id ?? null)
+        : [];
+      const warnings = engine.errors.map((reason) => ({ severity: "yellow" as const, reason }));
+      const last = engine.sessions[engine.sessions.length - 1];
+      return {
+        ok: engine.ok && conflicts.length === 0,
+        summary: {
+          weekly_minutes: Math.round(engine.total_minutes / Math.max(1, engine.weeks)),
+          total_minutes: engine.total_minutes,
+          occurrences: engine.total_sessions,
+          weeks: engine.weeks,
+          end_date: engine.end_date ?? data.start_date,
+          end_time: last ? last.end_time.slice(0, 5) : data.start_time,
+          required_sessions: engine.required_sessions,
+          module_total_minutes: Math.round((mod?.total_hours ?? 0) * 60),
+          shortfall_minutes: engine.shortfall_minutes,
+        },
+        sessions: engine.sessions,
+        conflicts,
+        warnings,
+      };
+    }
+
     const plan = planOccurrences(data, sem.start_date, sem.end_date);
     if (!plan.occurrences.length) {
       return {
         ok: false,
-        summary: { weekly_minutes: 0, total_minutes: 0, occurrences: 0, weeks: 0, end_date: data.start_date, end_time: data.start_time },
+        summary: { weekly_minutes: 0, total_minutes: 0, occurrences: 0, weeks: 0, end_date: data.start_date, end_time: data.start_time, required_sessions: 0, module_total_minutes: 0, shortfall_minutes: 0 },
         conflicts: [], warnings: [{ severity: "yellow" as const, reason: "No sessions generated — check delivery days, dates, and duration." }],
+        sessions: [] as GeneratedSession[],
       };
     }
 
@@ -414,7 +479,11 @@ export const validateBuilder = createServerFn({ method: "POST" })
         weeks: plan.weeks,
         end_date: last.date,
         end_time: last.end_time.slice(0, 5),
+        required_sessions: plan.occurrences.length,
+        module_total_minutes: Math.round((module_?.total_hours ?? 0) * 60),
+        shortfall_minutes: 0,
       },
+      sessions: [] as GeneratedSession[],
       conflicts,
       warnings,
     };
@@ -436,6 +505,67 @@ export const saveBuilderDraft = createServerFn({ method: "POST" })
       }
       const relErr = await assertDhRelationships(supabase, data);
       if (relErr) throw new Error(relErr);
+
+      // Canonical DH path: engine generates the sessions, one database
+      // transaction stores plan + sessions (or nothing at all).
+      const [{ data: semDh }, { data: modDh }] = await Promise.all([
+        supabase.from("semester_registry").select("id, start_date, end_date").eq("id", data.semester_id).maybeSingle(),
+        supabase.from("modules").select("id, code, name, total_hours").eq("id", data.module_id).maybeSingle(),
+      ]);
+      if (!semDh) throw new Error("The selected academic term no longer exists.");
+      if (!modDh) throw new Error("The selected Module no longer exists.");
+
+      const engine = runEngine(data, modDh.total_hours ?? 0, semDh.end_date);
+      if (engine.errors.length || !engine.sessions.length) {
+        throw new Error(engine.errors[0] ?? "No sessions could be generated — check the teaching days, duration and start date.");
+      }
+      const dhConflicts = await detectConflicts(data, asOccurrences(engine.sessions), data.plan_id ?? null);
+      if (dhConflicts.length) {
+        throw new Error(`${dhConflicts[0].reason} (${dhConflicts.length} clash(es) in total.) Resolve them before saving.`);
+      }
+
+      const { data: rpc, error: rpcError } = await supabase.rpc("dh_save_schedule_plan", {
+        _plan: {
+          semester_id: data.semester_id,
+          department_id: data.department_id,
+          level_id: data.level_id,
+          module_id: data.module_id,
+          section_id: data.section_id,
+          venue_id: data.venue_id,
+          trainer_registry_id: data.trainer_id,
+          delivery: data.delivery,
+          theory_days: data.theory_days,
+          practical_days: data.practical_days,
+          sessions_per_week: data.sessions_per_week,
+          session_minutes: data.duration_hours * 60 + data.duration_minutes,
+          module_total_minutes: Math.round((modDh.total_hours ?? 0) * 60),
+          start_date: data.start_date,
+          start_time: data.start_time,
+          end_date: engine.end_date,
+          total_sessions: engine.total_sessions,
+          total_minutes: engine.total_minutes,
+          weeks: engine.weeks,
+        } as any,
+        _sessions: engine.sessions.map((s) => ({
+          session_number: s.session_number,
+          date: s.date,
+          day: s.day,
+          week_num: s.week_num,
+          start_time: s.start_time,
+          end_time: s.end_time,
+          mode: s.mode,
+        })) as any,
+        _plan_id: data.plan_id ?? null,
+      } as any);
+      if (rpcError) throw new Error(rpcError.message);
+      const r = (rpc ?? {}) as { plan_id?: string; sessions?: number };
+      return {
+        ok: true,
+        created: r.sessions ?? engine.total_sessions,
+        weeks: engine.weeks,
+        plan_id: r.plan_id ?? null,
+        end_date: engine.end_date,
+      };
     }
 
     const [{ data: sem }, { data: mod }, { data: trainer }, { data: trainerDept }, { data: venue }, { data: section }, { data: level }] = await Promise.all([
@@ -504,5 +634,5 @@ export const saveBuilderDraft = createServerFn({ method: "POST" })
         days: plan.days, weeks: plan.weeks, duration_min: plan.duration_min,
       } as any,
     });
-    return { ok: true, created, weeks: plan.weeks };
+    return { ok: true, created, weeks: plan.weeks, plan_id: null as string | null, end_date: plan.occurrences[plan.occurrences.length - 1]?.date ?? null };
   });

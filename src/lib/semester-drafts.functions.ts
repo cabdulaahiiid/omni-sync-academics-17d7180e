@@ -228,6 +228,26 @@ export const dhRequestApprovalPerWeek = createServerFn({ method: "POST" })
  * No extra records: schedules are grouped by module + level + section so the
  * DH can review a module end-to-end instead of week by week.
  */
+/**
+ * Chronological session list for one canonical plan (or one legacy module
+ * group) — the same rows the weekly view groups by week, nothing recalculated.
+ */
+export const listPlanSessions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ plan_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("schedules")
+      .select("id, session_number, week_num, date, day, start_time, end_time, status, is_published, module_code, module_name, trainer_name")
+      .eq("plan_id", data.plan_id)
+      .order("date")
+      .order("start_time");
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
 export const listDraftModules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -248,9 +268,10 @@ export const listDraftModules = createServerFn({ method: "POST" })
 
     let q = supabase
       .from("schedules")
-      .select("id, semester_id, module_code, module_name, level_id, section_id, trainer_name, date, week_num, start_time, end_time, status, is_published")
+      .select("id, semester_id, module_code, module_name, level_id, section_id, trainer_name, date, week_num, session_number, plan_id, start_time, end_time, status, is_published")
       .neq("status", "CANCELLED")
-      .order("date");
+      .order("date")
+      .order("start_time");
     if (departmentId) q = q.eq("department_id", departmentId);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
@@ -266,7 +287,7 @@ export const listDraftModules = createServerFn({ method: "POST" })
     const secMap = new Map((sections ?? []).map((s: any) => [s.id, s.name]));
 
     type Group = {
-      key: string; semester_id: string; semester_name: string;
+      key: string; plan_id: string | null; semester_id: string; semester_name: string;
       module_code: string; module_name: string; level_name: string; section_name: string;
       trainer_name: string; start_date: string; end_date: string;
       weeks: number[]; sessions: number; total_minutes: number;
@@ -275,10 +296,12 @@ export const listDraftModules = createServerFn({ method: "POST" })
     };
     const groups = new Map<string, Group>();
     for (const r of rows) {
-      const key = `${r.semester_id}|${r.module_code}|${r.level_id}|${r.section_id}`;
+      // A canonical plan is the group; legacy rows fall back to the old key.
+      const key = r.plan_id ?? `${r.semester_id}|${r.module_code}|${r.level_id}|${r.section_id}`;
       const sem: any = semMap.get(r.semester_id);
       const g = groups.get(key) ?? {
         key,
+        plan_id: r.plan_id ?? null,
         semester_id: r.semester_id,
         semester_name: sem?.name ?? "—",
         module_code: r.module_code,

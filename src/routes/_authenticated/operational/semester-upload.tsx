@@ -23,7 +23,8 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useMe } from "@/hooks/use-me";
-import { useLiveTables } from "@/hooks/use-live-tables";
+import { useDhScheduleLive } from "@/hooks/use-dh-schedule-live";
+import { generatePlan, type Day as EngineDay } from "@/lib/scheduling/engine";
 import { getBuilderOptions, getTrainerLoad, validateBuilder, saveBuilderDraft } from "@/lib/semester-builder.functions";
 import { requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
 
@@ -129,11 +130,8 @@ function SemesterBuilderPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
 
-  // Live invalidation across the ERP whenever schedules / semester / approvals change.
-  useLiveTables(
-    ["schedules", "semester_registry", "approval_queue", "notifications"],
-    ["builder-options", "trainer-load", "semesters", "drafts", "dashboard"],
-  );
+  // One shared DH channel keeps every schedule surface in sync.
+  useDhScheduleLive(me?.profile?.department_id ?? null, ["trainer-load", "semesters", "drafts", "dashboard"]);
 
   const optionsFn = useServerFn(getBuilderOptions);
   const loadFn = useServerFn(getTrainerLoad);
@@ -234,9 +232,26 @@ function SemesterBuilderPage() {
     const p = delivery === "Theory" ? [] : practicalDays;
     return Array.from(new Set([...t, ...p]));
   }, [delivery, theoryDays, practicalDays]);
-  const weeklyMins = daysSelected.length * durationMin;
-  const totalWeeks = selectedSem ? diffWeeks(selectedSem.start_date, selectedSem.end_date) : 0;
-  const totalContactMins = weeklyMins * totalWeeks;
+  // Live preview comes from the one canonical engine — the same math the
+  // server validation and the transactional save run. Nothing is computed twice.
+  const enginePreview = useMemo(
+    () =>
+      generatePlan({
+        module_total_minutes: Math.round(((selectedModule?.total_hours as number) ?? 0) * 60),
+        session_minutes: durationMin,
+        sessions_per_week: sessionsPerWeek,
+        delivery,
+        theory_days: (delivery === "Practical" ? [] : theoryDays) as EngineDay[],
+        practical_days: (delivery === "Theory" ? [] : practicalDays) as EngineDay[],
+        start_date: startDate,
+        start_time: startTime,
+        term_end_date: selectedSem?.end_date ?? null,
+      }),
+    [selectedModule?.total_hours, durationMin, sessionsPerWeek, delivery, theoryDays, practicalDays, startDate, startTime, selectedSem?.end_date],
+  );
+  const weeklyMins = Math.round(enginePreview.total_minutes / Math.max(1, enginePreview.weeks));
+  const totalWeeks = enginePreview.weeks;
+  const totalContactMins = enginePreview.total_minutes;
 
   // Auto end-time
   const endTime = useMemo(() => {
@@ -258,7 +273,8 @@ function SemesterBuilderPage() {
     practical_session_name: practicalSessionName,
     start_date: startDate, start_time: startTime,
     duration_hours: durationHours, duration_minutes: durationMinutes,
-  }), [semesterId, me?.profile?.department_id, moduleId, trainerId, sectionId, levelId, venueId, delivery, theoryDays, practicalDays, theorySessionName, practicalSessionName, startDate, startTime, durationHours, durationMinutes]);
+    sessions_per_week: sessionsPerWeek,
+  }), [semesterId, me?.profile?.department_id, moduleId, trainerId, sectionId, levelId, venueId, delivery, theoryDays, practicalDays, theorySessionName, practicalSessionName, startDate, startTime, durationHours, durationMinutes, sessionsPerWeek]);
 
   const formComplete = !!(builderPayload.semester_id && builderPayload.department_id && builderPayload.module_id &&
     builderPayload.trainer_id && builderPayload.section_id && builderPayload.level_id && builderPayload.venue_id &&
@@ -278,8 +294,9 @@ function SemesterBuilderPage() {
     if (durationMin <= 0) m.push("Session duration");
     if (!startDate) m.push("Start date");
     if (!startTime) m.push("Start time");
+    if (moduleId && !((selectedModule?.total_hours as number) > 0)) m.push("Module total hours (set them in Module Registry)");
     return m;
-  }, [academicYear, semesterId, levelId, moduleId, trainerId, sectionId, venueId, daysSelected, durationMin, startDate, startTime]);
+  }, [academicYear, semesterId, levelId, moduleId, trainerId, sectionId, venueId, daysSelected, durationMin, startDate, startTime, selectedModule?.total_hours]);
 
   const validateMut = useMutation({
     mutationFn: () => validateFn({ data: builderPayload }),
@@ -448,8 +465,9 @@ function SemesterBuilderPage() {
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Sessions per week</Label>
-                <Input type="number" min={1} max={7} value={sessionsPerWeek}
-                  onChange={(e) => setSessionsPerWeek(Math.max(1, Math.min(7, Number(e.target.value) || 1)))} />
+                <Input type="number" min={1} max={14} value={sessionsPerWeek}
+                  onChange={(e) => setSessionsPerWeek(Math.max(1, Math.min(14, Number(e.target.value) || 1)))} />
+                <p className="text-[11px] text-muted-foreground">Frequency: how many sessions are taught each week.</p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Duration — Hours</Label>
@@ -463,8 +481,16 @@ function SemesterBuilderPage() {
             <div className="grid gap-2 rounded-xl border bg-muted/30 p-3 text-xs md:grid-cols-3">
               <div><span className="text-muted-foreground">Per session:</span> <b>{(durationMin / 60).toFixed(2)} h</b></div>
               <div><span className="text-muted-foreground">Weekly:</span> <b>{(weeklyMins / 60).toFixed(2)} h</b></div>
-              <div><span className="text-muted-foreground">Level total:</span> <b>{(totalContactMins / 60).toFixed(1)} h</b></div>
+              <div><span className="text-muted-foreground">Module total:</span> <b>{(((selectedModule?.total_hours as number) ?? 0)).toFixed(1)} h</b></div>
+              <div><span className="text-muted-foreground">Sessions required:</span> <b>{enginePreview.required_sessions || "—"}</b></div>
+              <div><span className="text-muted-foreground">Sessions generated:</span> <b>{enginePreview.total_sessions || "—"}</b></div>
+              <div><span className="text-muted-foreground">Final session:</span> <b>{enginePreview.final_session_minutes ? `${enginePreview.final_session_minutes} min` : "—"}</b></div>
             </div>
+            {enginePreview.errors.length > 0 && (
+              <ul className="mt-2 space-y-1 rounded-xl border border-amber-300/60 bg-amber-50/60 p-3 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                {enginePreview.errors.map((e) => <li key={e}>{e}</li>)}
+              </ul>
+            )}
           </SectionItem>
 
           <SectionItem step={5} title="Class Assignment" icon={Building2} value="s5" complete={!!(sectionId && venueId)}>
