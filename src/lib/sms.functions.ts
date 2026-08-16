@@ -62,7 +62,15 @@ export const updateSmsSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireRole(context, ["MA"], "updateSmsSettings");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: Record<string, unknown> = {
+    const patch: {
+      sender_id: string | null;
+      environment: string;
+      prod_base_url: string;
+      dev_base_url: string;
+      updated_by: string;
+      updated_at: string;
+      api_key?: string;
+    } = {
       sender_id: data.sender_id || null,
       environment: data.environment,
       prod_base_url: data.prod_base_url,
@@ -70,7 +78,7 @@ export const updateSmsSettings = createServerFn({ method: "POST" })
       updated_by: context.userId,
       updated_at: new Date().toISOString(),
     };
-    if (data.api_key) patch["api_key"] = data.api_key;
+    if (data.api_key) patch.api_key = data.api_key;
 
     const { data: existing } = await supabaseAdmin
       .from("sms_settings")
