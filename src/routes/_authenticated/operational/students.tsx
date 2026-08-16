@@ -155,10 +155,45 @@ function StudentsHub() {
               <div><Label>Student ID code</Label><Input value={form.registration_number} onChange={(e) => setForm({ ...form, registration_number: e.target.value })} /></div>
               <div><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-2">
-                <div><Label>Level</Label><Input placeholder="e.g. I" value={form.level_name} onChange={(e) => setForm({ ...form, level_name: e.target.value })} /></div>
-                <div><Label>Section</Label><Input placeholder="e.g. Section A" value={form.section_name} onChange={(e) => setForm({ ...form, section_name: e.target.value })} /></div>
+                <div>
+                  <Label>Level</Label>
+                  <Select value={form.level_id} onValueChange={(v) => setForm({ ...form, level_id: v, section_id: "" })}>
+                    <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
+                    <SelectContent>
+                      {(formLevels as any[]).map((l) => (
+                        <SelectItem key={l.id} value={l.id}>{l.display_name || l.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Section</Label>
+                  <Select value={form.section_id} onValueChange={(v) => setForm({ ...form, section_id: v })} disabled={!form.level_id}>
+                    <SelectTrigger><SelectValue placeholder={form.level_id ? "Select section" : "Select level first"} /></SelectTrigger>
+                    <SelectContent>
+                      {(formSections as any[]).map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div><Label>Gender (optional)</Label><Input value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Gender</Label>
+                  <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                    <SelectContent>
+                      {GENDER_OPTIONS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Student Telephone</Label>
+                  <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} />
+                  {studentPhoneInvalid && <p className="mt-1 text-xs text-destructive">{PHONE_ERROR}</p>}
+                </div>
+              </div>
             </div>
             <div className="space-y-3 border-t pt-4">
               <h3 className="text-sm font-semibold text-slate-800">Parent / Guardian Contact</h3>
@@ -177,7 +212,7 @@ function StudentsHub() {
                   <Select value={form.parent_guardian_relationship} onValueChange={(v) => setForm({ ...form, parent_guardian_relationship: v })}>
                     <SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger>
                     <SelectContent>
-                      {["Father", "Mother", "Brother", "Sister", "Uncle", "Aunt", "Grandfather", "Grandmother", "Guardian", "Other"].map((r) => (
+                      {GUARDIAN_RELATIONSHIP_OPTIONS.map((r) => (
                         <SelectItem key={r} value={r}>{r}</SelectItem>
                       ))}
                     </SelectContent>
@@ -188,7 +223,7 @@ function StudentsHub() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button onClick={() => create.mutate()}
-                disabled={!form.registration_number || !form.full_name || !form.level_name || !form.section_name || phoneInvalid || create.isPending}>
+                disabled={!form.registration_number || !form.full_name || !form.level_id || !form.section_id || !form.telephone || studentPhoneInvalid || phoneInvalid || create.isPending}>
                 {create.isPending ? "Saving…" : "Save"}
               </Button>
             </DialogFooter>
