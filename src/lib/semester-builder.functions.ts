@@ -312,15 +312,17 @@ function planOccurrences(input: BuilderInputT, semStart: string, semEnd: string)
   return { occurrences, duration_min, weeks: uniqWeeks, days: allDays };
 }
 
-async function detectConflicts(input: BuilderInputT, occurrences: Occurrence[]) {
+async function detectConflicts(input: BuilderInputT, occurrences: Occurrence[], excludePlanId?: string | null) {
   if (!occurrences.length) return [] as Array<{ kind: "trainer" | "venue" | "section"; severity: "red"; date: string; reason: string }>;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const dates = Array.from(new Set(occurrences.map((o) => o.date)));
-  const { data: existing } = await supabaseAdmin
+  const { data: existingAll } = await supabaseAdmin
     .from("schedules")
-    .select("id, date, start_time, end_time, trainer_registry_id, venue_id, section_id, semester_id, module_code, department_id")
+    .select("id, date, start_time, end_time, trainer_registry_id, venue_id, section_id, semester_id, module_code, department_id, plan_id")
     .in("date", dates)
     .in("status", ["DRAFT", "PENDING_MA", "LIVE", "ACTIVE"]);
+  // Regenerating a plan must not conflict with its own sessions.
+  const existing = (existingAll ?? []).filter((e: any) => !excludePlanId || e.plan_id !== excludePlanId);
 
   const overlap = (a: { start_time: string; end_time: string }, b: { start_time: string; end_time: string }) =>
     !(a.end_time <= b.start_time || b.end_time <= a.start_time);
