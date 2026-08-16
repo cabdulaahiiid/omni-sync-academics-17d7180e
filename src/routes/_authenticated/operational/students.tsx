@@ -327,6 +327,7 @@ function StudentsHub() {
                 <div><p className="text-xs text-muted-foreground">Level</p><p>{detail.level_name}</p></div>
                 <div><p className="text-xs text-muted-foreground">Section</p><p>{detail.section_name}</p></div>
                 <div><p className="text-xs text-muted-foreground">Gender</p><p>{detail.gender || "—"}</p></div>
+                <div><p className="text-xs text-muted-foreground">Telephone</p><p className="font-mono">{detail.telephone || "—"}</p></div>
                 <div><p className="text-xs text-muted-foreground">Status</p><p>{detail.status}</p></div>
               </div>
               {canViewGuardian && (
