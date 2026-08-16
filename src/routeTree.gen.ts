@@ -39,6 +39,7 @@ import { Route as AuthenticatedStrategicLevelsRouteImport } from './routes/_auth
 import { Route as AuthenticatedStrategicInsightsRouteImport } from './routes/_authenticated/strategic/insights'
 import { Route as AuthenticatedStrategicDepartmentsRouteImport } from './routes/_authenticated/strategic/departments'
 import { Route as AuthenticatedStrategicDepartmentHeadsRouteImport } from './routes/_authenticated/strategic/department-heads'
+import { Route as AuthenticatedStrategicContactsRouteImport } from './routes/_authenticated/strategic/contacts'
 import { Route as AuthenticatedStrategicAuditRouteImport } from './routes/_authenticated/strategic/audit'
 import { Route as AuthenticatedStrategicApprovalsRouteImport } from './routes/_authenticated/strategic/approvals'
 import { Route as AuthenticatedPrintReportRouteImport } from './routes/_authenticated/print.$report'
@@ -228,6 +229,12 @@ const AuthenticatedStrategicDepartmentHeadsRoute =
     path: '/department-heads',
     getParentRoute: () => AuthenticatedStrategicRoute,
   } as any)
+const AuthenticatedStrategicContactsRoute =
+  AuthenticatedStrategicContactsRouteImport.update({
+    id: '/contacts',
+    path: '/contacts',
+    getParentRoute: () => AuthenticatedStrategicRoute,
+  } as any)
 const AuthenticatedStrategicAuditRoute =
   AuthenticatedStrategicAuditRouteImport.update({
     id: '/audit',
@@ -372,6 +379,7 @@ export interface FileRoutesByFullPath {
   '/print/$report': typeof AuthenticatedPrintReportRoute
   '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
+  '/strategic/contacts': typeof AuthenticatedStrategicContactsRoute
   '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
   '/strategic/departments': typeof AuthenticatedStrategicDepartmentsRouteWithChildren
   '/strategic/insights': typeof AuthenticatedStrategicInsightsRoute
@@ -418,6 +426,7 @@ export interface FileRoutesByTo {
   '/print/$report': typeof AuthenticatedPrintReportRoute
   '/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/strategic/audit': typeof AuthenticatedStrategicAuditRoute
+  '/strategic/contacts': typeof AuthenticatedStrategicContactsRoute
   '/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
   '/strategic/departments': typeof AuthenticatedStrategicDepartmentsRouteWithChildren
   '/strategic/insights': typeof AuthenticatedStrategicInsightsRoute
@@ -470,6 +479,7 @@ export interface FileRoutesById {
   '/_authenticated/print/$report': typeof AuthenticatedPrintReportRoute
   '/_authenticated/strategic/approvals': typeof AuthenticatedStrategicApprovalsRoute
   '/_authenticated/strategic/audit': typeof AuthenticatedStrategicAuditRoute
+  '/_authenticated/strategic/contacts': typeof AuthenticatedStrategicContactsRoute
   '/_authenticated/strategic/department-heads': typeof AuthenticatedStrategicDepartmentHeadsRoute
   '/_authenticated/strategic/departments': typeof AuthenticatedStrategicDepartmentsRouteWithChildren
   '/_authenticated/strategic/insights': typeof AuthenticatedStrategicInsightsRoute
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
     | '/print/$report'
     | '/strategic/approvals'
     | '/strategic/audit'
+    | '/strategic/contacts'
     | '/strategic/department-heads'
     | '/strategic/departments'
     | '/strategic/insights'
@@ -568,6 +579,7 @@ export interface FileRouteTypes {
     | '/print/$report'
     | '/strategic/approvals'
     | '/strategic/audit'
+    | '/strategic/contacts'
     | '/strategic/department-heads'
     | '/strategic/departments'
     | '/strategic/insights'
@@ -619,6 +631,7 @@ export interface FileRouteTypes {
     | '/_authenticated/print/$report'
     | '/_authenticated/strategic/approvals'
     | '/_authenticated/strategic/audit'
+    | '/_authenticated/strategic/contacts'
     | '/_authenticated/strategic/department-heads'
     | '/_authenticated/strategic/departments'
     | '/_authenticated/strategic/insights'
@@ -864,6 +877,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStrategicDepartmentHeadsRouteImport
       parentRoute: typeof AuthenticatedStrategicRoute
     }
+    '/_authenticated/strategic/contacts': {
+      id: '/_authenticated/strategic/contacts'
+      path: '/contacts'
+      fullPath: '/strategic/contacts'
+      preLoaderRoute: typeof AuthenticatedStrategicContactsRouteImport
+      parentRoute: typeof AuthenticatedStrategicRoute
+    }
     '/_authenticated/strategic/audit': {
       id: '/_authenticated/strategic/audit'
       path: '/audit'
@@ -1073,6 +1093,7 @@ const AuthenticatedStrategicDepartmentsRouteWithChildren =
 interface AuthenticatedStrategicRouteChildren {
   AuthenticatedStrategicApprovalsRoute: typeof AuthenticatedStrategicApprovalsRoute
   AuthenticatedStrategicAuditRoute: typeof AuthenticatedStrategicAuditRoute
+  AuthenticatedStrategicContactsRoute: typeof AuthenticatedStrategicContactsRoute
   AuthenticatedStrategicDepartmentHeadsRoute: typeof AuthenticatedStrategicDepartmentHeadsRoute
   AuthenticatedStrategicDepartmentsRoute: typeof AuthenticatedStrategicDepartmentsRouteWithChildren
   AuthenticatedStrategicInsightsRoute: typeof AuthenticatedStrategicInsightsRoute
@@ -1094,6 +1115,7 @@ const AuthenticatedStrategicRouteChildren: AuthenticatedStrategicRouteChildren =
   {
     AuthenticatedStrategicApprovalsRoute: AuthenticatedStrategicApprovalsRoute,
     AuthenticatedStrategicAuditRoute: AuthenticatedStrategicAuditRoute,
+    AuthenticatedStrategicContactsRoute: AuthenticatedStrategicContactsRoute,
     AuthenticatedStrategicDepartmentHeadsRoute:
       AuthenticatedStrategicDepartmentHeadsRoute,
     AuthenticatedStrategicDepartmentsRoute:
