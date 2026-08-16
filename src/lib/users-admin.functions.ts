@@ -240,6 +240,45 @@ export const adminSetUserPhone = createServerFn({ method: "POST" })
   });
 
 /** MA suspends or reactivates a user account (blocks sign-in when suspended). */
+export const adminSetUserEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      user_id: z.string().uuid(),
+      email: z.string().trim().email("Please enter a valid email address.").max(255)
+        .transform((v) => v.toLowerCase()),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireRole(context, ["MA"], "adminSetUserEmail");
+    const { data: profile, error: pErr } = await supabaseAdmin
+      .from("profiles").select("trainer_registry_id, email").eq("id", data.user_id).maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    const { data: clash } = await supabaseAdmin
+      .from("profiles").select("id, full_name").eq("email", data.email).neq("id", data.user_id).maybeSingle();
+    if (clash) {
+      throw new Error(`This email address is already used by ${clash.full_name || "another user"}.`);
+    }
+    const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      email: data.email,
+      email_confirm: true,
+    } as any);
+    if (authErr) throw new Error(authErr.message);
+    const { error } = await supabaseAdmin.from("profiles")
+      .update({ email: data.email }).eq("id", data.user_id);
+    if (error) throw new Error(error.message);
+    if (profile?.trainer_registry_id) {
+      await supabaseAdmin.from("trainer_registry")
+        .update({ email: data.email }).eq("id", profile.trainer_registry_id);
+    }
+    await context.supabase.from("audit_logs").insert({
+      actor_id: context.userId, action_type: "UPDATE_EMAIL", entity_type: "profiles", entity_id: data.user_id,
+      before_state: { email: profile?.email ?? null }, after_state: { email: data.email },
+    });
+    return { ok: true, email: data.email };
+  });
+
+/** MA suspends or reactivates a user account (blocks sign-in when suspended). */
 export const adminSetUserActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
