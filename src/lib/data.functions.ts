@@ -22,9 +22,7 @@ export const getMe = createServerFn({ method: "GET" })
       throw new Error(`profile_query_failed: ${profileRes.error.message}`);
     }
     const profile = profileRes.data;
-    if (profile && profile.active === false) {
-      throw new Error("account_suspended");
-    }
+    const suspended = Boolean(profile) && profile!.active === false;
 
     const rolesRes = await supabase
       .from("user_roles")
@@ -47,6 +45,7 @@ export const getMe = createServerFn({ method: "GET" })
       userId,
       profile,
       avatar_url,
+      suspended,
       roles: roles.map((r) => r.role as "MA" | "DH" | "T"),
       profileFound: Boolean(profile),
       roleCount: roles.length,
