@@ -282,43 +282,57 @@ function UsersPage() {
       </Card>
 
       <Dialog open={!!manage} onOpenChange={(o) => { if (!o) setManage(null); }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Manage user — {manage?.name}</DialogTitle></DialogHeader>
+        <DialogContent className="flex max-h-[90vh] flex-col gap-0 sm:max-w-2xl">
+          <DialogHeader className="shrink-0 pb-3"><DialogTitle>Manage user — {manage?.name}</DialogTitle></DialogHeader>
           {manage && (
-            <div className="space-y-5">
-              <AvatarUploader
-                ownerId={manage.id}
-                initialUrl={manage.avatar_url}
-                fallback={manage.name}
-                label="Profile photo"
-                onUploaded={(p) => setNewAvatarPath(p)}
-              />
-              <Button size="sm" disabled={!newAvatarPath || saveAvatar.isPending}
-                onClick={() => saveAvatar.mutate({ user_id: manage.id, avatar_path: newAvatarPath })}>
-                {saveAvatar.isPending ? "Saving…" : "Save photo"}
-              </Button>
-
-              <div className="space-y-2 border-t pt-4">
-                <Label>Telephone</Label>
-                <Input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="e.g. +251 91 XXX XXXX" />
-                {editPhone && !isValidEtPhone(editPhone) && <p className="text-xs text-destructive">{PHONE_ERROR}</p>}
-                <Button size="sm" disabled={!editPhone || !isValidEtPhone(editPhone) || savePhone.isPending}
-                  onClick={() => savePhone.mutate({ user_id: manage.id, phone: editPhone })}>
-                  {savePhone.isPending ? "Saving…" : "Save telephone"}
+            <FormBody className="max-h-[70vh] flex-1 space-y-6 pr-2">
+              <FormSection title="Profile photo">
+                <AvatarUploader
+                  ownerId={manage.id}
+                  initialUrl={manage.avatar_url}
+                  fallback={manage.name}
+                  label="Profile photo"
+                  onUploaded={(p) => setNewAvatarPath(p)}
+                />
+                <Button size="sm" disabled={!newAvatarPath || saveAvatar.isPending}
+                  onClick={() => saveAvatar.mutate({ user_id: manage.id, avatar_path: newAvatarPath })}>
+                  {saveAvatar.isPending ? "Saving…" : "Save photo"}
                 </Button>
-              </div>
+              </FormSection>
 
-              <div className="space-y-2 border-t pt-4">
-                <Label>New password (min 8 chars)</Label>
-                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Set a new password" />
-                <Button size="sm" disabled={newPassword.length < 8 || savePassword.isPending}
-                  onClick={() => savePassword.mutate({ user_id: manage.id, new_password: newPassword })}>
-                  {savePassword.isPending ? "Updating…" : "Reset password"}
-                </Button>
-              </div>
+              <FormSection title="Contact details" description="Email address and telephone number are stored and saved separately.">
+                <FormGrid>
+                  <div className="space-y-2">
+                    <EmailField label="Email address" required value={editEmail} onChange={setEditEmail} />
+                    <Button size="sm" variant="outline"
+                      disabled={!editEmail || !isValidEmail(editEmail) || editEmail.trim().toLowerCase() === (manage.email ?? "").toLowerCase() || saveEmail.isPending}
+                      onClick={() => saveEmail.mutate({ user_id: manage.id, email: editEmail.trim() })}>
+                      {saveEmail.isPending ? "Saving…" : "Save email"}
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <PhoneField label="Telephone number" required value={editPhone} onChange={setEditPhone} hint="Ethiopian number, e.g. 0912345678" />
+                    <Button size="sm" variant="outline"
+                      disabled={!editPhone || !isValidEtPhone(editPhone) || savePhone.isPending}
+                      onClick={() => savePhone.mutate({ user_id: manage.id, phone: editPhone })}>
+                      {savePhone.isPending ? "Saving…" : "Save telephone"}
+                    </Button>
+                  </div>
+                </FormGrid>
+              </FormSection>
 
-              <div className="space-y-2 border-t pt-4">
-                <Label>Account status</Label>
+              <FormSection title="Security" description="Resetting the password signs the user out of all devices.">
+                <div className="space-y-2 sm:max-w-sm">
+                  <Label className="text-xs font-medium">New password (min 8 characters)</Label>
+                  <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Set a new password" />
+                  <Button size="sm" variant="outline" disabled={newPassword.length < 8 || savePassword.isPending}
+                    onClick={() => savePassword.mutate({ user_id: manage.id, new_password: newPassword })}>
+                    {savePassword.isPending ? "Updating…" : "Reset password"}
+                  </Button>
+                </div>
+              </FormSection>
+
+              <FormSection title="Account status">
                 <div className="flex items-center gap-3">
                   <Badge variant={manage.active ? "default" : "destructive"}>{manage.active ? "Active" : "Suspended"}</Badge>
                   <Button size="sm" variant={manage.active ? "destructive" : "default"} disabled={setActive.isPending}
@@ -327,10 +341,9 @@ function UsersPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">Suspended users are blocked from signing in until reactivated.</p>
-              </div>
+              </FormSection>
 
-              <div className="space-y-3 border-t pt-4">
-                <Label>Roles</Label>
+              <FormSection title="Roles & departments">
                 <div className="flex flex-wrap gap-4">
                   {(["MA", "DH", "T"] as const).map((r) => (
                     <label key={r} className="flex items-center gap-2 text-sm">
@@ -397,10 +410,10 @@ function UsersPage() {
                   onClick={() => saveAccess.mutate()}>
                   {saveAccess.isPending ? "Saving…" : "Save roles & departments"}
                 </Button>
-              </div>
-            </div>
+              </FormSection>
+            </FormBody>
           )}
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t pt-3">
             <Button variant="outline" onClick={() => setManage(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
