@@ -47,7 +47,7 @@ function UsersPage() {
   const geoEnabled = cfg?.geofence_enabled ?? true;
 
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "T" as "MA" | "DH" | "T", department_id: "" });
+  const [form, setForm] = useState({ full_name: "", email: "", phone: "", password: "", role: "T" as "MA" | "DH" | "T", department_id: "" });
   const [avatarPath, setAvatarPath] = useState("");
 
   const [manage, setManage] = useState<null | { id: string; name: string; email: string; avatar_url: string | null; roles: string[]; department_ids: string[]; primary_department_id: string | null; department_id: string | null; phone: string | null; active: boolean }>(null);
@@ -64,9 +64,10 @@ function UsersPage() {
     onSuccess: () => {
       toast.success(`User created — ${form.email}`);
       setOpen(false);
-      setForm({ full_name: "", email: "", password: "", role: "T", department_id: "" });
+      setForm({ full_name: "", email: "", phone: "", password: "", role: "T", department_id: "" });
       setAvatarPath("");
       qc.invalidateQueries({ queryKey: ["all-users"] });
+      qc.invalidateQueries({ queryKey: ["contacts"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -84,13 +85,23 @@ function UsersPage() {
   });
   const savePassword = useMutation({
     mutationFn: (vars: { user_id: string; new_password: string }) => setPasswordFn({ data: vars }),
-    onSuccess: () => { toast.success("Password reset"); setNewPassword(""); },
+    onSuccess: (r: any) => {
+      toast.success(r?.sessions_revoked === false
+        ? "Password updated. Ask the user to sign in again."
+        : "Password updated. The user has been signed out of all devices.");
+      setNewPassword("");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const savePhone = useMutation({
     mutationFn: (vars: { user_id: string; phone: string }) => phoneFn({ data: vars }),
-    onSuccess: () => { toast.success("Telephone updated"); qc.invalidateQueries({ queryKey: ["all-users"] }); },
+    onSuccess: () => {
+      toast.success("Telephone updated");
+      qc.invalidateQueries({ queryKey: ["all-users"] });
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: ["dh"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -141,6 +152,11 @@ function UsersPage() {
               <AvatarUploader ownerId="pending" required onUploaded={(p) => setAvatarPath(p)} />
               <div><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
               <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+              <div>
+                <Label>Telephone</Label>
+                <Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="e.g. +251 91 XXX XXXX" />
+                {form.phone && !isValidEtPhone(form.phone) && <p className="text-xs text-destructive">{PHONE_ERROR}</p>}
+              </div>
               <div><Label>Password</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="min 8 characters" /></div>
               <div>
                 <Label>Role</Label>
@@ -166,7 +182,7 @@ function UsersPage() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button onClick={() => create.mutate()}
-                disabled={!form.email || !form.full_name || form.password.length < 8 || (form.role !== "MA" && !form.department_id) || !avatarPath || create.isPending}>
+                disabled={!form.email || !form.full_name || !form.phone || !isValidEtPhone(form.phone) || form.password.length < 8 || (form.role !== "MA" && !form.department_id) || !avatarPath || create.isPending}>
                 {create.isPending ? "Creating…" : "Register account"}
               </Button>
             </DialogFooter>

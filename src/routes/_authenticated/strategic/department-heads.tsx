@@ -49,6 +49,7 @@ function DHPage() {
       setCredentials({ email: r.email, temp_password: r.temp_password });
       setOpen(false); setEmail(""); setFullName(""); setDeptId(""); setPhone(""); setPassword("Head@123"); setAvatarPath("");
       qc.invalidateQueries({ queryKey: ["dh"] });
+      qc.invalidateQueries({ queryKey: ["contacts"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
