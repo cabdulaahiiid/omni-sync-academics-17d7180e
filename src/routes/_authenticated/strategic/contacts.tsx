@@ -425,11 +425,14 @@ function ComposeTab({
   onSent: () => void;
 }) {
   const send = useServerFn(sendSmsCampaign);
+  const schedule = useServerFn(scheduleSmsCampaign);
   const [groups, setGroups] = useState<ContactGroup[]>([]);
   const [dept, setDept] = useState("ALL");
   const [cls, setCls] = useState("ALL");
   const [message, setMessage] = useState("");
   const [confirm, setConfirm] = useState(false);
+  const [mode, setMode] = useState<"now" | "later">("now");
+  const [when, setWhen] = useState("");
 
   const recipients = useMemo(() => {
     const map = new Map<string, Contact>();
@@ -465,6 +468,29 @@ function ComposeTab({
     },
     onError: (e: Error) => { setConfirm(false); toast.error(e.message); },
   });
+
+  const scheduleMut = useMutation({
+    mutationFn: () =>
+      schedule({
+        data: {
+          message,
+          groups: groups.length ? groups : ["SELECTION"],
+          recipients: recipients.map((r) => ({ name: r.name, phone: r.phone!, group: r.group })),
+          scheduled_at: new Date(when).toISOString(),
+        },
+      }),
+    onSuccess: (res) => {
+      toast.success(`Scheduled ${res.total} message(s) for ${new Date(res.scheduled_at).toLocaleString()}`);
+      setConfirm(false);
+      setMessage("");
+      setWhen("");
+      onSent();
+    },
+    onError: (e: Error) => { setConfirm(false); toast.error(e.message); },
+  });
+
+  const busy = sendMut.isPending || scheduleMut.isPending;
+  const whenValid = mode === "now" || (when !== "" && !Number.isNaN(new Date(when).getTime()));
 
   return (
     <Card className="space-y-4 p-4">
@@ -534,13 +560,34 @@ function ComposeTab({
         <p className="mt-1 whitespace-pre-wrap">{preview || "—"}</p>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Delivery</Label>
+          <Select value={mode} onValueChange={(v) => setMode(v as "now" | "later")}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="now">Send now</SelectItem>
+              <SelectItem value="later">Schedule for later</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {mode === "later" && (
+          <div>
+            <Label>Date &amp; time</Label>
+            <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+            <p className="mt-1 text-xs text-muted-foreground">Your local time. The batch is sent automatically.</p>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">{recipients.length} unique recipient(s)</p>
         <Button
-          disabled={!configured || recipients.length === 0 || message.trim().length === 0}
+          disabled={!configured || recipients.length === 0 || message.trim().length === 0 || !whenValid}
           onClick={() => setConfirm(true)}
         >
-          <Send className="mr-2 h-4 w-4" /> Send SMS
+          {mode === "now" ? <Send className="mr-2 h-4 w-4" /> : <Clock className="mr-2 h-4 w-4" />}
+          {mode === "now" ? "Send SMS" : "Schedule SMS"}
         </Button>
       </div>
       {!configured && <p className="text-xs text-destructive">The SMS gateway is not configured yet, so sending is disabled.</p>}
@@ -548,14 +595,21 @@ function ComposeTab({
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send to {recipients.length} recipient(s)?</DialogTitle>
-            <DialogDescription>Duplicate telephone numbers have already been removed.</DialogDescription>
+            <DialogTitle>
+              {mode === "now"
+                ? `Send to ${recipients.length} recipient(s)?`
+                : `Schedule for ${recipients.length} recipient(s)?`}
+            </DialogTitle>
+            <DialogDescription>
+              Duplicate telephone numbers have already been removed.
+              {mode === "later" && when ? ` Sending on ${new Date(when).toLocaleString()}.` : ""}
+            </DialogDescription>
           </DialogHeader>
           <p className="whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 text-sm">{preview}</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirm(false)}>Cancel</Button>
-            <Button disabled={sendMut.isPending} onClick={() => sendMut.mutate()}>
-              {sendMut.isPending ? "Sending…" : "Confirm & send"}
+            <Button disabled={busy} onClick={() => (mode === "now" ? sendMut.mutate() : scheduleMut.mutate())}>
+              {busy ? "Working…" : mode === "now" ? "Confirm & send" : "Confirm & schedule"}
             </Button>
           </DialogFooter>
         </DialogContent>
