@@ -10,6 +10,7 @@ import { listSemesterDrafts, requestSemesterApproval, dhRequestApprovalPerWeek, 
 import { listWeekThreadsForDept, dhResubmitWeek } from "@/lib/feedback.functions";
 import { WeekFeedbackWorkspace } from "@/components/week-feedback-workspace";
 import { useMe } from "@/hooks/use-me";
+import { useDhScheduleLive } from "@/hooks/use-dh-schedule-live";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
