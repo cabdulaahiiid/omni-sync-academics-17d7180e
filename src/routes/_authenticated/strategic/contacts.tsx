@@ -23,8 +23,11 @@ import {
   CONTACT_GROUPS, listContacts, upsertExternalContact, deleteExternalContact,
   importExternalContacts, type Contact, type ContactGroup,
 } from "@/lib/contacts.functions";
-import { getSmsStatus, listSmsCampaigns, listSmsRecipients, sendSmsCampaign } from "@/lib/sms.functions";
-import { BookUser, MessageSquarePlus, Pencil, Plus, Send, Trash2, Users } from "lucide-react";
+import {
+  cancelScheduledCampaign, getSmsSettings, getSmsStatus, listSmsCampaigns, listSmsRecipients,
+  rescheduleCampaign, scheduleSmsCampaign, sendSmsCampaign, sendTestSms, updateSmsSettings,
+} from "@/lib/sms.functions";
+import { BookUser, Clock, MessageSquarePlus, Pencil, Plus, Send, Settings2, Trash2, Users } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/strategic/contacts")({
   component: ContactBookPage,
@@ -99,9 +102,12 @@ function ContactBookPage() {
             Contacts are sourced live from staff, trainer, student and guardian registrations.
           </p>
         </div>
-        <Badge variant={smsStatus?.configured ? "secondary" : "destructive"}>
-          SMS gateway: {smsStatus?.configured ? "Ready" : "Not configured"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {smsStatus?.environment === "development" && <Badge variant="outline">Dev mode</Badge>}
+          <Badge variant={smsStatus?.configured ? "secondary" : "destructive"}>
+            SMS gateway: {smsStatus?.configured ? "Ready" : "Not configured"}
+          </Badge>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -119,6 +125,7 @@ function ContactBookPage() {
           <TabsTrigger value="other">Other Staff</TabsTrigger>
           <TabsTrigger value="compose">Create SMS</TabsTrigger>
           <TabsTrigger value="history">SMS History</TabsTrigger>
+          <TabsTrigger value="settings">Gateway Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="book" className="mt-4 space-y-4">
@@ -227,6 +234,10 @@ function ContactBookPage() {
 
         <TabsContent value="history" className="mt-4">
           <HistoryTab />
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-4">
+          <GatewaySettingsTab onSaved={() => qc.invalidateQueries({ queryKey: ["sms-status"] })} />
         </TabsContent>
       </Tabs>
 
@@ -414,11 +425,14 @@ function ComposeTab({
   onSent: () => void;
 }) {
   const send = useServerFn(sendSmsCampaign);
+  const schedule = useServerFn(scheduleSmsCampaign);
   const [groups, setGroups] = useState<ContactGroup[]>([]);
   const [dept, setDept] = useState("ALL");
   const [cls, setCls] = useState("ALL");
   const [message, setMessage] = useState("");
   const [confirm, setConfirm] = useState(false);
+  const [mode, setMode] = useState<"now" | "later">("now");
+  const [when, setWhen] = useState("");
 
   const recipients = useMemo(() => {
     const map = new Map<string, Contact>();
@@ -454,6 +468,29 @@ function ComposeTab({
     },
     onError: (e: Error) => { setConfirm(false); toast.error(e.message); },
   });
+
+  const scheduleMut = useMutation({
+    mutationFn: () =>
+      schedule({
+        data: {
+          message,
+          groups: groups.length ? groups : ["SELECTION"],
+          recipients: recipients.map((r) => ({ name: r.name, phone: r.phone!, group: r.group })),
+          scheduled_at: new Date(when).toISOString(),
+        },
+      }),
+    onSuccess: (res) => {
+      toast.success(`Scheduled ${res.total} message(s) for ${new Date(res.scheduled_at).toLocaleString()}`);
+      setConfirm(false);
+      setMessage("");
+      setWhen("");
+      onSent();
+    },
+    onError: (e: Error) => { setConfirm(false); toast.error(e.message); },
+  });
+
+  const busy = sendMut.isPending || scheduleMut.isPending;
+  const whenValid = mode === "now" || (when !== "" && !Number.isNaN(new Date(when).getTime()));
 
   return (
     <Card className="space-y-4 p-4">
@@ -523,13 +560,34 @@ function ComposeTab({
         <p className="mt-1 whitespace-pre-wrap">{preview || "—"}</p>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Delivery</Label>
+          <Select value={mode} onValueChange={(v) => setMode(v as "now" | "later")}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="now">Send now</SelectItem>
+              <SelectItem value="later">Schedule for later</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {mode === "later" && (
+          <div>
+            <Label>Date &amp; time</Label>
+            <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+            <p className="mt-1 text-xs text-muted-foreground">Your local time. The batch is sent automatically.</p>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">{recipients.length} unique recipient(s)</p>
         <Button
-          disabled={!configured || recipients.length === 0 || message.trim().length === 0}
+          disabled={!configured || recipients.length === 0 || message.trim().length === 0 || !whenValid}
           onClick={() => setConfirm(true)}
         >
-          <Send className="mr-2 h-4 w-4" /> Send SMS
+          {mode === "now" ? <Send className="mr-2 h-4 w-4" /> : <Clock className="mr-2 h-4 w-4" />}
+          {mode === "now" ? "Send SMS" : "Schedule SMS"}
         </Button>
       </div>
       {!configured && <p className="text-xs text-destructive">The SMS gateway is not configured yet, so sending is disabled.</p>}
@@ -537,14 +595,21 @@ function ComposeTab({
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send to {recipients.length} recipient(s)?</DialogTitle>
-            <DialogDescription>Duplicate telephone numbers have already been removed.</DialogDescription>
+            <DialogTitle>
+              {mode === "now"
+                ? `Send to ${recipients.length} recipient(s)?`
+                : `Schedule for ${recipients.length} recipient(s)?`}
+            </DialogTitle>
+            <DialogDescription>
+              Duplicate telephone numbers have already been removed.
+              {mode === "later" && when ? ` Sending on ${new Date(when).toLocaleString()}.` : ""}
+            </DialogDescription>
           </DialogHeader>
           <p className="whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 text-sm">{preview}</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirm(false)}>Cancel</Button>
-            <Button disabled={sendMut.isPending} onClick={() => sendMut.mutate()}>
-              {sendMut.isPending ? "Sending…" : "Confirm & send"}
+            <Button disabled={busy} onClick={() => (mode === "now" ? sendMut.mutate() : scheduleMut.mutate())}>
+              {busy ? "Working…" : mode === "now" ? "Confirm & send" : "Confirm & schedule"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -557,21 +622,39 @@ function ComposeTab({
 
 function HistoryTab() {
   const { authReady, hasSession } = useAuthSession();
+  const qc = useQueryClient();
   const fetchCampaigns = useServerFn(listSmsCampaigns);
   const fetchRecipients = useServerFn(listSmsRecipients);
+  const cancelFn = useServerFn(cancelScheduledCampaign);
+  const rescheduleFn = useServerFn(rescheduleCampaign);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [when, setWhen] = useState("");
 
   const { data: campaigns } = useQuery({
     queryKey: ["sms-campaigns"],
     queryFn: () => fetchCampaigns(),
     enabled: authReady && hasSession,
     throwOnError: false,
+    refetchInterval: 30_000,
   });
   const { data: recipients } = useQuery({
     queryKey: ["sms-recipients", openId],
     queryFn: () => fetchRecipients({ data: { campaign_id: openId! } }),
     enabled: !!openId,
     throwOnError: false,
+  });
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ["sms-campaigns"] });
+  const cancelMut = useMutation({
+    mutationFn: (id: string) => cancelFn({ data: { campaign_id: id } }),
+    onSuccess: () => { toast.success("Scheduled batch cancelled"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const rescheduleMut = useMutation({
+    mutationFn: () => rescheduleFn({ data: { campaign_id: editId!, scheduled_at: new Date(when).toISOString() } }),
+    onSuccess: () => { toast.success("Batch rescheduled"); setEditId(null); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   return (
@@ -581,28 +664,69 @@ function HistoryTab() {
         <TableHeader>
           <TableRow>
             <TableHead>Date</TableHead><TableHead>Sender</TableHead><TableHead>Message</TableHead>
-            <TableHead>Groups</TableHead><TableHead>Total</TableHead><TableHead>Sent</TableHead>
-            <TableHead>Failed</TableHead><TableHead>Status</TableHead>
+            <TableHead>Scheduled for</TableHead><TableHead>Groups</TableHead><TableHead>Total</TableHead>
+            <TableHead>Sent</TableHead><TableHead>Failed</TableHead><TableHead>Status</TableHead>
+            <TableHead className="w-40"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {(campaigns ?? []).length === 0 && (
-            <TableRow><TableCell colSpan={8} className="text-muted-foreground">No messages sent yet.</TableCell></TableRow>
+            <TableRow><TableCell colSpan={10} className="text-muted-foreground">No messages sent yet.</TableCell></TableRow>
           )}
           {(campaigns ?? []).map((c: any) => (
             <TableRow key={c.id} className="cursor-pointer" onClick={() => setOpenId(c.id)}>
               <TableCell>{new Date(c.created_at).toLocaleString()}</TableCell>
               <TableCell>{c.sender_name ?? "—"}</TableCell>
               <TableCell className="max-w-[240px] truncate">{c.message}</TableCell>
+              <TableCell className="whitespace-nowrap">
+                {c.scheduled_at ? (
+                  <>
+                    {new Date(c.scheduled_at).toLocaleString()}
+                    {c.status === "SCHEDULED" && (
+                      <span className="block text-xs text-muted-foreground">{countdown(c.scheduled_at)}</span>
+                    )}
+                  </>
+                ) : "—"}
+              </TableCell>
               <TableCell>{(c.groups ?? []).join(", ") || "—"}</TableCell>
               <TableCell>{c.total_recipients}</TableCell>
               <TableCell>{c.sent_count}</TableCell>
               <TableCell>{c.failed_count}</TableCell>
-              <TableCell><Badge variant={c.status === "COMPLETED" ? "secondary" : "outline"}>{c.status}</Badge></TableCell>
+              <TableCell>
+                <Badge variant={c.status === "COMPLETED" ? "secondary" : c.status === "FAILED" ? "destructive" : "outline"}>
+                  {c.status}
+                </Badge>
+                {c.environment === "development" && <span className="ml-1 text-xs text-muted-foreground">dev</span>}
+              </TableCell>
+              <TableCell onClick={(e) => e.stopPropagation()}>
+                {c.status === "SCHEDULED" && (
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="outline" onClick={() => { setEditId(c.id); setWhen(""); }}>Reschedule</Button>
+                    <Button size="sm" variant="ghost" onClick={() => cancelMut.mutate(c.id)}>Cancel</Button>
+                  </div>
+                )}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      <Dialog open={!!editId} onOpenChange={(o) => !o && setEditId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Reschedule batch</DialogTitle></DialogHeader>
+          <div>
+            <Label>New date &amp; time</Label>
+            <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditId(null)}>Cancel</Button>
+            <Button
+              disabled={!when || rescheduleMut.isPending}
+              onClick={() => rescheduleMut.mutate()}
+            >Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!openId} onOpenChange={(o) => !o && setOpenId(null)}>
         <DialogContent className="max-w-2xl">
@@ -626,6 +750,145 @@ function HistoryTab() {
           </div>
         </DialogContent>
       </Dialog>
+    </Card>
+  );
+}
+
+function countdown(iso: string) {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return "due now";
+  const mins = Math.round(ms / 60000);
+  if (mins < 60) return `in ${mins} min`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 48) return `in ${hrs} h`;
+  return `in ${Math.round(hrs / 24)} days`;
+}
+
+/* ---------------- Gateway settings ---------------- */
+
+function GatewaySettingsTab({ onSaved }: { onSaved: () => void }) {
+  const { authReady, hasSession } = useAuthSession();
+  const qc = useQueryClient();
+  const getFn = useServerFn(getSmsSettings);
+  const saveFn = useServerFn(updateSmsSettings);
+  const testFn = useServerFn(sendTestSms);
+
+  const { data } = useQuery({
+    queryKey: ["sms-settings"],
+    queryFn: () => getFn(),
+    enabled: authReady && hasSession,
+    throwOnError: false,
+  });
+
+  const [apiKey, setApiKey] = useState("");
+  const [senderId, setSenderId] = useState("");
+  const [environment, setEnvironment] = useState<"development" | "production">("production");
+  const [prodUrl, setProdUrl] = useState("https://api.smsethiopia.com/api/send");
+  const [devUrl, setDevUrl] = useState("https://api.smsethiopia.com/api/send");
+  const [loaded, setLoaded] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [testResult, setTestResult] = useState<string | null>(null);
+
+  if (data && !loaded) {
+    setLoaded(true);
+    setSenderId(data.sender_id ?? "");
+    setEnvironment(data.environment);
+    setProdUrl(data.prod_base_url);
+    setDevUrl(data.dev_base_url);
+  }
+
+  const saveMut = useMutation({
+    mutationFn: () =>
+      saveFn({
+        data: {
+          api_key: apiKey || null,
+          sender_id: senderId || null,
+          environment,
+          prod_base_url: prodUrl,
+          dev_base_url: devUrl,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Gateway settings saved — they apply to the next message.");
+      setApiKey("");
+      qc.invalidateQueries({ queryKey: ["sms-settings"] });
+      onSaved();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const testMut = useMutation({
+    mutationFn: () =>
+      testFn({ data: { phone: testPhone, message: "TVET ERP test message — gateway configuration check." } }),
+    onSuccess: (res) => {
+      setTestResult(`${res.ok ? "Success" : "Failed"} (${res.environment}): ${res.response}`);
+      if (res.ok) toast.success("Test message accepted by the gateway");
+      else toast.error("Gateway rejected the test message");
+    },
+    onError: (e: Error) => { setTestResult(`Failed: ${e.message}`); toast.error(e.message); },
+  });
+
+  return (
+    <Card className="max-w-2xl space-y-4 p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 font-semibold"><Settings2 className="h-4 w-4" /> SMS gateway settings</h2>
+        {data?.source === "secrets" && <Badge variant="outline">Using project secrets</Badge>}
+      </div>
+
+      <div>
+        <Label>API key</Label>
+        <Input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder={data?.has_api_key ? `Saved (${data.api_key_hint}) — type to replace` : "Enter your smsethiopia.com API key"}
+        />
+        <p className="mt-1 text-xs text-muted-foreground">Stored securely; it is never shown again after saving.</p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Sender ID</Label>
+          <Input value={senderId} onChange={(e) => setSenderId(e.target.value)} placeholder="e.g. TVET" />
+        </div>
+        <div>
+          <Label>Environment</Label>
+          <Select value={environment} onValueChange={(v) => setEnvironment(v as "development" | "production")}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="production">Production</SelectItem>
+              <SelectItem value="development">Development</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Production endpoint</Label>
+          <Input value={prodUrl} onChange={(e) => setProdUrl(e.target.value)} />
+        </div>
+        <div>
+          <Label>Development endpoint</Label>
+          <Input value={devUrl} onChange={(e) => setDevUrl(e.target.value)} />
+        </div>
+      </div>
+
+      <Button disabled={saveMut.isPending} onClick={() => saveMut.mutate()}>
+        {saveMut.isPending ? "Saving…" : "Save settings"}
+      </Button>
+
+      <div className="space-y-2 rounded-lg border p-3">
+        <Label>Send a test SMS</Label>
+        <div className="flex gap-2">
+          <Input value={testPhone} onChange={(e) => setTestPhone(e.target.value)} placeholder="09XXXXXXXX" />
+          <Button variant="outline" disabled={!testPhone || testMut.isPending} onClick={() => testMut.mutate()}>
+            {testMut.isPending ? "Sending…" : "Send test"}
+          </Button>
+        </div>
+        {testResult && <p className="text-xs text-muted-foreground">{testResult}</p>}
+      </div>
+
+      {data?.updated_at && (
+        <p className="text-xs text-muted-foreground">Last updated {new Date(data.updated_at).toLocaleString()}</p>
+      )}
     </Card>
   );
 }
