@@ -26,6 +26,8 @@ import { GENDER_OPTIONS, GUARDIAN_RELATIONSHIP_OPTIONS, normalizeGender } from "
 import { downloadCsv, downloadPdf } from "@/lib/report-export";
 import type { ReportResult } from "@/lib/reports.functions";
 import { FileDown, FileText } from "lucide-react";
+import { ErrorPanel } from "@/components/forms/error-panel";
+import { downloadImportErrorReport, type ImportRowError } from "@/lib/errors/import-report";
 
 export const Route = createFileRoute("/_authenticated/operational/students")({
   component: StudentsHub,
@@ -52,6 +54,8 @@ function StudentsHub() {
   const [csvName, setCsvName] = useState("");
   const [bulkLevelId, setBulkLevelId] = useState<string>("");
   const [bulkSectionId, setBulkSectionId] = useState<string>("");
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<{ inserted: number; total: number; errors: ImportRowError[] } | null>(null);
 
   const levels = ls?.levels ?? [];
   const sections = (ls?.sections ?? []).filter((s) => !bulkLevelId || s.level_id === bulkLevelId);
@@ -124,7 +128,7 @@ function StudentsHub() {
 
   const bulk = useMutation({
     mutationFn: () => {
-      if (!bulkLevelName || !bulkSectionName) throw new Error("Select level and section first");
+      if (!bulkLevelName || !bulkSectionName) throw new Error("Select the level and section this file belongs to before importing.");
       const rows = csvRows.map((r) => ({
         registration_number: r.student_id_code || r.registration_number || "",
         full_name: r.full_name || "",
@@ -136,8 +140,16 @@ function StudentsHub() {
       return bulkFn({ data: { rows } });
     },
     onSuccess: (r) => {
-      toast.success(`Inserted ${r.inserted} students${r.errors.length ? ` · ${r.errors.length} errors` : ""}`);
-      r.errors.slice(0, 5).forEach((e) => toast.error(`Row ${e.row}: ${e.reason}`));
+      const total = csvRows.length;
+      setImportResult({ inserted: r.inserted, total, errors: r.errors as ImportRowError[] });
+      if (r.errors.length) {
+        toast.warning(`${r.inserted} of ${total} rows imported · ${r.errors.length} skipped`, {
+          description: "See the list below for the exact row, the problem and how to fix it.",
+          duration: 8000,
+        });
+      } else {
+        toast.success(`All ${r.inserted} students imported`);
+      }
       setCsvRows([]); setCsvName("");
       qc.invalidateQueries({ queryKey: ["dh-students"] });
     },
