@@ -63,6 +63,7 @@ function ModulesPage() {
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
     setFileName(file.name);
     const reader = new FileReader();
@@ -82,6 +83,7 @@ function ModulesPage() {
           total_sessions: Number(r.total_sessions) || 0,
         })).filter((r) => r.code && r.name);
         setParsed(rows);
+        setOpen(true);
         toast.success(`Parsed ${rows.length} rows`);
       } catch {
         toast.error("Failed to parse file");
