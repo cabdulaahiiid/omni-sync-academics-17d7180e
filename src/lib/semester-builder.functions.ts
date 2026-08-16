@@ -505,6 +505,67 @@ export const saveBuilderDraft = createServerFn({ method: "POST" })
       }
       const relErr = await assertDhRelationships(supabase, data);
       if (relErr) throw new Error(relErr);
+
+      // Canonical DH path: engine generates the sessions, one database
+      // transaction stores plan + sessions (or nothing at all).
+      const [{ data: semDh }, { data: modDh }] = await Promise.all([
+        supabase.from("semester_registry").select("id, start_date, end_date").eq("id", data.semester_id).maybeSingle(),
+        supabase.from("modules").select("id, code, name, total_hours").eq("id", data.module_id).maybeSingle(),
+      ]);
+      if (!semDh) throw new Error("The selected academic term no longer exists.");
+      if (!modDh) throw new Error("The selected Module no longer exists.");
+
+      const engine = runEngine(data, modDh.total_hours ?? 0, semDh.end_date);
+      if (engine.errors.length || !engine.sessions.length) {
+        throw new Error(engine.errors[0] ?? "No sessions could be generated — check the teaching days, duration and start date.");
+      }
+      const dhConflicts = await detectConflicts(data, asOccurrences(engine.sessions), data.plan_id ?? null);
+      if (dhConflicts.length) {
+        throw new Error(`${dhConflicts[0].reason} (${dhConflicts.length} clash(es) in total.) Resolve them before saving.`);
+      }
+
+      const { data: rpc, error: rpcError } = await supabase.rpc("dh_save_schedule_plan", {
+        _plan: {
+          semester_id: data.semester_id,
+          department_id: data.department_id,
+          level_id: data.level_id,
+          module_id: data.module_id,
+          section_id: data.section_id,
+          venue_id: data.venue_id,
+          trainer_registry_id: data.trainer_id,
+          delivery: data.delivery,
+          theory_days: data.theory_days,
+          practical_days: data.practical_days,
+          sessions_per_week: data.sessions_per_week,
+          session_minutes: data.duration_hours * 60 + data.duration_minutes,
+          module_total_minutes: Math.round((modDh.total_hours ?? 0) * 60),
+          start_date: data.start_date,
+          start_time: data.start_time,
+          end_date: engine.end_date,
+          total_sessions: engine.total_sessions,
+          total_minutes: engine.total_minutes,
+          weeks: engine.weeks,
+        } as any,
+        _sessions: engine.sessions.map((s) => ({
+          session_number: s.session_number,
+          date: s.date,
+          day: s.day,
+          week_num: s.week_num,
+          start_time: s.start_time,
+          end_time: s.end_time,
+          mode: s.mode,
+        })) as any,
+        _plan_id: data.plan_id ?? null,
+      } as any);
+      if (rpcError) throw new Error(rpcError.message);
+      const r = (rpc ?? {}) as { plan_id?: string; sessions?: number };
+      return {
+        ok: true,
+        created: r.sessions ?? engine.total_sessions,
+        weeks: engine.weeks,
+        plan_id: r.plan_id ?? null,
+        end_date: engine.end_date,
+      };
     }
 
     const [{ data: sem }, { data: mod }, { data: trainer }, { data: trainerDept }, { data: venue }, { data: section }, { data: level }] = await Promise.all([
@@ -573,5 +634,5 @@ export const saveBuilderDraft = createServerFn({ method: "POST" })
         days: plan.days, weeks: plan.weeks, duration_min: plan.duration_min,
       } as any,
     });
-    return { ok: true, created, weeks: plan.weeks };
+    return { ok: true, created, weeks: plan.weeks, plan_id: null as string | null, end_date: plan.occurrences[plan.occurrences.length - 1]?.date ?? null };
   });
