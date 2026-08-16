@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listTrainers, createTrainer, revokeTrainer, updateTrainerQualifications } from "@/lib/dh.functions";
+import { nextEntityCode } from "@/lib/codes.functions";
 import { listDepartments } from "@/lib/data.functions";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ function TrainersPage() {
   const list = useServerFn(listTrainers);
   const listD = useServerFn(listDepartments);
   const create = useServerFn(createTrainer);
+  const nextCodeFn = useServerFn(nextEntityCode);
   const revoke = useServerFn(revokeTrainer);
   const updateQuals = useServerFn(updateTrainerQualifications);
   const { data: rows, isLoading } = useQuery({ queryKey: ["trainers"], queryFn: () => list(), enabled: canQuery, throwOnError: false });
@@ -46,6 +48,12 @@ function TrainersPage() {
   const [password, setPassword] = useState("Trainer@123");
   const [quals, setQuals] = useState<string[]>([]);
   const [avatarPath, setAvatarPath] = useState("");
+  const [staffCode, setStaffCode] = useState("");
+  const { data: nextCode } = useQuery({
+    queryKey: ["next-trainer-id", deptId],
+    enabled: canQuery && !!deptId,
+    queryFn: () => nextCodeFn({ data: { kind: "trainer" as const, department_id: deptId } }),
+  });
   const [credentials, setCredentials] = useState<{ email: string; temp_password: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string; department_id: string | null } | null>(null);
   const [editQuals, setEditQuals] = useState<string[]>([]);
@@ -61,13 +69,14 @@ function TrainersPage() {
       phone,
       qualifications: quals,
       avatar_path: avatarPath,
+      staff_code: staffCode,
     } }),
-    invalidateKeys: [["trainers"], ["all-users"], ["contacts"]],
+    invalidateKeys: [["trainers"], ["all-users"], ["contacts"], ["next-trainer-id"]],
     successMessage: "Trainer account created",
     onSaved: (r: any) => {
       setCredentials({ email: r.email, temp_password: r.temp_password });
       setOpen(false);
-      setEmail(""); setFullName(""); setPhone(""); setDeptId(""); setPassword("Trainer@123"); setQuals([]); setAvatarPath("");
+      setEmail(""); setFullName(""); setPhone(""); setDeptId(""); setPassword("Trainer@123"); setQuals([]); setAvatarPath(""); setStaffCode("");
     },
   });
   const revokeMut = useMutation({
@@ -125,9 +134,17 @@ function TrainersPage() {
                     label="Department"
                     required
                     value={deptId}
-                    onChange={(v) => { setDeptId(v); setQuals([]); }}
+                    onChange={(v) => { setDeptId(v); setQuals([]); setStaffCode(""); }}
                     placeholder="Select department"
                     options={((depts ?? md.departments) as any[]).map((d) => ({ value: d.id, label: d.name }))}
+                  />
+                  <TextField
+                    label="Trainer ID (staff code)"
+                    value={staffCode || nextCode?.code || ""}
+                    onChange={setStaffCode}
+                    disabled={!deptId}
+                    placeholder={deptId ? "e.g. ICT-26-0001" : "Select department first"}
+                    hint="Generated automatically — you can change it if needed."
                   />
                 </FormGrid>
               </FormSection>
