@@ -262,6 +262,7 @@ export type Database = {
       }
       departments: {
         Row: {
+          code: string | null
           created_at: string
           description: string | null
           id: string
@@ -270,6 +271,7 @@ export type Database = {
           telephone: string | null
         }
         Insert: {
+          code?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -278,6 +280,7 @@ export type Database = {
           telephone?: string | null
         }
         Update: {
+          code?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1275,6 +1278,7 @@ export type Database = {
           qualifications: string[]
           sessions_completed: number
           sessions_target: number
+          staff_code: string | null
           status: Database["public"]["Enums"]["entity_status"]
         }
         Insert: {
@@ -1288,6 +1292,7 @@ export type Database = {
           qualifications?: string[]
           sessions_completed?: number
           sessions_target?: number
+          staff_code?: string | null
           status?: Database["public"]["Enums"]["entity_status"]
         }
         Update: {
@@ -1301,6 +1306,7 @@ export type Database = {
           qualifications?: string[]
           sessions_completed?: number
           sessions_target?: number
+          staff_code?: string | null
           status?: Database["public"]["Enums"]["entity_status"]
         }
         Relationships: [
@@ -1496,6 +1502,10 @@ export type Database = {
       ma_split_semester_to_weeks: {
         Args: { _approval_id: string }
         Returns: Json
+      }
+      next_entity_code: {
+        Args: { _department_id: string; _kind: string }
+        Returns: string
       }
       phone_owner: {
         Args: { _phone: string }

@@ -176,7 +176,7 @@ function UsersPage() {
                 <AvatarUploader ownerId="pending" required onUploaded={(p) => setAvatarPath(p)} />
                 <FormGrid>
                   <FormFull>
-                    <TextField label="Full name" required value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} />
+                    <TextField label="Full name" required value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} placeholder="e.g. Abdi Mohammed Ali" />
                   </FormFull>
                 </FormGrid>
               </FormSection>

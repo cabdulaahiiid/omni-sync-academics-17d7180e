@@ -164,8 +164,8 @@ function ModulesPage() {
               <DialogHeader><DialogTitle>New module</DialogTitle></DialogHeader>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2"><Label>Code</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></div>
-                  <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Code</Label><Input placeholder="e.g. ICT-201" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Name</Label><Input placeholder="e.g. Database Administration" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
@@ -199,8 +199,8 @@ function ModulesPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2"><Label>Hours</Label><Input type="number" min={0} value={form.total_hours} onChange={(e) => setForm({ ...form, total_hours: Number(e.target.value) || 0 })} /></div>
-                  <div className="space-y-2"><Label>Sessions</Label><Input type="number" min={0} value={form.total_sessions} onChange={(e) => setForm({ ...form, total_sessions: Number(e.target.value) || 0 })} /></div>
+                  <div className="space-y-2"><Label>Hours</Label><Input type="number" min={0} placeholder="e.g. 60" value={form.total_hours} onChange={(e) => setForm({ ...form, total_hours: Number(e.target.value) || 0 })} /></div>
+                  <div className="space-y-2"><Label>Sessions</Label><Input type="number" min={0} placeholder="e.g. 24" value={form.total_sessions} onChange={(e) => setForm({ ...form, total_sessions: Number(e.target.value) || 0 })} /></div>
                 </div>
               </div>
               <DialogFooter>

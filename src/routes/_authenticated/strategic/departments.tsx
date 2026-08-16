@@ -99,8 +99,8 @@ function DepartmentsPage() {
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? "Edit department" : "New department"}</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} /></div>
+              <div className="space-y-2"><Label>Name</Label><Input placeholder="e.g. Information Communication Technology" value={name} onChange={(e) => setName(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Description</Label><Textarea placeholder="e.g. Trains ICT technicians in networking, hardware and software support." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} /></div>
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={status} onValueChange={(v) => setStatus(v as "ACTIVE" | "SUSPENDED")}>

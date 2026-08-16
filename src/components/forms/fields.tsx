@@ -78,7 +78,7 @@ export function TextField({ label, value, onChange, required, placeholder, hint,
 }
 
 /** Email only — never accepts a telephone number. */
-export function EmailField({ label = "Email address", value, onChange, required, placeholder = "name@tvet.com", hint, disabled }: Partial<BaseProps> & { value: string; onChange: (v: string) => void }) {
+export function EmailField({ label = "Email address", value, onChange, required, placeholder = "e.g. abdi@tvet.edu.et", hint, disabled }: Partial<BaseProps> & { value: string; onChange: (v: string) => void }) {
   const id = useId();
   const [touched, setTouched] = useState(false);
   const empty = !value.trim();
@@ -109,7 +109,7 @@ export function EmailField({ label = "Email address", value, onChange, required,
 }
 
 /** Ethiopian telephone only — letters and "@" can never be typed in. */
-export function PhoneField({ label = "Telephone number", value, onChange, required, placeholder = "e.g. +251 91 XXX XXXX", hint, disabled }: Partial<BaseProps> & { value: string; onChange: (v: string) => void }) {
+export function PhoneField({ label = "Telephone number", value, onChange, required, placeholder = "e.g. 0912345678", hint, disabled }: Partial<BaseProps> & { value: string; onChange: (v: string) => void }) {
   const id = useId();
   const [touched, setTouched] = useState(false);
   const empty = !value.trim();
