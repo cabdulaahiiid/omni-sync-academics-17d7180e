@@ -25,6 +25,7 @@ import {
   Search,
   Plus,
   Database,
+  BookUser,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -78,6 +79,7 @@ const GROUPS: NavGroup[] = [
       { to: "/strategic/trainers", label: "Trainers", icon: Users },
       { to: "/strategic/students", label: "Students", icon: GraduationCap },
       { to: "/strategic/users", label: "Users & Roles", icon: ShieldCheck },
+      { to: "/strategic/contacts", label: "Contact Book & SMS", icon: BookUser },
     ],
   },
   {
