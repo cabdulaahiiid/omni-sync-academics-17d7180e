@@ -123,7 +123,15 @@ export const createTrainer = createServerFn({ method: "POST" })
       full_name: z.string().min(1).max(120),
       department_id: z.string().uuid(),
       password: z.string().min(6).max(72),
-      phone: z.string().max(40).optional().nullable(),
+      phone: z
+        .string()
+        .trim()
+        .min(1, "Trainer telephone number is required.")
+        .max(40)
+        .refine((v) => normalizeEtPhone(v) !== null, {
+          message: "Please enter a valid Ethiopian telephone number.",
+        })
+        .transform((v) => normalizeEtPhone(v) as string),
       qualifications: z.array(z.string().min(1).max(60)).default([]),
       avatar_path: z.string().min(1).max(300),
     }).parse(d),
