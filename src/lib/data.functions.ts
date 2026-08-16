@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireRole } from "@/lib/auth/require-role";
-import { normalizeEtPhone, PHONE_ERROR } from "@/lib/phone";
+
 
 // ===== Current user role + profile =====
 export const getMe = createServerFn({ method: "GET" })

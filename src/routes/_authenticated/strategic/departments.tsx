@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { isValidEtPhone, PHONE_ERROR } from "@/lib/phone";
 import { DEPARTMENT_STATUS_OPTIONS } from "@/lib/master-data";
 import { useInvalidateMasterData } from "@/hooks/use-master-data";
 
@@ -23,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/strategic/departments")({
   component: DepartmentsPage,
 });
 
-type Dept = { id: string; name: string; description: string | null; telephone?: string | null; status: "ACTIVE" | "SUSPENDED" };
+type Dept = { id: string; name: string; description: string | null; status: "ACTIVE" | "SUSPENDED" };
 
 function DepartmentsPage() {
   const qc = useQueryClient();
@@ -63,13 +62,11 @@ function DepartmentsPage() {
   const [editing, setEditing] = useState<Dept | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [telephone, setTelephone] = useState("");
   const [status, setStatus] = useState<"ACTIVE" | "SUSPENDED">("ACTIVE");
   const invalidateMaster = useInvalidateMasterData();
-  const phoneInvalid = !isValidEtPhone(telephone);
 
   const saveMut = useMutation({
-    mutationFn: () => upsert({ data: { id: editing?.id, name, description, telephone: telephone || null, status } }),
+    mutationFn: () => upsert({ data: { id: editing?.id, name, description, status } }),
     onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["departments"] }); invalidateMaster(); setOpen(false); },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -94,7 +91,7 @@ function DepartmentsPage() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditing(null); setName(""); setDescription(""); setTelephone(""); setStatus("ACTIVE"); }}>
+            <Button onClick={() => { setEditing(null); setName(""); setDescription(""); setStatus("ACTIVE"); }}>
               <Plus className="mr-2 h-4 w-4" /> New department
             </Button>
           </DialogTrigger>
@@ -103,11 +100,6 @@ function DepartmentsPage() {
             <div className="space-y-4">
               <div className="space-y-2"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
               <div className="space-y-2"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} /></div>
-              <div className="space-y-2">
-                <Label>Department Telephone</Label>
-                <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={telephone} onChange={(e) => setTelephone(e.target.value)} />
-                {telephone && phoneInvalid && <p className="text-xs text-destructive">{PHONE_ERROR}</p>}
-              </div>
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={status} onValueChange={(v) => setStatus(v as "ACTIVE" | "SUSPENDED")}>
@@ -120,7 +112,7 @@ function DepartmentsPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={() => saveMut.mutate()} disabled={!name || !telephone || phoneInvalid || saveMut.isPending}>{saveMut.isPending ? "Saving…" : "Save"}</Button>
+              <Button onClick={() => saveMut.mutate()} disabled={!name || saveMut.isPending}>{saveMut.isPending ? "Saving…" : "Save"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -147,11 +139,11 @@ function DepartmentsPage() {
       <Card ref={scrollRef}>
         <Table>
           <TableHeader>
-            <TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Telephone</TableHead><TableHead>Status</TableHead><TableHead className="w-40 text-right">Actions</TableHead></TableRow>
+            <TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Status</TableHead><TableHead className="w-40 text-right">Actions</TableHead></TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
-            {!isLoading && filteredRows.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No departments match.</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
+            {!isLoading && filteredRows.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No departments match.</TableCell></TableRow>}
             {filteredRows.map((d) => {
               const dept = d as Dept;
               return (
@@ -167,10 +159,9 @@ function DepartmentsPage() {
                     </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{dept.description}</TableCell>
-                  <TableCell className="font-mono text-xs">{dept.telephone || "—"}</TableCell>
                   <TableCell><Badge variant={dept.status === "ACTIVE" ? "default" : "secondary"}>{dept.status}</Badge></TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" onClick={() => { setEditing(dept); setName(dept.name); setDescription(dept.description ?? ""); setTelephone(dept.telephone ?? ""); setStatus(dept.status); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => { setEditing(dept); setName(dept.name); setDescription(dept.description ?? ""); setStatus(dept.status); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => { if (confirm(`Delete ${dept.name}?`)) delMut.mutate(dept.id); }}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
