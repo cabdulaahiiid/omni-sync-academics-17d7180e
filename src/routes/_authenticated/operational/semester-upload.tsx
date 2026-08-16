@@ -589,7 +589,14 @@ function SemesterBuilderPage() {
                 <PreviewRow k="Occurrences" v={validation?.summary.occurrences != null ? String(validation.summary.occurrences) : "—"} />
               </TabsContent>
               <TabsContent value="validate" className="mt-3 space-y-2 text-xs">
-                {!formComplete && <p className="text-muted-foreground">Complete every section to run validation.</p>}
+                {!formComplete && (
+                  <div className="space-y-1.5">
+                    <p className="text-muted-foreground">Complete these fields before saving:</p>
+                    <ul className="list-disc space-y-0.5 pl-4">
+                      {missingFields.map((f) => <li key={f} className="text-destructive">{f}</li>)}
+                    </ul>
+                  </div>
+                )}
                 {formComplete && validateMut.isPending && <p className="text-muted-foreground">Checking conflicts…</p>}
                 {formComplete && !validateMut.isPending && validation && (
                   <>
@@ -622,10 +629,10 @@ function SemesterBuilderPage() {
           <div className="mr-auto text-xs text-muted-foreground">
             {draftCount > 0
               ? <span className="text-emerald-600">{draftCount} draft session(s) saved for this level.</span>
-              : formComplete
+                : formComplete
                 ? validationOk ? <span className="text-emerald-600">Ready to save.</span>
                   : <span className="text-destructive">Resolve conflicts before saving.</span>
-                : <span>Complete all sections to enable actions.</span>}
+                : <span className="text-destructive">Missing: {missingFields.join(", ")}</span>}
           </div>
           <Button variant="ghost" size="sm" onClick={() => { resetForm(); setDraftCount(0); }}><X className="mr-1.5 h-4 w-4" /> Cancel</Button>
           <Button variant="outline" size="sm" onClick={() => validateMut.mutate()} disabled={!formComplete || validateMut.isPending}>
