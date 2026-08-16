@@ -25,6 +25,7 @@ import { Route as AuthenticatedStrategicIndexRouteImport } from './routes/_authe
 import { Route as AuthenticatedOperationalIndexRouteImport } from './routes/_authenticated/operational/index'
 import { Route as AuthenticatedGroundIndexRouteImport } from './routes/_authenticated/ground/index'
 import { Route as ManualModulesSlugRouteImport } from './routes/manual/modules.$slug'
+import { Route as ApiPublicSmsDispatchRouteImport } from './routes/api/public/sms-dispatch'
 import { Route as AuthenticatedStrategicVenuesRouteImport } from './routes/_authenticated/strategic/venues'
 import { Route as AuthenticatedStrategicUsersRouteImport } from './routes/_authenticated/strategic/users'
 import { Route as AuthenticatedStrategicTrainersRouteImport } from './routes/_authenticated/strategic/trainers'
@@ -144,6 +145,11 @@ const ManualModulesSlugRoute = ManualModulesSlugRouteImport.update({
   id: '/modules/$slug',
   path: '/modules/$slug',
   getParentRoute: () => ManualRoute,
+} as any)
+const ApiPublicSmsDispatchRoute = ApiPublicSmsDispatchRouteImport.update({
+  id: '/api/public/sms-dispatch',
+  path: '/api/public/sms-dispatch',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedStrategicVenuesRoute =
   AuthenticatedStrategicVenuesRouteImport.update({
@@ -394,6 +400,7 @@ export interface FileRoutesByFullPath {
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/api/public/sms-dispatch': typeof ApiPublicSmsDispatchRoute
   '/manual/modules/$slug': typeof ManualModulesSlugRoute
   '/ground/': typeof AuthenticatedGroundIndexRoute
   '/operational/': typeof AuthenticatedOperationalIndexRoute
@@ -441,6 +448,7 @@ export interface FileRoutesByTo {
   '/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/api/public/sms-dispatch': typeof ApiPublicSmsDispatchRoute
   '/manual/modules/$slug': typeof ManualModulesSlugRoute
   '/ground': typeof AuthenticatedGroundIndexRoute
   '/operational': typeof AuthenticatedOperationalIndexRoute
@@ -494,6 +502,7 @@ export interface FileRoutesById {
   '/_authenticated/strategic/trainers': typeof AuthenticatedStrategicTrainersRoute
   '/_authenticated/strategic/users': typeof AuthenticatedStrategicUsersRoute
   '/_authenticated/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
+  '/api/public/sms-dispatch': typeof ApiPublicSmsDispatchRoute
   '/manual/modules/$slug': typeof ManualModulesSlugRoute
   '/_authenticated/ground/': typeof AuthenticatedGroundIndexRoute
   '/_authenticated/operational/': typeof AuthenticatedOperationalIndexRoute
@@ -547,6 +556,7 @@ export interface FileRouteTypes {
     | '/strategic/trainers'
     | '/strategic/users'
     | '/strategic/venues'
+    | '/api/public/sms-dispatch'
     | '/manual/modules/$slug'
     | '/ground/'
     | '/operational/'
@@ -594,6 +604,7 @@ export interface FileRouteTypes {
     | '/strategic/trainers'
     | '/strategic/users'
     | '/strategic/venues'
+    | '/api/public/sms-dispatch'
     | '/manual/modules/$slug'
     | '/ground'
     | '/operational'
@@ -646,6 +657,7 @@ export interface FileRouteTypes {
     | '/_authenticated/strategic/trainers'
     | '/_authenticated/strategic/users'
     | '/_authenticated/strategic/venues'
+    | '/api/public/sms-dispatch'
     | '/manual/modules/$slug'
     | '/_authenticated/ground/'
     | '/_authenticated/operational/'
@@ -663,6 +675,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicSmsDispatchRoute: typeof ApiPublicSmsDispatchRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -778,6 +791,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/manual/modules/$slug'
       preLoaderRoute: typeof ManualModulesSlugRouteImport
       parentRoute: typeof ManualRoute
+    }
+    '/api/public/sms-dispatch': {
+      id: '/api/public/sms-dispatch'
+      path: '/api/public/sms-dispatch'
+      fullPath: '/api/public/sms-dispatch'
+      preLoaderRoute: typeof ApiPublicSmsDispatchRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/strategic/venues': {
       id: '/_authenticated/strategic/venues'
@@ -1185,6 +1205,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicSmsDispatchRoute: ApiPublicSmsDispatchRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

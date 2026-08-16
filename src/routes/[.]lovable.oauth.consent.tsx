@@ -9,7 +9,7 @@ type OAuthNamespace = {
   denyAuthorization: (id: string) => Promise<{ data: any; error: any }>;
 };
 
-function oauthClient(): OAuthNamespace {
+export function oauthClient(): OAuthNamespace {
   return (supabase.auth as unknown as { oauth: OAuthNamespace }).oauth;
 }
 
