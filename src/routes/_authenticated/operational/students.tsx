@@ -92,7 +92,7 @@ function StudentsHub() {
     };
   }
 
-  const create = useMutation({
+  const create = useFormSubmit({
     mutationFn: () =>
       createFn({
         data: {
@@ -107,16 +107,15 @@ function StudentsHub() {
           parent_guardian_relationship: (form.parent_guardian_relationship || null) as any,
         },
       }),
-    onSuccess: () => {
-      toast.success("Student registered");
+    invalidateKeys: [["dh-students"], ["contacts"]],
+    successMessage: "Student registered",
+    onSaved: () => {
       setOpen(false);
       setForm({
         registration_number: "", full_name: "", level_id: "", section_id: "", gender: "", telephone: "",
         parent_guardian_name: "", parent_guardian_telephone: "", parent_guardian_relationship: "",
       });
-      qc.invalidateQueries({ queryKey: ["dh-students"] });
     },
-    onError: (e: Error) => toast.error(e.message),
   });
 
   const bulk = useMutation({
@@ -148,84 +147,58 @@ function StudentsHub() {
           <h1 className="text-2xl font-semibold tracking-tight">Students Hub</h1>
           <p className="text-sm text-muted-foreground">Department roster. Register one student or bulk-import a CSV.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(o) => { if (!create.isSaving) setOpen(o); }}>
           <DialogTrigger asChild><Button><UserPlus className="mr-2 h-4 w-4" /> Register single student</Button></DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader><DialogTitle>Register student</DialogTitle></DialogHeader>
-            <div className="grid gap-3">
-              <div><Label>Student ID code</Label><Input value={form.registration_number} onChange={(e) => setForm({ ...form, registration_number: e.target.value })} /></div>
-              <div><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label>Level</Label>
-                  <Select value={form.level_id} onValueChange={(v) => setForm({ ...form, level_id: v, section_id: "" })}>
-                    <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
-                    <SelectContent>
-                      {(formLevels as any[]).map((l) => (
-                        <SelectItem key={l.id} value={l.id}>{l.display_name || l.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Section</Label>
-                  <Select value={form.section_id} onValueChange={(v) => setForm({ ...form, section_id: v })} disabled={!form.level_id}>
-                    <SelectTrigger><SelectValue placeholder={form.level_id ? "Select section" : "Select level first"} /></SelectTrigger>
-                    <SelectContent>
-                      {(formSections as any[]).map((s) => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label>Gender</Label>
-                  <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
-                    <SelectContent>
-                      {GENDER_OPTIONS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Student Telephone</Label>
-                  <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} />
-                  {studentPhoneInvalid && <p className="mt-1 text-xs text-destructive">{PHONE_ERROR}</p>}
-                </div>
-              </div>
-            </div>
-            <div className="space-y-3 border-t pt-4">
-              <h3 className="text-sm font-semibold text-slate-800">Parent / Guardian Contact</h3>
-              <div className="grid gap-3">
-                <div>
-                  <Label>Parent/Guardian Name</Label>
-                  <Input placeholder="e.g. Ahmed Hassan" value={form.parent_guardian_name} onChange={(e) => setForm({ ...form, parent_guardian_name: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Telephone Number</Label>
-                  <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={form.parent_guardian_telephone} onChange={(e) => setForm({ ...form, parent_guardian_telephone: e.target.value })} />
-                  {phoneInvalid && <p className="mt-1 text-xs text-destructive">{PHONE_ERROR}</p>}
-                </div>
-                <div>
-                  <Label>Relationship to Student</Label>
-                  <Select value={form.parent_guardian_relationship} onValueChange={(v) => setForm({ ...form, parent_guardian_relationship: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger>
-                    <SelectContent>
-                      {GUARDIAN_RELATIONSHIP_OPTIONS.map((r) => (
-                        <SelectItem key={r} value={r}>{r}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
+            <FormBody>
+              <FormError message={create.error} />
+              <FormSection title="Student details">
+                <FormGrid>
+                  <TextField label="Student ID code" required value={form.registration_number} onChange={(v) => setForm({ ...form, registration_number: v })} />
+                  <TextField label="Full name" required value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} />
+                  <SelectField
+                    label="Level" required value={form.level_id}
+                    onChange={(v) => setForm({ ...form, level_id: v, section_id: "" })}
+                    placeholder="Select level"
+                    options={(formLevels as any[]).map((l) => ({ value: l.id, label: l.display_name || l.name }))}
+                  />
+                  <SelectField
+                    label="Section" required value={form.section_id}
+                    onChange={(v) => setForm({ ...form, section_id: v })}
+                    disabled={!form.level_id}
+                    placeholder={form.level_id ? "Select section" : "Select level first"}
+                    options={(formSections as any[]).map((s) => ({ value: s.id, label: s.name }))}
+                  />
+                  <SelectField
+                    label="Gender" value={form.gender}
+                    onChange={(v) => setForm({ ...form, gender: v })}
+                    placeholder="Select gender"
+                    options={GENDER_OPTIONS.map((g) => ({ value: g, label: g }))}
+                  />
+                  <PhoneField label="Student telephone" required value={form.telephone} onChange={(v) => setForm({ ...form, telephone: v })} hint="Ethiopian number, e.g. 0912345678" />
+                </FormGrid>
+              </FormSection>
+              <FormSection title="Parent / Guardian contact">
+                <FormGrid>
+                  <TextField label="Parent/Guardian name" value={form.parent_guardian_name} onChange={(v) => setForm({ ...form, parent_guardian_name: v })} placeholder="e.g. Ahmed Hassan" />
+                  <PhoneField label="Guardian telephone" required value={form.parent_guardian_telephone} onChange={(v) => setForm({ ...form, parent_guardian_telephone: v })} />
+                  <FormFull>
+                    <SelectField
+                      label="Relationship to student" value={form.parent_guardian_relationship}
+                      onChange={(v) => setForm({ ...form, parent_guardian_relationship: v })}
+                      placeholder="Select relationship"
+                      options={GUARDIAN_RELATIONSHIP_OPTIONS.map((r) => ({ value: r, label: r }))}
+                    />
+                  </FormFull>
+                </FormGrid>
+              </FormSection>
+            </FormBody>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={() => create.mutate()}
-                disabled={!form.registration_number || !form.full_name || !form.level_id || !form.section_id || !form.telephone || studentPhoneInvalid || phoneInvalid || create.isPending}>
-                {create.isPending ? "Saving…" : "Save"}
+              <Button variant="outline" disabled={create.isSaving} onClick={() => setOpen(false)}>Cancel</Button>
+              <Button onClick={() => create.submit()}
+                disabled={!form.registration_number || !form.full_name || !form.level_id || !form.section_id || !form.telephone || studentPhoneInvalid || phoneInvalid || create.isSaving}>
+                {create.isSaving ? "Saving…" : "Save"}
               </Button>
             </DialogFooter>
           </DialogContent>
