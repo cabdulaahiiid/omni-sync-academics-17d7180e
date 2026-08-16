@@ -145,6 +145,8 @@ export const createStudent = createServerFn({ method: "POST" })
     if (!level) throw new Error(`Unknown level '${data.level_name}'`);
     const { data: section } = await supabase.from("sections").select("id").eq("department_id", deptId).eq("level_id", level.id).eq("name", data.section_name).maybeSingle();
     if (!section) throw new Error(`Unknown section '${data.section_name}'`);
+    const { assertPhoneAvailable } = await import("@/lib/phone-uniqueness.server");
+    await assertPhoneAvailable(data.telephone ?? null);
     const { data: row, error } = await supabase.from("students").insert({
       registration_number: data.registration_number,
       full_name: data.full_name,
