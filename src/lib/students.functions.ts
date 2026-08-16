@@ -58,7 +58,7 @@ export const listMyStudents = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("students")
       .select(
-        "id, registration_number, full_name, gender, level_id, section_id, department_id, status, created_at, parent_guardian_name, parent_guardian_telephone, parent_guardian_relationship",
+        "id, registration_number, full_name, gender, telephone, level_id, section_id, department_id, status, created_at, parent_guardian_name, parent_guardian_telephone, parent_guardian_relationship",
       )
       .order("created_at", { ascending: false })
       .limit(2000);
@@ -149,6 +149,7 @@ export const createStudent = createServerFn({ method: "POST" })
       registration_number: data.registration_number,
       full_name: data.full_name,
       gender: data.gender ?? null,
+      telephone: data.telephone ?? null,
       level_id: level.id,
       section_id: section.id,
       department_id: deptId,
@@ -156,7 +157,12 @@ export const createStudent = createServerFn({ method: "POST" })
       parent_guardian_telephone: data.parent_guardian_telephone ?? null,
       parent_guardian_relationship: data.parent_guardian_relationship ?? null,
     }).select().single();
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.code === "23505" && error.message.includes("telephone")) {
+        throw new Error("This telephone number is already registered to another student.");
+      }
+      throw new Error(error.message);
+    }
     await supabase.from("audit_logs").insert({
       actor_id: userId, action_type: "STUDENT_ADDED", entity_type: "students",
       entity_id: row.id, after_state: {
