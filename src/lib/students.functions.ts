@@ -210,8 +210,26 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
     const inserts: (StudentInsert & { __row: number })[] = [];
     const seenPhones = new Map<string, number>();
     const seenIds = new Map<string, number>();
+    // Auto-fill blank student IDs with the next generated code (ICT-26-0001…).
+    let autoBase = "";
+    let autoSeq = 0;
+    if (data.rows.some((r) => !String(r.registration_number ?? "").trim())) {
+      const { data: gen } = await supabase.rpc("next_entity_code", { _department_id: deptId, _kind: "student" });
+      const code = (gen as string) ?? "";
+      const m = /^(.*-)(\d+)$/.exec(code);
+      if (m) { autoBase = m[1]; autoSeq = Number(m[2]); }
+    }
     data.rows.forEach((r, i) => {
       const rowNo = i + 1;
+      const regNo = String(r.registration_number ?? "").trim()
+        || (autoBase ? `${autoBase}${String(autoSeq++).padStart(4, "0")}` : "");
+      if (!regNo) {
+        errors.push({
+          row: rowNo, column: "student_id_code", value: "",
+          reason: "Student ID is empty and could not be generated. Enter an ID such as ICT-26-0001.",
+        });
+        return;
+      }
       const lvl = lMap.get(r.level_name.toLowerCase());
       if (!lvl) {
         errors.push({
@@ -229,15 +247,15 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
         });
         return;
       }
-      const dupIdRow = seenIds.get(r.registration_number.toLowerCase());
+      const dupIdRow = seenIds.get(regNo.toLowerCase());
       if (dupIdRow) {
         errors.push({
-          row: rowNo, column: "student_id_code", value: r.registration_number,
+          row: rowNo, column: "student_id_code", value: regNo,
           reason: `Same student ID also appears on row ${dupIdRow} of this file. Remove one of the two rows.`,
         });
         return;
       }
-      seenIds.set(r.registration_number.toLowerCase(), rowNo);
+      seenIds.set(regNo.toLowerCase(), rowNo);
       if (r.telephone) {
         const dupPhoneRow = seenPhones.get(r.telephone);
         if (dupPhoneRow) {
@@ -251,7 +269,7 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
       }
       inserts.push({
         __row: rowNo,
-        registration_number: r.registration_number,
+        registration_number: regNo,
         full_name: r.full_name,
         gender: r.gender ?? null,
         telephone: r.telephone ?? null,
