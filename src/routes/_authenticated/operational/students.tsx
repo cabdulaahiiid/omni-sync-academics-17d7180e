@@ -247,11 +247,49 @@ function StudentsHub() {
               </Select>
             </div>
           </div>
+          {fileError && <ErrorPanel error={fileError} />}
           <CsvDropzone
-            helpText="Required columns: student_id_code, full_name (optional: gender). Level and section come from the selectors above."
+            helpText="Required columns: student_id_code, full_name (optional: gender, telephone). Level and section come from the selectors above."
             sampleHeaders={["student_id_code", "full_name", "gender"]}
-            onParsed={(rows, name) => { setCsvRows(rows); setCsvName(name); toast.success(`Parsed ${rows.length} rows`); }}
+            requiredHeaders={["student_id_code", "full_name"]}
+            onFileError={(m) => {
+              setFileError(m); setCsvRows([]); setCsvName("");
+              toast.error("This file cannot be imported", { description: m, duration: 10000 });
+            }}
+            onParsed={(rows, name) => {
+              setFileError(null); setImportResult(null);
+              setCsvRows(rows); setCsvName(name);
+              toast.success(`Parsed ${rows.length} rows`);
+            }}
           />
+          {importResult && (
+            <div className="space-y-2 rounded-md border p-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-medium">
+                  {importResult.inserted} of {importResult.total} rows imported
+                  {importResult.errors.length > 0 ? ` · ${importResult.errors.length} skipped` : ""}
+                </p>
+                {importResult.errors.length > 0 && (
+                  <Button size="sm" variant="outline"
+                    onClick={() => downloadImportErrorReport("students-import-errors.xlsx", importResult.errors)}>
+                    <FileDown className="mr-2 h-4 w-4" /> Download error report
+                  </Button>
+                )}
+              </div>
+              {importResult.errors.length > 0 && (
+                <ul className="max-h-48 space-y-1 overflow-y-auto text-xs">
+                  {importResult.errors.map((e, i) => (
+                    <li key={`${e.row}-${i}`} className="flex flex-wrap gap-x-2 rounded bg-muted/50 px-2 py-1">
+                      <span className="font-mono">Row {e.row}</span>
+                      {e.column && <span className="font-mono text-muted-foreground">{e.column}</span>}
+                      <span className="font-mono">{e.value ? `"${e.value}"` : "empty"}</span>
+                      <span>{e.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           {csvRows.length > 0 && (
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">{csvName} · {csvRows.length} rows ready</p>
