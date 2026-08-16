@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listMyStudents, createStudent, bulkInsertStudents, listDeptLevelsSections } from "@/lib/students.functions";
+import { nextEntityCode } from "@/lib/codes.functions";
 import { CsvDropzone, type ParsedRow } from "@/components/csv-dropzone";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,12 +40,18 @@ function StudentsHub() {
   const createFn = useServerFn(createStudent);
   const bulkFn = useServerFn(bulkInsertStudents);
   const lsFn = useServerFn(listDeptLevelsSections);
+  const nextCodeFn = useServerFn(nextEntityCode);
   const { data: roster, isLoading } = useQuery({ queryKey: ["dh-students"], queryFn: () => listFn() });
   const students = roster?.students ?? [];
   const canViewGuardian = roster?.canViewGuardian ?? false;
   const { data: ls } = useQuery({ queryKey: ["dh-levels-sections"], queryFn: () => lsFn() });
 
   const [open, setOpen] = useState(false);
+  const { data: nextId } = useQuery({
+    queryKey: ["next-student-id"],
+    queryFn: () => nextCodeFn({ data: { kind: "student" as const } }),
+    staleTime: 0,
+  });
   const [detail, setDetail] = useState<any | null>(null);
   const [form, setForm] = useState({
     registration_number: "", full_name: "", level_id: "", section_id: "", gender: "", telephone: "",
@@ -171,8 +178,15 @@ function StudentsHub() {
               <FormError message={create.error} />
               <FormSection title="Student details">
                 <FormGrid>
-                  <TextField label="Student ID code" required value={form.registration_number} onChange={(v) => setForm({ ...form, registration_number: v })} />
-                  <TextField label="Full name" required value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} />
+                  <TextField
+                    label="Student ID code"
+                    required
+                    value={form.registration_number}
+                    onChange={(v) => setForm({ ...form, registration_number: v })}
+                    placeholder={nextId?.code || "e.g. ICT-26-0001"}
+                    hint="Generated automatically — you can change it if needed."
+                  />
+                  <TextField label="Full name" required value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} placeholder="e.g. Abdi Mohammed Ali" />
                   <SelectField
                     label="Level" required value={form.level_id}
                     onChange={(v) => setForm({ ...form, level_id: v, section_id: "" })}
