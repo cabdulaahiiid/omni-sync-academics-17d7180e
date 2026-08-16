@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireRole } from "@/lib/auth/require-role";
+import { generatePlan, type Day as EngineDay, type GeneratedSession } from "@/lib/scheduling/engine";
 
 type Day = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
 const DAY_OFFSET: Record<Day, number> = { MON: 0, TUE: 1, WED: 2, THU: 3, FRI: 4, SAT: 5, SUN: 6 };
@@ -196,9 +197,38 @@ const BuilderInput = z.object({
   start_time: z.string().regex(/^\d{2}:\d{2}$/),
   duration_hours: z.number().int().min(0).max(8),
   duration_minutes: z.number().int().min(0).max(59),
+  /** Frequency: sessions taught per week. */
+  sessions_per_week: z.number().int().min(1).max(14).default(1),
+  /** Set when regenerating an existing canonical plan. */
+  plan_id: z.string().uuid().nullish(),
 });
 
 type BuilderInputT = z.infer<typeof BuilderInput>;
+
+/**
+ * Run the canonical engine for a DH request. Session count comes from the
+ * module's total hours ÷ session duration — never from the calendar window.
+ */
+function runEngine(input: BuilderInputT, moduleTotalHours: number, termEnd: string | null) {
+  return generatePlan({
+    module_total_minutes: Math.round((moduleTotalHours || 0) * 60),
+    session_minutes: input.duration_hours * 60 + input.duration_minutes,
+    sessions_per_week: input.sessions_per_week,
+    delivery: input.delivery,
+    theory_days: input.theory_days as EngineDay[],
+    practical_days: input.practical_days as EngineDay[],
+    start_date: input.start_date,
+    start_time: input.start_time,
+    term_end_date: termEnd,
+  });
+}
+
+/** Engine sessions -> the occurrence shape the shared conflict checker uses. */
+const asOccurrences = (sessions: GeneratedSession[]): Occurrence[] =>
+  sessions.map((s) => ({
+    date: s.date, day: s.day as Day, week_num: s.week_num,
+    start_time: s.start_time, end_time: s.end_time, mode: s.mode,
+  }));
 
 /**
  * Strict Department-Head rules: Year -> Level -> Module, and everything must
