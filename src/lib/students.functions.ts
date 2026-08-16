@@ -223,7 +223,12 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
       for (let i = 0; i < inserts.length; i += chunk) {
         const slice = inserts.slice(i, i + chunk);
         const { error, data: ins } = await supabase.from("students").insert(slice).select("id");
-        if (error) throw new Error(error.message);
+        if (error) {
+          if (error.code === "23505" && error.message.includes("telephone")) {
+            throw new Error("Import stopped: one of the telephone numbers in this file is already registered to another student. Please remove duplicates and try again.");
+          }
+          throw new Error(error.message);
+        }
         inserted += ins?.length ?? 0;
       }
     }
