@@ -97,12 +97,28 @@ const RelationshipOptions = [
   "Grandfather", "Grandmother", "Guardian", "Other",
 ] as const;
 
+const etPhone = (required: boolean) =>
+  z
+    .string()
+    .trim()
+    .max(40)
+    .optional()
+    .nullable()
+    .refine((v) => !required || (v !== undefined && v !== null && v !== ""), {
+      message: "Telephone number is required.",
+    })
+    .refine((v) => v === undefined || v === null || v === "" || normalizeEtPhone(v) !== null, {
+      message: PHONE_ERROR,
+    })
+    .transform((v) => (v === undefined || v === null || v === "" ? null : normalizeEtPhone(v)));
+
 const StudentRow = z.object({
   registration_number: z.string().min(1).max(80),
   full_name: z.string().min(1).max(160),
   level_name: z.string().min(1).max(80),
   section_name: z.string().min(1).max(80),
-  gender: z.string().max(20).optional().nullable(),
+  gender: z.enum(["Male", "Female"]).optional().nullable(),
+  telephone: etPhone(false),
   parent_guardian_name: z.string().trim().max(160).optional().nullable(),
   parent_guardian_telephone: z
     .string()
