@@ -234,9 +234,26 @@ function SemesterBuilderPage() {
     const p = delivery === "Theory" ? [] : practicalDays;
     return Array.from(new Set([...t, ...p]));
   }, [delivery, theoryDays, practicalDays]);
-  const weeklyMins = daysSelected.length * durationMin;
-  const totalWeeks = selectedSem ? diffWeeks(selectedSem.start_date, selectedSem.end_date) : 0;
-  const totalContactMins = weeklyMins * totalWeeks;
+  // Live preview comes from the one canonical engine — the same math the
+  // server validation and the transactional save run. Nothing is computed twice.
+  const enginePreview = useMemo(
+    () =>
+      generatePlan({
+        module_total_minutes: Math.round(((selectedModule?.total_hours as number) ?? 0) * 60),
+        session_minutes: durationMin,
+        sessions_per_week: sessionsPerWeek,
+        delivery,
+        theory_days: (delivery === "Practical" ? [] : theoryDays) as EngineDay[],
+        practical_days: (delivery === "Theory" ? [] : practicalDays) as EngineDay[],
+        start_date: startDate,
+        start_time: startTime,
+        term_end_date: selectedSem?.end_date ?? null,
+      }),
+    [selectedModule?.total_hours, durationMin, sessionsPerWeek, delivery, theoryDays, practicalDays, startDate, startTime, selectedSem?.end_date],
+  );
+  const weeklyMins = Math.round(enginePreview.total_minutes / Math.max(1, enginePreview.weeks));
+  const totalWeeks = enginePreview.weeks;
+  const totalContactMins = enginePreview.total_minutes;
 
   // Auto end-time
   const endTime = useMemo(() => {
