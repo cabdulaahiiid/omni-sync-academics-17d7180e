@@ -22,6 +22,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarUploader } from "@/components/avatar-uploader";
 import { adminSetUserAvatar, adminChangeUserPassword } from "@/lib/profile.functions";
 import { isValidEtPhone, PHONE_ERROR } from "@/lib/phone";
+import { EmailField, PhoneField, TextField, PasswordField, SelectField, isValidEmail } from "@/components/forms/fields";
+import { FormBody, FormSection, FormGrid, FormFull, FormError } from "@/components/forms/layout";
+import { useFormSubmit } from "@/hooks/use-form-submit";
 
 export const Route = createFileRoute("/_authenticated/strategic/users")({
   component: UsersPage,
@@ -59,18 +62,21 @@ function UsersPage() {
   const [editPrimary, setEditPrimary] = useState<string>("");
   const [editDHDept, setEditDHDept] = useState<string>("");
 
-  const create = useMutation({
+  const create = useFormSubmit({
     mutationFn: () => createFn({ data: { ...form, department_id: form.department_id || null, avatar_path: avatarPath } }),
-    onSuccess: () => {
-      toast.success(`User created — ${form.email}`);
+    invalidateKeys: [["all-users"], ["contacts"], ["dh"], ["trainers"]],
+    successMessage: "User account created",
+    onSaved: () => {
       setOpen(false);
       setForm({ full_name: "", email: "", phone: "", password: "", role: "T", department_id: "" });
       setAvatarPath("");
-      qc.invalidateQueries({ queryKey: ["all-users"] });
-      qc.invalidateQueries({ queryKey: ["contacts"] });
     },
-    onError: (e: Error) => toast.error(e.message),
   });
+
+  const canCreate =
+    !!form.full_name.trim() && !!form.email && isValidEmail(form.email) &&
+    !!form.phone && isValidEtPhone(form.phone) && form.password.length >= 8 &&
+    (form.role === "MA" || !!form.department_id) && !!avatarPath;
 
   const toggle = useMutation({
     mutationFn: (vars: { user_id: string; bypass: boolean }) => toggleFn({ data: vars }),
@@ -144,46 +150,57 @@ function UsersPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Users &amp; Roles</h1>
           <p className="text-sm text-muted-foreground">Provision accounts and manage the geofence bypass flag.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(o) => { if (!create.isSaving) setOpen(o); }}>
           <DialogTrigger asChild><Button><UserPlus className="mr-2 h-4 w-4" /> Create user</Button></DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader><DialogTitle>Register user account</DialogTitle></DialogHeader>
-            <div className="grid gap-3">
-              <AvatarUploader ownerId="pending" required onUploaded={(p) => setAvatarPath(p)} />
-              <div><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
-              <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-              <div>
-                <Label>Telephone</Label>
-                <Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="e.g. +251 91 XXX XXXX" />
-                {form.phone && !isValidEtPhone(form.phone) && <p className="text-xs text-destructive">{PHONE_ERROR}</p>}
-              </div>
-              <div><Label>Password</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="min 8 characters" /></div>
-              <div>
-                <Label>Role</Label>
-                <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as any })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MA">Master Admin</SelectItem>
-                    <SelectItem value="DH">Department Head</SelectItem>
-                    <SelectItem value="T">Trainer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Department</Label>
-                <Select value={form.department_id} onValueChange={(v) => setForm({ ...form, department_id: v })}>
-                  <SelectTrigger><SelectValue placeholder={form.role === "MA" ? "(optional)" : "Required"} /></SelectTrigger>
-                  <SelectContent>
-                    {(depts ?? []).map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <FormBody>
+              <FormError message={create.error} />
+              <FormSection title="Identity">
+                <AvatarUploader ownerId="pending" required onUploaded={(p) => setAvatarPath(p)} />
+                <FormGrid>
+                  <FormFull>
+                    <TextField label="Full name" required value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} />
+                  </FormFull>
+                </FormGrid>
+              </FormSection>
+              <FormSection title="Contact details" description="Email and telephone are stored separately.">
+                <FormGrid>
+                  <EmailField label="Email address" required value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
+                  <PhoneField label="Telephone number" required value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} hint="Ethiopian number, e.g. 0912345678" />
+                </FormGrid>
+              </FormSection>
+              <FormSection title="Access">
+                <FormGrid>
+                  <PasswordField label="Password" required value={form.password} onChange={(v) => setForm({ ...form, password: v })} reveal={false} />
+                  <SelectField
+                    label="Role"
+                    required
+                    value={form.role}
+                    onChange={(v) => setForm({ ...form, role: v as any })}
+                    options={[
+                      { value: "MA", label: "Master Admin" },
+                      { value: "DH", label: "Department Head" },
+                      { value: "T", label: "Trainer" },
+                    ]}
+                  />
+                  <FormFull>
+                    <SelectField
+                      label="Department"
+                      required={form.role !== "MA"}
+                      value={form.department_id}
+                      onChange={(v) => setForm({ ...form, department_id: v })}
+                      placeholder={form.role === "MA" ? "(optional)" : "Select department"}
+                      options={(depts ?? []).map((d) => ({ value: d.id, label: d.name }))}
+                    />
+                  </FormFull>
+                </FormGrid>
+              </FormSection>
+            </FormBody>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={() => create.mutate()}
-                disabled={!form.email || !form.full_name || !form.phone || !isValidEtPhone(form.phone) || form.password.length < 8 || (form.role !== "MA" && !form.department_id) || !avatarPath || create.isPending}>
-                {create.isPending ? "Creating…" : "Register account"}
+              <Button variant="outline" disabled={create.isSaving} onClick={() => setOpen(false)}>Cancel</Button>
+              <Button onClick={() => create.submit()} disabled={!canCreate || create.isSaving}>
+                {create.isSaving ? "Creating…" : "Register account"}
               </Button>
             </DialogFooter>
           </DialogContent>
