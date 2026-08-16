@@ -148,6 +148,7 @@ export const createTrainer = createServerFn({ method: "POST" })
         .transform((v) => normalizeEtPhone(v) as string),
       qualifications: z.array(z.string().min(1).max(60)).default([]),
       avatar_path: z.string().min(1).max(300),
+      staff_code: z.string().trim().max(40).optional().default(""),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -176,6 +177,7 @@ export const createTrainer = createServerFn({ method: "POST" })
         phone: data.phone ?? null,
         department_id: data.department_id,
         qualifications: data.qualifications,
+        staff_code: staffCode || null,
       }).select().single();
     if (trErr) throw new Error(trErr.message);
     await supabaseAdmin.from("profiles").upsert({

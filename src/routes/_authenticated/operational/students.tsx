@@ -143,7 +143,7 @@ function StudentsHub() {
         section_name: bulkSectionName,
         gender: normalizeGender(r.gender),
         telephone: r.telephone || r.phone || null,
-      })).filter((r) => r.registration_number && r.full_name);
+      })).filter((r) => r.full_name);
       return bulkFn({ data: { rows } });
     },
     onSuccess: (r) => {
