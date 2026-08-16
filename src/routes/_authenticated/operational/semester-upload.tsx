@@ -359,13 +359,25 @@ function SemesterBuilderPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Level</Label>
+                <Label className="text-xs">Academic period</Label>
                 <Select value={semesterId} onValueChange={setSemesterId}>
-                  <SelectTrigger><SelectValue placeholder={academicYear ? "Pick level" : "Pick a year first"} /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={academicYear ? "Pick period" : "Pick a year first"} /></SelectTrigger>
                   <SelectContent>
                     {semestersForYear.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="text-xs">Level</Label>
+                <Select value={levelId} onValueChange={onLevelChange}>
+                  <SelectTrigger><SelectValue placeholder="Pick level" /></SelectTrigger>
+                  <SelectContent>
+                    {(opts.levels ?? []).map((l: any) => (
+                      <SelectItem key={l.id} value={l.id}>{l.display_name || `Level ${l.name}`}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Modules are filtered to the level you pick here.</p>
               </div>
             </div>
             {selectedSem && (
@@ -379,10 +391,14 @@ function SemesterBuilderPage() {
 
           <SectionItem step={2} title="Module Information" icon={BookOpen} value="s2" complete={!!moduleId}>
             <Combobox value={moduleId} onChange={setModuleId}
-              placeholder="Search module by code or name"
-              items={opts.modules}
-              getKey={(m) => `${m.code} ${m.name}`}
-              getLabel={(m) => `${m.code} — ${m.name}`} />
+              placeholder={levelId ? "Search module by code or name" : "Pick a Level first"}
+              disabled={!levelId}
+              items={modulesForLevel as any}
+              getKey={(m: any) => `${m.code} ${m.name}`}
+              getLabel={(m: any) => `${m.code} — ${m.name}`} />
+            {levelId && modulesForLevel.length === 0 && (
+              <p className="text-[11px] text-muted-foreground">No modules are registered for this level yet.</p>
+            )}
             {selectedModule && (
               <div className="grid gap-2 rounded-xl border bg-muted/30 p-3 text-xs md:grid-cols-4">
                 <div><span className="text-muted-foreground">Name:</span> <b>{selectedModule.name}</b></div>
