@@ -127,7 +127,8 @@ function StudentsHub() {
         full_name: r.full_name || "",
         level_name: bulkLevelName,
         section_name: bulkSectionName,
-        gender: r.gender || null,
+        gender: normalizeGender(r.gender),
+        telephone: r.telephone || r.phone || null,
       })).filter((r) => r.registration_number && r.full_name);
       return bulkFn({ data: { rows } });
     },
