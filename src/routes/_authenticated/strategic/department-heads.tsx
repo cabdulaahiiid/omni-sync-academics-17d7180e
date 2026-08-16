@@ -15,6 +15,7 @@ import { Plus, Trash2, Copy } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AvatarUploader } from "@/components/avatar-uploader";
+import { isValidEtPhone, PHONE_ERROR } from "@/lib/phone";
 
 export const Route = createFileRoute("/_authenticated/strategic/department-heads")({
   component: DHPage,
@@ -34,16 +35,19 @@ function DHPage() {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [deptId, setDeptId] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("Head@123");
   const [avatarPath, setAvatarPath] = useState("");
   const [credentials, setCredentials] = useState<{ email: string; temp_password: string } | null>(null);
 
+  const phoneInvalid = !phone || !isValidEtPhone(phone);
+
   const createMut = useMutation({
-    mutationFn: () => create({ data: { email, full_name: fullName, department_id: deptId, password, avatar_path: avatarPath } }),
+    mutationFn: () => create({ data: { email, full_name: fullName, department_id: deptId, password, phone, avatar_path: avatarPath } }),
     onSuccess: (r) => {
       toast.success("Department Head created");
       setCredentials({ email: r.email, temp_password: r.temp_password });
-      setOpen(false); setEmail(""); setFullName(""); setDeptId(""); setPassword("Head@123"); setAvatarPath("");
+      setOpen(false); setEmail(""); setFullName(""); setDeptId(""); setPhone(""); setPassword("Head@123"); setAvatarPath("");
       qc.invalidateQueries({ queryKey: ["dh"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -69,6 +73,11 @@ function DHPage() {
               <AvatarUploader ownerId="pending" required onUploaded={(p) => setAvatarPath(p)} />
               <div className="space-y-2"><Label>Full name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
               <div className="space-y-2"><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+              <div className="space-y-2">
+                <Label>Telephone</Label>
+                <Input type="tel" placeholder="e.g. +251 91 XXX XXXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                {phone && !isValidEtPhone(phone) && <p className="text-xs text-destructive">{PHONE_ERROR}</p>}
+              </div>
               <div className="space-y-2"><Label>Password</Label><Input value={password} onChange={(e) => setPassword(e.target.value)} /></div>
               <div className="space-y-2">
                 <Label>Department</Label>
@@ -82,7 +91,7 @@ function DHPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || !password || !avatarPath || createMut.isPending}>
+              <Button onClick={() => createMut.mutate()} disabled={!email || !fullName || !deptId || !password || phoneInvalid || !avatarPath || createMut.isPending}>
                 {createMut.isPending ? "Creating…" : "Create"}
               </Button>
             </DialogFooter>
@@ -103,14 +112,15 @@ function DHPage() {
 
       <Card>
         <Table>
-          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Department</TableHead><TableHead className="w-24 text-right">Actions</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Telephone</TableHead><TableHead>Department</TableHead><TableHead className="w-24 text-right">Actions</TableHead></TableRow></TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
-            {!isLoading && !rows?.length && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No DH accounts yet.</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
+            {!isLoading && !rows?.length && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No DH accounts yet.</TableCell></TableRow>}
             {rows?.map((r) => (
               <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.full_name}</TableCell>
                 <TableCell className="text-muted-foreground">{r.email}</TableCell>
+                <TableCell className="font-mono text-xs">{r.phone || "—"}</TableCell>
                 <TableCell>{r.department_name}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => { if (confirm(`Revoke ${r.full_name}?`)) revokeMut.mutate(r.id); }}><Trash2 className="h-4 w-4" /></Button>
