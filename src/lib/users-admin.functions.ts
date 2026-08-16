@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireRole } from "@/lib/auth/require-role";
+import { normalizeEtPhone } from "@/lib/phone";
 
 export const listAllUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -10,7 +11,7 @@ export const listAllUsers = createServerFn({ method: "GET" })
     await requireRole(context, ["MA"], "listAllUsers");
     const { data: profiles, error } = await supabaseAdmin
       .from("profiles")
-      .select("id, full_name, email, department_id, trainer_registry_id, bypass_geofence, active, created_at, avatar_path")
+      .select("id, full_name, email, phone, department_id, trainer_registry_id, bypass_geofence, active, created_at, avatar_path")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const ids = (profiles ?? []).map((p) => p.id);
