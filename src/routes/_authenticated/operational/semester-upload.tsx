@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -254,7 +255,7 @@ function SemesterBuilderPage() {
 
   const validateMut = useMutation({
     mutationFn: () => validateFn({ data: builderPayload }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   // Auto-validate on form changes (debounced via reactive deps).
   useEffect(() => {
@@ -288,17 +289,17 @@ function SemesterBuilderPage() {
         },
       });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const submitFull = useMutation({
     mutationFn: () => submitFullFn({ data: { semester_id: semesterId } }),
     onSuccess: () => { toast.success("Sent to Admin for approval"); setPublishOpen(false); navigate({ to: "/operational/drafts" }); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const submitWeekly = useMutation({
     mutationFn: () => submitWeeklyFn({ data: { semester_id: semesterId } }),
     onSuccess: (r) => { toast.success(`Submitted ${r.created} weekly session(s)`); setPublishOpen(false); navigate({ to: "/operational/drafts" }); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const conflicts = validation?.conflicts ?? [];

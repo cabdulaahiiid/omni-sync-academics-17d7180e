@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -305,12 +306,12 @@ function OtherStaffTab({
         },
       }),
     onSuccess: () => { toast.success("Contact saved"); setOpen(false); onChanged(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const delMut = useMutation({
     mutationFn: (id: string) => del({ data: { id } }),
     onSuccess: () => { toast.success("Contact deleted"); onChanged(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const importMut = useMutation({
     mutationFn: (r: { full_name: string; phone: string; role_title?: string; department?: string }[]) =>
@@ -319,7 +320,7 @@ function OtherStaffTab({
       toast.success(`Imported ${res.inserted} contact(s)${res.errors.length ? `, ${res.errors.length} skipped` : ""}`);
       onChanged();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   function openNew() {
@@ -466,7 +467,7 @@ function ComposeTab({
       setMessage("");
       onSent();
     },
-    onError: (e: Error) => { setConfirm(false); toast.error(e.message); },
+    onError: (e: Error) => { setConfirm(false); toastError(e); },
   });
 
   const scheduleMut = useMutation({
@@ -486,7 +487,7 @@ function ComposeTab({
       setWhen("");
       onSent();
     },
-    onError: (e: Error) => { setConfirm(false); toast.error(e.message); },
+    onError: (e: Error) => { setConfirm(false); toastError(e); },
   });
 
   const busy = sendMut.isPending || scheduleMut.isPending;
@@ -649,12 +650,12 @@ function HistoryTab() {
   const cancelMut = useMutation({
     mutationFn: (id: string) => cancelFn({ data: { campaign_id: id } }),
     onSuccess: () => { toast.success("Scheduled batch cancelled"); refresh(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const rescheduleMut = useMutation({
     mutationFn: () => rescheduleFn({ data: { campaign_id: editId!, scheduled_at: new Date(when).toISOString() } }),
     onSuccess: () => { toast.success("Batch rescheduled"); setEditId(null); refresh(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   return (
@@ -814,7 +815,7 @@ function GatewaySettingsTab({ onSaved }: { onSaved: () => void }) {
       qc.invalidateQueries({ queryKey: ["sms-settings"] });
       onSaved();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const testMut = useMutation({
@@ -825,7 +826,7 @@ function GatewaySettingsTab({ onSaved }: { onSaved: () => void }) {
       if (res.ok) toast.success("Test message accepted by the gateway");
       else toast.error("Gateway rejected the test message");
     },
-    onError: (e: Error) => { setTestResult(`Failed: ${e.message}`); toast.error(e.message); },
+    onError: (e: Error) => { setTestResult(`Failed: ${e.message}`); toastError(e); },
   });
 
   return (

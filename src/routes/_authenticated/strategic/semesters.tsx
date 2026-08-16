@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -55,12 +56,12 @@ function SemestersPage() {
   const saveMut = useMutation({
     mutationFn: () => upsert({ data: { id: editing?.id, year, term, start_date: startDate, end_date: endDate, status } }),
     onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["semesters"] }); setOpen(false); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const delMut = useMutation({
     mutationFn: (id: string) => del({ data: { id } }),
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["semesters"] }); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const openNew = () => {

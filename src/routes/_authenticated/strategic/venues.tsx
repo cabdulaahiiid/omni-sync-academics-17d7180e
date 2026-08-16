@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -49,19 +50,19 @@ function VenuesPage() {
   const saveMut = useMutation({
     mutationFn: () => upsert({ data: { id: editing?.id, name, type, capacity, latitude, longitude, geo_radius: geoRadius } }),
     onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["venues"] }); invalidateMaster(); setOpen(false); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const delMut = useMutation({
     mutationFn: (id: string) => del({ data: { id } }),
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["venues"] }); invalidateMaster(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const useGPS = () => {
     if (!navigator.geolocation) return toast.error("Geolocation unavailable");
     navigator.geolocation.getCurrentPosition(
       (pos) => { setLatitude(pos.coords.latitude); setLongitude(pos.coords.longitude); toast.success("Coordinates filled"); },
-      (err) => toast.error(err.message),
+      (err) => toastError(err),
       { enableHighAccuracy: true, timeout: 10000 },
     );
   };

@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -133,7 +134,7 @@ function DraftsPage() {
       toast.success("Level sent to Admin for approval");
       qc.invalidateQueries({ queryKey: ["semester-drafts"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const submitPerWeekMut = useMutation({
@@ -146,7 +147,7 @@ function DraftsPage() {
       }
       qc.invalidateQueries({ queryKey: ["semester-drafts"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const resubmitWeekMut = useMutation({
@@ -157,7 +158,7 @@ function DraftsPage() {
       qc.invalidateQueries({ queryKey: ["semester-drafts"] });
       qc.invalidateQueries({ queryKey: ["week-feedback-threads", deptId] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   // Derive per-week buckets. Realtime listener above already refetches when

@@ -69,7 +69,8 @@ export const bulkInsertModules = createServerFn({ method: "POST" })
     const { data: levels } = await supabase.from("levels").select("id, name, department_id");
     const dMap = new Map((depts ?? []).map((d) => [d.name.toLowerCase(), d.id]));
     const lMap = new Map((levels ?? []).map((l) => [`${l.department_id}::${l.name}`, l.id]));
-    const errors: { row: number; reason: string }[] = [];
+    const errors: { row: number; column: string; value: string; reason: string }[] = [];
+    const deptNames = (depts ?? []).map((d) => d.name).join(", ") || "none defined";
     type ModuleInsert = {
       code: string; name: string; department_id: string; level_id: string;
       type: "Theory" | "Practical" | "Both"; qualifications: string[];
@@ -79,12 +80,19 @@ export const bulkInsertModules = createServerFn({ method: "POST" })
     data.rows.forEach((r, idx) => {
       const dept_id = dMap.get(r.department_name.toLowerCase());
       if (!dept_id) {
-        errors.push({ row: idx + 1, reason: `Unknown department '${r.department_name}'` });
+        errors.push({
+          row: idx + 1, column: "department_name", value: r.department_name,
+          reason: `No department named "${r.department_name}". Use one of: ${deptNames} — or create it first under Departments.`,
+        });
         return;
       }
       const level_id = lMap.get(`${dept_id}::${r.level_name}`);
       if (!level_id) {
-        errors.push({ row: idx + 1, reason: `Unknown level '${r.level_name}' in '${r.department_name}'` });
+        const options = (levels ?? []).filter((l) => l.department_id === dept_id).map((l) => l.name).join(", ") || "none defined";
+        errors.push({
+          row: idx + 1, column: "level_name", value: r.level_name,
+          reason: `"${r.department_name}" has no level named "${r.level_name}". Use one of: ${options}.`,
+        });
         return;
       }
       payload.push({
@@ -96,9 +104,20 @@ export const bulkInsertModules = createServerFn({ method: "POST" })
     let inserted = 0;
     if (payload.length) {
       const { data: ins, error } = await supabase.from("modules").insert(payload).select("id");
-      if (error) throw new Error(error.message);
+      if (error) {
+        if (error.code === "23505") {
+          const dup = /Key \(code\)=\(([^)]*)\)/.exec(`${error.message} ${error.details ?? ""}`)?.[1];
+          throw new Error(
+            dup
+              ? `Module code '${dup}' already exists in the registry, so nothing was imported. Remove that row (or change the code) and upload again.`
+              : "One of the module codes in this file already exists in the registry, so nothing was imported. Remove the duplicate row and upload again.",
+          );
+        }
+        throw new Error(error.message);
+      }
       inserted = ins?.length ?? 0;
     }
+    errors.sort((a, b) => a.row - b.row);
     await supabase.from("audit_logs").insert({
       actor_id: context.userId, action_type: "BULK_IMPORT", entity_type: "modules",
       after_state: { inserted, errors: errors.length },

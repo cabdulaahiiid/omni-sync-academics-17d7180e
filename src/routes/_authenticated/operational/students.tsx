@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,6 +26,8 @@ import { GENDER_OPTIONS, GUARDIAN_RELATIONSHIP_OPTIONS, normalizeGender } from "
 import { downloadCsv, downloadPdf } from "@/lib/report-export";
 import type { ReportResult } from "@/lib/reports.functions";
 import { FileDown, FileText } from "lucide-react";
+import { ErrorPanel } from "@/components/forms/error-panel";
+import { downloadImportErrorReport, type ImportRowError } from "@/lib/errors/import-report";
 
 export const Route = createFileRoute("/_authenticated/operational/students")({
   component: StudentsHub,
@@ -51,6 +54,8 @@ function StudentsHub() {
   const [csvName, setCsvName] = useState("");
   const [bulkLevelId, setBulkLevelId] = useState<string>("");
   const [bulkSectionId, setBulkSectionId] = useState<string>("");
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<{ inserted: number; total: number; errors: ImportRowError[] } | null>(null);
 
   const levels = ls?.levels ?? [];
   const sections = (ls?.sections ?? []).filter((s) => !bulkLevelId || s.level_id === bulkLevelId);
@@ -123,7 +128,7 @@ function StudentsHub() {
 
   const bulk = useMutation({
     mutationFn: () => {
-      if (!bulkLevelName || !bulkSectionName) throw new Error("Select level and section first");
+      if (!bulkLevelName || !bulkSectionName) throw new Error("Select the level and section this file belongs to before importing.");
       const rows = csvRows.map((r) => ({
         registration_number: r.student_id_code || r.registration_number || "",
         full_name: r.full_name || "",
@@ -135,12 +140,20 @@ function StudentsHub() {
       return bulkFn({ data: { rows } });
     },
     onSuccess: (r) => {
-      toast.success(`Inserted ${r.inserted} students${r.errors.length ? ` · ${r.errors.length} errors` : ""}`);
-      r.errors.slice(0, 5).forEach((e) => toast.error(`Row ${e.row}: ${e.reason}`));
+      const total = csvRows.length;
+      setImportResult({ inserted: r.inserted, total, errors: r.errors as ImportRowError[] });
+      if (r.errors.length) {
+        toast.warning(`${r.inserted} of ${total} rows imported · ${r.errors.length} skipped`, {
+          description: "See the list below for the exact row, the problem and how to fix it.",
+          duration: 8000,
+        });
+      } else {
+        toast.success(`All ${r.inserted} students imported`);
+      }
       setCsvRows([]); setCsvName("");
       qc.invalidateQueries({ queryKey: ["dh-students"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   return (
@@ -234,11 +247,49 @@ function StudentsHub() {
               </Select>
             </div>
           </div>
+          {fileError && <ErrorPanel error={fileError} />}
           <CsvDropzone
-            helpText="Required columns: student_id_code, full_name (optional: gender). Level and section come from the selectors above."
+            helpText="Required columns: student_id_code, full_name (optional: gender, telephone). Level and section come from the selectors above."
             sampleHeaders={["student_id_code", "full_name", "gender"]}
-            onParsed={(rows, name) => { setCsvRows(rows); setCsvName(name); toast.success(`Parsed ${rows.length} rows`); }}
+            requiredHeaders={["student_id_code", "full_name"]}
+            onFileError={(m) => {
+              setFileError(m); setCsvRows([]); setCsvName("");
+              toast.error("This file cannot be imported", { description: m, duration: 10000 });
+            }}
+            onParsed={(rows, name) => {
+              setFileError(null); setImportResult(null);
+              setCsvRows(rows); setCsvName(name);
+              toast.success(`Parsed ${rows.length} rows`);
+            }}
           />
+          {importResult && (
+            <div className="space-y-2 rounded-md border p-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-medium">
+                  {importResult.inserted} of {importResult.total} rows imported
+                  {importResult.errors.length > 0 ? ` · ${importResult.errors.length} skipped` : ""}
+                </p>
+                {importResult.errors.length > 0 && (
+                  <Button size="sm" variant="outline"
+                    onClick={() => downloadImportErrorReport("students-import-errors.xlsx", importResult.errors)}>
+                    <FileDown className="mr-2 h-4 w-4" /> Download error report
+                  </Button>
+                )}
+              </div>
+              {importResult.errors.length > 0 && (
+                <ul className="max-h-48 space-y-1 overflow-y-auto text-xs">
+                  {importResult.errors.map((e, i) => (
+                    <li key={`${e.row}-${i}`} className="flex flex-wrap gap-x-2 rounded bg-muted/50 px-2 py-1">
+                      <span className="font-mono">Row {e.row}</span>
+                      {e.column && <span className="font-mono text-muted-foreground">{e.column}</span>}
+                      <span className="font-mono">{e.value ? `"${e.value}"` : "empty"}</span>
+                      <span>{e.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           {csvRows.length > 0 && (
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">{csvName} · {csvRows.length} rows ready</p>

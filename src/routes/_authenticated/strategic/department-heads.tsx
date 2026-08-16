@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -55,7 +56,7 @@ function DHPage() {
   const revokeMut = useMutation({
     mutationFn: (id: string) => revoke({ data: { id } }),
     onSuccess: () => { toast.success("Revoked"); qc.invalidateQueries({ queryKey: ["dh"] }); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   return (

@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -83,13 +84,13 @@ function UsersPage() {
   const toggle = useMutation({
     mutationFn: (vars: { user_id: string; bypass: boolean }) => toggleFn({ data: vars }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["all-users"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const saveAvatar = useMutation({
     mutationFn: (vars: { user_id: string; avatar_path: string }) => setAvatarFn({ data: vars }),
     onSuccess: () => { toast.success("Photo updated"); setNewAvatarPath(""); qc.invalidateQueries({ queryKey: ["all-users"] }); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const savePassword = useMutation({
     mutationFn: (vars: { user_id: string; new_password: string }) => setPasswordFn({ data: vars }),
@@ -99,7 +100,7 @@ function UsersPage() {
         : "Password updated. The user has been signed out of all devices.");
       setNewPassword("");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const savePhone = useMutation({
@@ -110,7 +111,7 @@ function UsersPage() {
       qc.invalidateQueries({ queryKey: ["contacts"] });
       qc.invalidateQueries({ queryKey: ["dh"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const saveEmail = useMutation({
@@ -123,7 +124,7 @@ function UsersPage() {
       qc.invalidateQueries({ queryKey: ["dh"] });
       qc.invalidateQueries({ queryKey: ["trainers"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const setActive = useMutation({
@@ -133,7 +134,7 @@ function UsersPage() {
       setManage((m) => (m ? { ...m, active: vars.active } : m));
       qc.invalidateQueries({ queryKey: ["all-users"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const saveAccess = useMutation({
@@ -155,7 +156,7 @@ function UsersPage() {
       toast.success("Roles & departments updated");
       qc.invalidateQueries({ queryKey: ["all-users"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   return (

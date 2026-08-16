@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -29,12 +30,12 @@ function ProfilePage() {
   const saveAvatar = useMutation({
     mutationFn: () => updateAvatarFn({ data: { avatar_path: pendingPath } }),
     onSuccess: () => { toast.success("Photo updated"); setPendingPath(""); qc.invalidateQueries({ queryKey: ["me"] }); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
   const savePassword = useMutation({
     mutationFn: () => changePwFn({ data: { current_password: currentPw, new_password: newPw } }),
     onSuccess: () => { toast.success("Password changed"); setCurrentPw(""); setNewPw(""); setConfirmPw(""); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   if (isLoading || !me) return <div className="p-6 text-muted-foreground">Loading…</div>;

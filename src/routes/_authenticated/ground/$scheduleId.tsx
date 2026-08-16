@@ -1,3 +1,4 @@
+import { toastError } from "@/lib/errors/toast";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -161,7 +162,7 @@ function SessionDetail() {
   const modeMut = useMutation({
     mutationFn: (m: Mode) => setMode({ data: { schedule_id: scheduleId, mode: m } }),
     onSuccess: (_d, m) => { setLocalMode(m); refetch(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   const checkInMut = useMutation({
@@ -178,7 +179,7 @@ function SessionDetail() {
       setStepOverride("roster");
       refetch();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   async function submitRoster() {
@@ -215,7 +216,7 @@ function SessionDetail() {
         try { await generateSessionReportPdf(input); } catch { /* user can retry from Done step */ }
       }
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastError(e),
   });
 
   // Auto-end at scheduled finish (server-anchored). Requires plan + outcome.

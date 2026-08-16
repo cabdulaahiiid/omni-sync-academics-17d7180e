@@ -31,22 +31,61 @@ export function CsvDropzone({
   onParsed,
   helpText,
   sampleHeaders,
+  requiredHeaders,
+  onFileError,
 }: {
   onParsed: (rows: ParsedRow[], fileName: string) => void;
   helpText?: string;
   sampleHeaders?: string[];
+  /** Headers that must be present; the file is rejected with an exact message if any is missing. */
+  requiredHeaders?: string[];
+  /** Called with a problem/solution message when the file cannot be used. */
+  onFileError?: (message: string) => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [name, setName] = useState<string | null>(null);
 
   function handleFile(file: File) {
+    const fail = (message: string) => {
+      setName(null);
+      onFileError?.(message);
+    };
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (ext !== "csv" && ext !== "txt") {
+      fail(
+        `"${file.name}" is a .${ext} file, but this upload accepts CSV only. Fix: open the file, choose File → Save As → CSV, then upload the .csv version (or use the template button above).`,
+      );
+      return;
+    }
+    if (file.size === 0) {
+      fail(`"${file.name}" is empty (0 bytes). Fix: add your rows under the header line, save the file, and upload it again.`);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      fail(`"${file.name}" is larger than 5 MB. Fix: split it into batches of about 1,000 rows and upload them one after another.`);
+      return;
+    }
     setName(file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = String(e.target?.result ?? "");
-      onParsed(parseCsv(text), file.name);
+      const rows = parseCsv(text);
+      if (rows.length === 0) {
+        fail(`"${file.name}" has a header row but no data rows. Fix: add at least one record below the header and upload again.`);
+        return;
+      }
+      const headers = Object.keys(rows[0]).map((h) => h.trim().toLowerCase());
+      const missing = (requiredHeaders ?? []).filter((h) => !headers.includes(h.toLowerCase()));
+      if (missing.length) {
+        fail(
+          `The file is missing the column${missing.length > 1 ? "s" : ""} ${missing.map((m) => `"${m}"`).join(", ")}. Found: ${headers.join(", ")}. Fix: download the template, copy your data into it without renaming any header, then upload again.`,
+        );
+        return;
+      }
+      onParsed(rows, file.name);
     };
+    reader.onerror = () => fail(`"${file.name}" could not be read. Fix: close it in Excel, then upload it again.`);
     reader.readAsText(file);
   }
 
