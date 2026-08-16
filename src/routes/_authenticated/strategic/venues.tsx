@@ -37,6 +37,7 @@ function VenuesPage() {
     throwOnError: false,
   });
   const [open, setOpen] = useState(false);
+  const invalidateMaster = useInvalidateMasterData();
   const [editing, setEditing] = useState<Venue | null>(null);
   const [name, setName] = useState("");
   const [type, setType] = useState<VType>("Classroom");
