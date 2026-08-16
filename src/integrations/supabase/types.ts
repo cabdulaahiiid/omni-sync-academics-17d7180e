@@ -1278,6 +1278,7 @@ export type Database = {
           qualifications: string[]
           sessions_completed: number
           sessions_target: number
+          staff_code: string | null
           status: Database["public"]["Enums"]["entity_status"]
         }
         Insert: {
@@ -1291,6 +1292,7 @@ export type Database = {
           qualifications?: string[]
           sessions_completed?: number
           sessions_target?: number
+          staff_code?: string | null
           status?: Database["public"]["Enums"]["entity_status"]
         }
         Update: {
@@ -1304,6 +1306,7 @@ export type Database = {
           qualifications?: string[]
           sessions_completed?: number
           sessions_target?: number
+          staff_code?: string | null
           status?: Database["public"]["Enums"]["entity_status"]
         }
         Relationships: [
