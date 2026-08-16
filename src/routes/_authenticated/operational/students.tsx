@@ -18,7 +18,7 @@ import { DownloadTemplateButton } from "@/components/download-template-button";
 import { STUDENTS_ROSTER_TEMPLATE } from "@/lib/xlsx-templates";
 import { isValidEtPhone, PHONE_ERROR } from "@/lib/phone";
 import { useMasterData } from "@/hooks/use-master-data";
-import { GENDER_OPTIONS, GUARDIAN_RELATIONSHIP_OPTIONS } from "@/lib/master-data";
+import { GENDER_OPTIONS, GUARDIAN_RELATIONSHIP_OPTIONS, normalizeGender } from "@/lib/master-data";
 import { downloadCsv, downloadPdf } from "@/lib/report-export";
 import type { ReportResult } from "@/lib/reports.functions";
 import { FileDown, FileText } from "lucide-react";
