@@ -100,24 +100,9 @@ function DraftsPage() {
   }, [search.chat, search.semester, search.week]);
 
   const deptId = me?.profile?.department_id;
-  useEffect(() => {
-    if (!me) return;
-    const ch = supabase.channel(`dh-drafts-${deptId ?? "all"}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "semester_registry" },
-        () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
-      .on("postgres_changes", deptId
-        ? { event: "*", schema: "public", table: "schedules", filter: `department_id=eq.${deptId}` }
-        : { event: "*", schema: "public", table: "schedules" },
-        () => qc.invalidateQueries({ queryKey: ["semester-drafts"] }))
-      .on("postgres_changes", deptId
-        ? { event: "*", schema: "public", table: "schedule_feedback_threads", filter: `department_id=eq.${deptId}` }
-        : { event: "*", schema: "public", table: "schedule_feedback_threads" },
-        () => qc.invalidateQueries({ queryKey: ["week-feedback-threads", deptId] }))
-      .on("postgres_changes", { event: "*", schema: "public", table: "schedule_feedback_messages" },
-        () => qc.invalidateQueries({ queryKey: ["week-feedback-threads", deptId] }))
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [deptId, me, qc]);
+  // Single shared DH channel: covers schedules, plans, terms, approvals and
+  // feedback, and invalidates every DH query root (including draft-modules).
+  useDhScheduleLive(deptId ?? null, [`week-feedback-threads`]);
   const { data, isLoading } = useQuery({
     queryKey: ["semester-drafts", deptId],
     queryFn: () => listFn({ data: deptId ? { department_id: deptId } : {} }),
