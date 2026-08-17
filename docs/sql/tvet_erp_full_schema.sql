@@ -17,8 +17,7 @@ CREATE TYPE public.schedule_status AS ENUM ('DRAFT', 'PENDING', 'FEEDBACK_REQUIR
 CREATE TYPE public.semester_status AS ENUM ('ACTIVE', 'CLOSED', 'ARCHIVED', 'DRAFT', 'PENDING_MA', 'LIVE', 'ENDED');
 CREATE TYPE public.session_mode AS ENUM ('Theory', 'Practical', 'Both');
 CREATE TYPE public.session_status AS ENUM ('LIVE', 'COMPLETED');
-CREATE TYPE public.venue_type AS ENUM ('Workshop', 'Lab', 'Classroom'
-);
+CREATE TYPE public.venue_type AS ENUM ('Workshop', 'Lab', 'Classroom');
 
 
 -- ============ 2. TABLES ============
@@ -37,8 +36,7 @@ CREATE TABLE public.approval_queue (
   decision approval_decision DEFAULT 'pending'::approval_decision NOT NULL,
   decided_by uuid,
   decided_at timestamp with time zone,
-  comment text DEFAULT 
-,
+  comment text,
   CONSTRAINT approval_queue_pkey PRIMARY KEY (id),
   CONSTRAINT approval_queue_type_schedule_chk CHECK ((((type = 'session'::approval_type) AND (schedule_id IS NOT NULL)) OR (type = 'semester'::approval_type)))
 );
@@ -48,8 +46,7 @@ CREATE TABLE public.attendance_logs (
   student_id uuid NOT NULL,
   present boolean DEFAULT false NOT NULL,
   attendance_timestamp timestamp with time zone DEFAULT now() NOT NULL,
-  submitted_by uuid DEFAULT 
-,
+  submitted_by uuid,
   CONSTRAINT attendance_logs_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.attendance_overrides (
@@ -60,8 +57,7 @@ CREATE TABLE public.attendance_overrides (
   audit_comment text NOT NULL,
   overridden_by uuid,
   override_timestamp timestamp with time zone DEFAULT now() NOT NULL,
-  expires_at timestamp with time zone DEFAULT (now() + '7 days'::interval)
- NOT NULL,
+  expires_at timestamp with time zone DEFAULT (now() + '7 days'::interval) NOT NULL,
   CONSTRAINT attendance_overrides_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.audit_logs (
@@ -74,8 +70,7 @@ CREATE TABLE public.audit_logs (
   after_state jsonb,
   timestamp timestamp with time zone DEFAULT now() NOT NULL,
   ip_address text,
-  device_info text DEFAULT 
-,
+  device_info text,
   CONSTRAINT audit_logs_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.auth_events (
@@ -87,15 +82,14 @@ CREATE TABLE public.auth_events (
   ok boolean,
   reason text,
   meta jsonb,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
+  CONSTRAINT auth_events_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.department_heads (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   user_id uuid NOT NULL,
   department_id uuid NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT department_heads_pkey PRIMARY KEY (id),
   CONSTRAINT department_heads_user_id_department_id_key UNIQUE (user_id, department_id)
 );
@@ -106,9 +100,9 @@ CREATE TABLE public.departments (
   status entity_status DEFAULT 'ACTIVE'::entity_status NOT NULL,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   telephone text,
-  code text DEFAULT 
-,
-  CONSTRAINT departments_pkey PRIMARY KEY (id)
+  code text,
+  CONSTRAINT departments_pkey PRIMARY KEY (id),
+  CONSTRAINT departments_name_key UNIQUE (name)
 );
 CREATE TABLE public.external_contacts (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -120,8 +114,7 @@ CREATE TABLE public.external_contacts (
   active boolean DEFAULT true NOT NULL,
   created_by uuid,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
-  updated_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  updated_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT external_contacts_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.global_config (
@@ -134,8 +127,7 @@ CREATE TABLE public.global_config (
   campus_lat numeric,
   campus_lng numeric,
   campus_radius_m numeric DEFAULT 150 NOT NULL,
-  geofence_enabled boolean DEFAULT true
- NOT NULL,
+  geofence_enabled boolean DEFAULT true NOT NULL,
   CONSTRAINT global_config_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.leave_requests (
@@ -145,8 +137,7 @@ CREATE TABLE public.leave_requests (
   start_date date NOT NULL,
   end_date date NOT NULL,
   status leave_status DEFAULT 'PENDING'::leave_status NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT leave_requests_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.levels (
@@ -155,8 +146,7 @@ CREATE TABLE public.levels (
   department_id uuid NOT NULL,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   display_name text,
-  status entity_status DEFAULT 'ACTIVE'::entity_status
- NOT NULL,
+  status entity_status DEFAULT 'ACTIVE'::entity_status NOT NULL,
   CONSTRAINT levels_pkey PRIMARY KEY (id),
   CONSTRAINT levels_dept_name_unique UNIQUE (department_id, name),
   CONSTRAINT levels_name_department_id_key UNIQUE (name, department_id)
@@ -172,8 +162,7 @@ CREATE TABLE public.modules (
   total_hours numeric DEFAULT 0 NOT NULL,
   total_sessions integer DEFAULT 0 NOT NULL,
   status entity_active DEFAULT 'ACTIVE'::entity_active NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT modules_pkey PRIMARY KEY (id),
   CONSTRAINT modules_code_key UNIQUE (code)
 );
@@ -184,8 +173,7 @@ CREATE TABLE public.notifications (
   body text NOT NULL,
   type notification_type DEFAULT 'IN_APP'::notification_type NOT NULL,
   read boolean DEFAULT false NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT notifications_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.pending_sync (
@@ -199,11 +187,11 @@ CREATE TABLE public.pending_sync (
   server_received_at timestamp with time zone DEFAULT now() NOT NULL,
   status text DEFAULT 'applied'::text NOT NULL,
   conflict_reason text,
-  result jsonb DEFAULT 
-,
+  result jsonb,
   CONSTRAINT pending_sync_pkey PRIMARY KEY (id),
   CONSTRAINT pending_sync_client_uuid_key UNIQUE (client_uuid),
-  CONSTRAINT pending_sync_kind_check CHECK ((kind = 'session_batch'::text))
+  CONSTRAINT pending_sync_kind_check CHECK ((kind = 'session_batch'::text)),
+  CONSTRAINT pending_sync_status_check CHECK ((status = ANY (ARRAY['applied'::text, 'conflict'::text, 'rejected'::text])))
 );
 CREATE TABLE public.profiles (
   id uuid NOT NULL,
@@ -215,8 +203,7 @@ CREATE TABLE public.profiles (
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   bypass_geofence boolean DEFAULT false NOT NULL,
   avatar_path text,
-  phone text DEFAULT 
-,
+  phone text,
   CONSTRAINT profiles_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.schedule_feedback_messages (
@@ -224,8 +211,7 @@ CREATE TABLE public.schedule_feedback_messages (
   thread_id uuid NOT NULL,
   sender_id uuid,
   message text NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT schedule_feedback_messages_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.schedule_feedback_threads (
@@ -235,8 +221,7 @@ CREATE TABLE public.schedule_feedback_threads (
   admin_id uuid,
   dh_id uuid,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
-  week_num integer DEFAULT 
-,
+  week_num integer,
   CONSTRAINT schedule_feedback_threads_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.schedule_plans (
@@ -264,8 +249,7 @@ CREATE TABLE public.schedule_plans (
   weeks integer DEFAULT 0 NOT NULL,
   created_by uuid,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
-  updated_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  updated_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT schedule_plans_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.schedules (
@@ -297,8 +281,7 @@ CREATE TABLE public.schedules (
   published_at timestamp with time zone,
   published_by uuid,
   plan_id uuid,
-  session_number integer DEFAULT 
-,
+  session_number integer,
   CONSTRAINT schedules_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.sections (
@@ -306,8 +289,7 @@ CREATE TABLE public.sections (
   level_id uuid NOT NULL,
   name text NOT NULL,
   department_id uuid NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT sections_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.semester_registry (
@@ -321,9 +303,9 @@ CREATE TABLE public.semester_registry (
   approved_at timestamp with time zone,
   source_file_url text,
   uploaded_by uuid,
-  distribution_status text DEFAULT 'DRAFT'::text
- NOT NULL,
-  CONSTRAINT semester_registry_pkey PRIMARY KEY (id)
+  distribution_status text DEFAULT 'DRAFT'::text NOT NULL,
+  CONSTRAINT semester_registry_pkey PRIMARY KEY (id),
+  CONSTRAINT semester_registry_distribution_status_check CHECK ((distribution_status = ANY (ARRAY['DRAFT'::text, 'PENDING_MA'::text, 'FEEDBACK_ACTIVE'::text, 'PUBLISHED'::text])))
 );
 CREATE TABLE public.session_logs (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -334,8 +316,7 @@ CREATE TABLE public.session_logs (
   checkin_latitude numeric,
   checkin_longitude numeric,
   session_status session_status DEFAULT 'LIVE'::session_status NOT NULL,
-  submitted_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  submitted_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT session_logs_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.sms_campaigns (
@@ -354,8 +335,8 @@ CREATE TABLE public.sms_campaigns (
   updated_at timestamp with time zone DEFAULT now() NOT NULL,
   scheduled_at timestamp with time zone,
   environment text,
-  claimed_at timestamp with time zone DEFAULT 
-
+  claimed_at timestamp with time zone,
+  CONSTRAINT sms_campaigns_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.sms_recipients (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -366,8 +347,7 @@ CREATE TABLE public.sms_recipients (
   status text DEFAULT 'PENDING'::text NOT NULL,
   provider_message_id text,
   error text,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT sms_recipients_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.sms_scheduled_recipients (
@@ -376,8 +356,7 @@ CREATE TABLE public.sms_scheduled_recipients (
   contact_name text,
   phone text NOT NULL,
   source_group text,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT sms_scheduled_recipients_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.sms_settings (
@@ -389,8 +368,7 @@ CREATE TABLE public.sms_settings (
   dev_base_url text DEFAULT 'https://api.smsethiopia.com/api/send'::text NOT NULL,
   updated_by uuid,
   created_at timestamp with time zone DEFAULT now() NOT NULL,
-  updated_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  updated_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT sms_settings_pkey PRIMARY KEY (id),
   CONSTRAINT sms_settings_environment_check CHECK ((environment = ANY (ARRAY['development'::text, 'production'::text])))
 );
@@ -407,8 +385,7 @@ CREATE TABLE public.students (
   parent_guardian_name text,
   parent_guardian_telephone text,
   parent_guardian_relationship text,
-  telephone text DEFAULT 
-,
+  telephone text,
   CONSTRAINT students_pkey PRIMARY KEY (id),
   CONSTRAINT students_registration_number_key UNIQUE (registration_number)
 );
@@ -416,8 +393,7 @@ CREATE TABLE public.trainer_departments (
   trainer_registry_id uuid NOT NULL,
   department_id uuid NOT NULL,
   is_primary boolean DEFAULT false NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT trainer_departments_pkey PRIMARY KEY (trainer_registry_id, department_id)
 );
 CREATE TABLE public.trainer_registry (
@@ -432,8 +408,7 @@ CREATE TABLE public.trainer_registry (
   created_at timestamp with time zone DEFAULT now() NOT NULL,
   sessions_target integer DEFAULT 15 NOT NULL,
   sessions_completed integer DEFAULT 0 NOT NULL,
-  staff_code text DEFAULT 
-,
+  staff_code text,
   CONSTRAINT trainer_registry_pkey PRIMARY KEY (id),
   CONSTRAINT trainer_registry_email_key UNIQUE (email),
   CONSTRAINT trainer_registry_hidden_staff_id_key UNIQUE (hidden_staff_id)
@@ -443,21 +418,18 @@ CREATE TABLE public.trainer_skills (
   trainer_registry_id uuid NOT NULL,
   module_code text NOT NULL,
   qualification_level text NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT trainer_skills_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.user_roles (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   user_id uuid NOT NULL,
   role app_role NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT user_roles_pkey PRIMARY KEY (id),
   CONSTRAINT user_roles_user_id_role_key UNIQUE (user_id, role)
 );
-CREATE TABLE public.venues
- (
+CREATE TABLE public.venues (
   id uuid DEFAULT gen_random_uuid() NOT NULL,
   name text NOT NULL,
   type venue_type DEFAULT 'Classroom'::venue_type NOT NULL,
@@ -465,8 +437,8 @@ CREATE TABLE public.venues
   longitude numeric DEFAULT 0 NOT NULL,
   geo_radius numeric DEFAULT 50 NOT NULL,
   capacity integer DEFAULT 0 NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
- NOT NULL
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
+  CONSTRAINT venues_pkey PRIMARY KEY (id)
 );
 
 
@@ -554,8 +526,7 @@ CREATE INDEX sms_scheduled_recipients_campaign_idx ON public.sms_scheduled_recip
 CREATE UNIQUE INDEX students_telephone_unique ON public.students USING btree (telephone) WHERE ((telephone IS NOT NULL) AND (telephone <> ''::text));
 CREATE INDEX trainer_departments_dept_idx ON public.trainer_departments USING btree (department_id);
 CREATE UNIQUE INDEX trainer_departments_one_primary ON public.trainer_departments USING btree (trainer_registry_id) WHERE (is_primary = true);
-CREATE UNIQUE INDEX trainer_registry_phone_unique ON public.trainer_registry USING btree (phone) WHERE ((phone IS NOT NULL) AND (phone <> ''::text))
-;
+CREATE UNIQUE INDEX trainer_registry_phone_unique ON public.trainer_registry USING btree (phone) WHERE ((phone IS NOT NULL) AND (phone <> ''::text));
 
 
 -- ============ 5. GRANTS ============
@@ -781,9 +752,7 @@ CREATE POLICY "venues MA write" ON public.venues FOR ALL TO authenticated
   USING (has_role(auth.uid(), 'MA'::app_role))
   WITH CHECK (has_role(auth.uid(), 'MA'::app_role));
 CREATE POLICY "venues read" ON public.venues FOR SELECT TO authenticated
-  USING (true)
-  WITH CHECK (
-);
+  USING (true);
 
 
 -- ============ 7. FUNCTIONS ============
@@ -805,8 +774,7 @@ BEGIN
   INSERT INTO public.audit_logs(actor_id, action_type, entity_type, entity_id, after_state)
   VALUES (auth.uid(), 'SET_DH_DEPARTMENT', 'profiles', _user_id::text,
           jsonb_build_object('department_id', _department_id));
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.admin_set_trainer_departments(_user_id uuid, _department_ids uuid[], _primary_id uuid)
  RETURNS void
@@ -839,8 +807,7 @@ BEGIN
   INSERT INTO public.audit_logs(actor_id, action_type, entity_type, entity_id, after_state)
   VALUES (auth.uid(), 'SET_TRAINER_DEPARTMENTS', 'trainer_registry', v_tr::text,
           jsonb_build_object('departments', _department_ids, 'primary', v_prim));
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.admin_update_user_roles(_user_id uuid, _roles app_role[])
  RETURNS void
@@ -880,8 +847,7 @@ BEGIN
   INSERT INTO public.audit_logs(actor_id, action_type, entity_type, entity_id, after_state)
   VALUES (auth.uid(), 'UPDATE_USER_ROLES', 'user_roles', _user_id::text,
           jsonb_build_object('roles', _roles));
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.audit_logs_immutable()
  RETURNS trigger
@@ -891,8 +857,7 @@ AS $function$
 BEGIN
   RAISE EXCEPTION 'Audit logs are append-only and cannot be % ', TG_OP;
 END;
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.bootstrap_first_user_as_ma()
  RETURNS trigger
@@ -906,8 +871,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.current_department_id()
  RETURNS uuid
@@ -916,8 +880,7 @@ CREATE OR REPLACE FUNCTION public.current_department_id()
  SET search_path TO 'public'
 AS $function$
   SELECT department_id FROM public.profiles WHERE id = auth.uid();
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.current_trainer_registry_id()
  RETURNS uuid
@@ -926,8 +889,7 @@ CREATE OR REPLACE FUNCTION public.current_trainer_registry_id()
  SET search_path TO 'public'
 AS $function$
   SELECT trainer_registry_id FROM public.profiles WHERE id = auth.uid();
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.decide_approval(_id uuid, _decision approval_decision, _comment text)
  RETURNS void
@@ -1013,8 +975,7 @@ BEGIN
           v_row.target_id::text,
           jsonb_build_object('decision', _decision, 'comment', _comment, 'approval_id', _id));
 END
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.dh_delete_draft_session(_schedule_id uuid)
  RETURNS void
@@ -1045,8 +1006,7 @@ BEGIN
   VALUES (auth.uid(), 'DELETE_DRAFT_SESSION', 'schedules', _schedule_id::text,
           jsonb_build_object('semester_id', v_sem));
 END
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.dh_override_attendance(_attendance_log_id uuid, _new_value boolean, _audit_comment text)
  RETURNS void
@@ -1060,8 +1020,7 @@ BEGIN
   INSERT INTO attendance_overrides(attendance_log_id, old_value, new_value, audit_comment, overridden_by)
   VALUES (_attendance_log_id, v_old, _new_value, _audit_comment, auth.uid());
   UPDATE attendance_logs SET present = _new_value WHERE id = _attendance_log_id;
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.dh_reply_feedback(_thread_id uuid, _message text)
  RETURNS uuid
@@ -1086,8 +1045,7 @@ BEGIN
   RETURNING id INTO v_id;
   RETURN v_id;
 END;
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.dh_resubmit_semester(_semester_id uuid)
  RETURNS void
@@ -1121,8 +1079,7 @@ BEGIN
   VALUES (auth.uid(), 'RESUBMIT', 'semester', _semester_id::text,
           jsonb_build_object('semester_id', _semester_id));
 END
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.dh_resubmit_week(_semester_id uuid, _week_num integer)
  RETURNS integer
@@ -1163,8 +1120,7 @@ BEGIN
 
   RETURN v_count;
 END
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.dh_save_schedule_plan(_plan jsonb, _sessions jsonb, _plan_id uuid DEFAULT NULL::uuid)
  RETURNS jsonb
@@ -1332,8 +1288,7 @@ BEGIN
 
   RETURN jsonb_build_object('ok', true, 'plan_id', v_plan_id, 'sessions', v_count);
 END
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.dh_submit_semester_per_week(_semester_id uuid)
  RETURNS jsonb
@@ -1384,8 +1339,7 @@ BEGIN
           jsonb_build_object('semester_id',_semester_id,'created',v_created));
 
   RETURN jsonb_build_object('created', v_created);
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.dh_swap_trainer(_schedule_id uuid, _new_trainer uuid, _reason text)
  RETURNS void
@@ -1412,8 +1366,7 @@ BEGIN
   VALUES (auth.uid(), 'SWAP_TRAINER', 'schedules', _schedule_id::text,
           jsonb_build_object('trainer_registry_id', v_old),
           jsonb_build_object('trainer_registry_id', _new_trainer, 'reason', _reason));
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.enforce_attendance_lock()
  RETURNS trigger
@@ -1436,8 +1389,7 @@ BEGIN
     RAISE EXCEPTION 'Only DH or MA can override attendance';
   END IF;
   RETURN NEW;
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.enforce_schedule_transition()
  RETURNS trigger
@@ -1462,8 +1414,7 @@ BEGIN
     RAISE EXCEPTION 'Illegal schedule transition % -> %', OLD.status, NEW.status;
   END IF;
   RETURN NEW;
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
  RETURNS trigger
@@ -1476,8 +1427,7 @@ BEGIN
   VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', ''), NEW.email);
   RETURN NEW;
 END;
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
  RETURNS boolean
@@ -1486,8 +1436,7 @@ CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
  SET search_path TO 'public'
 AS $function$
   SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role = _role);
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.link_trainer_login(_profile_id uuid, _department_id uuid DEFAULT NULL::uuid)
  RETURNS uuid
@@ -1520,8 +1469,7 @@ BEGIN
    WHERE id = _profile_id;
   ALTER TABLE public.profiles ENABLE TRIGGER USER;
   RETURN v_tr;
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.ma_decide_week(_department_id uuid, _week_num integer, _decision approval_decision, _message text)
  RETURNS jsonb
@@ -1622,8 +1570,7 @@ BEGIN
 
   RETURN jsonb_build_object('count', v_count, 'thread_id', v_thread);
 END
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.ma_delete_schedule(_schedule_id uuid, _reason text)
  RETURNS jsonb
@@ -1693,8 +1640,7 @@ BEGIN
 
   RETURN jsonb_build_object('ok', true, 'id', _schedule_id);
 END
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.ma_reject_semester_with_feedback(_semester_id uuid, _message text)
  RETURNS uuid
@@ -1745,8 +1691,7 @@ BEGIN
 
   RETURN v_thread;
 END
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.ma_split_semester_to_weeks(_approval_id uuid)
  RETURNS jsonb
@@ -1809,8 +1754,7 @@ BEGIN
 
   RETURN jsonb_build_object('semester_id', v_semester_id, 'created', v_created);
 END
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.next_entity_code(_department_id uuid, _kind text)
  RETURNS text
@@ -1839,8 +1783,7 @@ BEGIN
   END IF;
 
   RETURN v_prefix || lpad((v_max + 1)::text, 4, '0');
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.phone_owner(_phone text)
  RETURNS TABLE(kind text, name text, id uuid)
@@ -1856,8 +1799,7 @@ AS $function$
   UNION ALL
   SELECT 'student'::text, s.full_name, s.id FROM public.students s
    WHERE s.telephone = _phone
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.prevent_profile_privilege_escalation()
  RETURNS trigger
@@ -1877,8 +1819,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.reset_academic_data()
  RETURNS jsonb
@@ -1917,8 +1858,7 @@ BEGIN
 
   RETURN jsonb_build_object('ok', true);
 END;
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.seed_department_levels()
  RETURNS trigger
@@ -1931,8 +1871,7 @@ BEGIN
   SELECT NEW.id, l::level_name FROM unnest(ARRAY['I','II','III','IV','V']) l
   ON CONFLICT (department_id, name) DO NOTHING;
   RETURN NEW;
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.set_session_mode(_schedule_id uuid, _mode session_mode)
  RETURNS void
@@ -1947,16 +1886,14 @@ BEGIN
     RAISE EXCEPTION 'Not your schedule';
   END IF;
   UPDATE schedules SET mode = _mode WHERE id = _schedule_id;
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.set_updated_at_ts()
  RETURNS trigger
  LANGUAGE plpgsql
  SET search_path TO 'public'
 AS $function$
-BEGIN NEW.updated_at = now(); RETURN NEW; END; $function$
-;
+BEGIN NEW.updated_at = now(); RETURN NEW; END; $function$;
 
 CREATE OR REPLACE FUNCTION public.submit_for_approval(_type approval_type, _target_ids uuid[])
  RETURNS integer
@@ -2006,8 +1943,7 @@ BEGIN
 
   RETURN v_count;
 END
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.submit_session_batch(_client_uuid uuid, _schedule_id uuid, _client_timestamp timestamp with time zone, _lesson_plan text, _learning_outcome text, _latitude numeric, _longitude numeric, _attendance jsonb)
  RETURNS jsonb
@@ -2111,8 +2047,7 @@ BEGIN
 
   RETURN jsonb_build_object('status', v_status, 'conflict_reason', v_reason, 'replayed', false, 'result', v_result);
 END;
-$function$
-;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.sync_trainer_primary_department()
  RETURNS trigger
@@ -2129,8 +2064,7 @@ BEGIN
       WHERE trainer_registry_id = NEW.trainer_registry_id;
   END IF;
   RETURN NEW;
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.trainer_checkin(_schedule_id uuid, _latitude numeric, _longitude numeric)
  RETURNS jsonb
@@ -2198,8 +2132,7 @@ BEGIN
     'roster_unlock_until', now() + interval '50 minutes',
     'distance_m', v_distance
   );
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.trainer_end_session(_schedule_id uuid, _learning_outcome text, _lesson_plan text)
  RETURNS jsonb
@@ -2237,8 +2170,7 @@ BEGIN
   UPDATE trainer_registry SET sessions_completed = sessions_completed + 1 WHERE id = v_tr;
 
   RETURN jsonb_build_object('ok', true, 'ended_at', now());
-END $function$
-;
+END $function$;
 
 CREATE OR REPLACE FUNCTION public.wipe_entire_system()
  RETURNS jsonb
@@ -2296,9 +2228,7 @@ BEGIN
 
   RETURN jsonb_build_object('ok', true, 'kept_user', v_actor);
 END;
-$function$
-
-;
+$function$;
 
 
 -- ============ 8. TRIGGERS ============
@@ -2313,5 +2243,4 @@ CREATE TRIGGER schedule_plans_set_updated_at BEFORE UPDATE ON public.schedule_pl
 CREATE TRIGGER trg_enforce_schedule_transition BEFORE UPDATE OF status ON public.schedules FOR EACH ROW EXECUTE FUNCTION enforce_schedule_transition();
 CREATE TRIGGER update_sms_campaigns_updated_at BEFORE UPDATE ON public.sms_campaigns FOR EACH ROW EXECUTE FUNCTION set_updated_at_ts();
 CREATE TRIGGER set_sms_settings_updated_at BEFORE UPDATE ON public.sms_settings FOR EACH ROW EXECUTE FUNCTION set_updated_at_ts();
-CREATE TRIGGER trg_sync_trainer_primary_dept AFTER INSERT OR UPDATE ON public.trainer_departments FOR EACH ROW EXECUTE FUNCTION sync_trainer_primary_department()
-;
+CREATE TRIGGER trg_sync_trainer_primary_dept AFTER INSERT OR UPDATE ON public.trainer_departments FOR EACH ROW EXECUTE FUNCTION sync_trainer_primary_department();
