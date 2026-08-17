@@ -2244,3 +2244,42 @@ CREATE TRIGGER trg_enforce_schedule_transition BEFORE UPDATE OF status ON public
 CREATE TRIGGER update_sms_campaigns_updated_at BEFORE UPDATE ON public.sms_campaigns FOR EACH ROW EXECUTE FUNCTION set_updated_at_ts();
 CREATE TRIGGER set_sms_settings_updated_at BEFORE UPDATE ON public.sms_settings FOR EACH ROW EXECUTE FUNCTION set_updated_at_ts();
 CREATE TRIGGER trg_sync_trainer_primary_dept AFTER INSERT OR UPDATE ON public.trainer_departments FOR EACH ROW EXECUTE FUNCTION sync_trainer_primary_department();
+
+
+-- ============ 9. STORAGE ============
+
+INSERT INTO storage.buckets (id, name, public) VALUES ('avatars','avatars', false) ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "avatars MA all" ON storage.objects FOR ALL TO authenticated
+  USING (((bucket_id = 'avatars'::text) AND has_role(auth.uid(), 'MA'::app_role)))
+  WITH CHECK (((bucket_id = 'avatars'::text) AND has_role(auth.uid(), 'MA'::app_role)));
+CREATE POLICY "avatars pending insert" ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = 'pending'::text) AND (split_part(name, '/'::text, 2) = (auth.uid())::text)));
+CREATE POLICY "avatars read authenticated" ON storage.objects FOR SELECT TO authenticated
+  USING ((bucket_id = 'avatars'::text));
+CREATE POLICY "avatars self delete" ON storage.objects FOR DELETE TO authenticated
+  USING (((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text)));
+CREATE POLICY "avatars self insert" ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text)));
+CREATE POLICY "avatars self update" ON storage.objects FOR UPDATE TO authenticated
+  USING (((bucket_id = 'avatars'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text)));
+
+
+-- ============ 10. REALTIME PUBLICATION ============
+
+ALTER TABLE public.approval_queue REPLICA IDENTITY FULL;
+ALTER TABLE public.attendance_logs REPLICA IDENTITY FULL;
+ALTER TABLE public.attendance_overrides REPLICA IDENTITY FULL;
+ALTER TABLE public.audit_logs REPLICA IDENTITY FULL;
+ALTER TABLE public.leave_requests REPLICA IDENTITY FULL;
+ALTER TABLE public.modules REPLICA IDENTITY FULL;
+ALTER TABLE public.notifications REPLICA IDENTITY FULL;
+ALTER TABLE public.schedule_feedback_messages REPLICA IDENTITY FULL;
+ALTER TABLE public.schedule_feedback_threads REPLICA IDENTITY FULL;
+ALTER TABLE public.schedule_plans REPLICA IDENTITY FULL;
+ALTER TABLE public.schedules REPLICA IDENTITY FULL;
+ALTER TABLE public.semester_registry REPLICA IDENTITY FULL;
+ALTER TABLE public.session_logs REPLICA IDENTITY FULL;
+ALTER TABLE public.students REPLICA IDENTITY FULL;
+ALTER TABLE public.trainer_registry REPLICA IDENTITY FULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.approval_queue, public.attendance_logs, public.attendance_overrides, public.audit_logs, public.leave_requests, public.modules, public.notifications, public.schedule_feedback_messages, public.schedule_feedback_threads, public.schedule_plans, public.schedules, public.semester_registry, public.session_logs, public.students, public.trainer_registry;
