@@ -489,6 +489,68 @@ export type Database = {
           },
         ]
       }
+      ct_daily_practical_logs: {
+        Row: {
+          attendance: Database["public"]["Enums"]["ct_attendance_status"]
+          client_uuid: string | null
+          created_at: string
+          created_by: string | null
+          gap_tags: string[]
+          id: string
+          log_date: string
+          placement_id: string
+          safety_breach: boolean
+          safety_notes: string | null
+          score: number | null
+          shift_hours: number
+          task_notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          attendance?: Database["public"]["Enums"]["ct_attendance_status"]
+          client_uuid?: string | null
+          created_at?: string
+          created_by?: string | null
+          gap_tags?: string[]
+          id?: string
+          log_date: string
+          placement_id: string
+          safety_breach?: boolean
+          safety_notes?: string | null
+          score?: number | null
+          shift_hours?: number
+          task_notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          attendance?: Database["public"]["Enums"]["ct_attendance_status"]
+          client_uuid?: string | null
+          created_at?: string
+          created_by?: string | null
+          gap_tags?: string[]
+          id?: string
+          log_date?: string
+          placement_id?: string
+          safety_breach?: boolean
+          safety_notes?: string | null
+          score?: number | null
+          shift_hours?: number
+          task_notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ct_daily_practical_logs_placement_id_fkey"
+            columns: ["placement_id"]
+            isOneToOne: false
+            referencedRelation: "ct_student_placements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ct_day1_checkins: {
         Row: {
           accuracy_meters: number | null
@@ -538,6 +600,109 @@ export type Database = {
             columns: ["placement_id"]
             isOneToOne: true
             referencedRelation: "ct_student_placements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ct_department_competencies: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          critical: boolean
+          department_id: string
+          description: string | null
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          critical?: boolean
+          department_id: string
+          description?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          critical?: boolean
+          department_id?: string
+          description?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ct_department_competencies_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ct_department_eval_configs: {
+        Row: {
+          attendance_threshold: number
+          created_at: string
+          created_by: string | null
+          department_id: string
+          id: string
+          max_allowed_gaps: number
+          passing_threshold: number
+          updated_at: string
+          updated_by: string | null
+          weight_daily: number
+          weight_industry: number
+          weight_tvet: number
+        }
+        Insert: {
+          attendance_threshold?: number
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          id?: string
+          max_allowed_gaps?: number
+          passing_threshold?: number
+          updated_at?: string
+          updated_by?: string | null
+          weight_daily?: number
+          weight_industry?: number
+          weight_tvet?: number
+        }
+        Update: {
+          attendance_threshold?: number
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          id?: string
+          max_allowed_gaps?: number
+          passing_threshold?: number
+          updated_at?: string
+          updated_by?: string | null
+          weight_daily?: number
+          weight_industry?: number
+          weight_tvet?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ct_department_eval_configs_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: true
+            referencedRelation: "departments"
             referencedColumns: ["id"]
           },
         ]
@@ -755,14 +920,18 @@ export type Database = {
       }
       ct_final_evaluations: {
         Row: {
+          attendance_rate: number | null
           calculation_version: number
+          composite_score: number | null
           created_at: string
+          daily_avg_score: number | null
           evaluator_id: string | null
           evaluator_name: string | null
           failed_uc_count: number
           finalized: boolean
           finalized_at: string | null
           id: string
+          industry_score: number | null
           overall_comment: string | null
           placement_id: string
           recommendation:
@@ -770,18 +939,26 @@ export type Database = {
             | null
           red_competency_count: number
           remedial_hours: number
+          safety_breach_count: number
           source: Database["public"]["Enums"]["ct_evaluator_source"]
+          status_color: Database["public"]["Enums"]["ct_status_color"] | null
+          tvet_score: number | null
           updated_at: string
+          weights_used: Json | null
         }
         Insert: {
+          attendance_rate?: number | null
           calculation_version?: number
+          composite_score?: number | null
           created_at?: string
+          daily_avg_score?: number | null
           evaluator_id?: string | null
           evaluator_name?: string | null
           failed_uc_count?: number
           finalized?: boolean
           finalized_at?: string | null
           id?: string
+          industry_score?: number | null
           overall_comment?: string | null
           placement_id: string
           recommendation?:
@@ -789,18 +966,26 @@ export type Database = {
             | null
           red_competency_count?: number
           remedial_hours?: number
+          safety_breach_count?: number
           source: Database["public"]["Enums"]["ct_evaluator_source"]
+          status_color?: Database["public"]["Enums"]["ct_status_color"] | null
+          tvet_score?: number | null
           updated_at?: string
+          weights_used?: Json | null
         }
         Update: {
+          attendance_rate?: number | null
           calculation_version?: number
+          composite_score?: number | null
           created_at?: string
+          daily_avg_score?: number | null
           evaluator_id?: string | null
           evaluator_name?: string | null
           failed_uc_count?: number
           finalized?: boolean
           finalized_at?: string | null
           id?: string
+          industry_score?: number | null
           overall_comment?: string | null
           placement_id?: string
           recommendation?:
@@ -808,8 +993,12 @@ export type Database = {
             | null
           red_competency_count?: number
           remedial_hours?: number
+          safety_breach_count?: number
           source?: Database["public"]["Enums"]["ct_evaluator_source"]
+          status_color?: Database["public"]["Enums"]["ct_status_color"] | null
+          tvet_score?: number | null
           updated_at?: string
+          weights_used?: Json | null
         }
         Relationships: [
           {
@@ -947,6 +1136,67 @@ export type Database = {
           },
           {
             foreignKeyName: "ct_remedial_actions_placement_id_fkey"
+            columns: ["placement_id"]
+            isOneToOne: false
+            referencedRelation: "ct_student_placements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ct_remediation_plans: {
+        Row: {
+          assigned_trainer_id: string | null
+          completed: boolean
+          created_at: string
+          evaluation_id: string | null
+          focus_areas: string[]
+          hours: number
+          id: string
+          notes: string | null
+          placement_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_trainer_id?: string | null
+          completed?: boolean
+          created_at?: string
+          evaluation_id?: string | null
+          focus_areas?: string[]
+          hours?: number
+          id?: string
+          notes?: string | null
+          placement_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_trainer_id?: string | null
+          completed?: boolean
+          created_at?: string
+          evaluation_id?: string | null
+          focus_areas?: string[]
+          hours?: number
+          id?: string
+          notes?: string | null
+          placement_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ct_remediation_plans_assigned_trainer_id_fkey"
+            columns: ["assigned_trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_registry"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ct_remediation_plans_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "ct_final_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ct_remediation_plans_placement_id_fkey"
             columns: ["placement_id"]
             isOneToOne: false
             referencedRelation: "ct_student_placements"
@@ -1099,6 +1349,8 @@ export type Database = {
           gap_type: string
           id: string
           placement_id: string
+          severity: Database["public"]["Enums"]["ct_gap_severity"]
+          tag: string | null
           uc_id: string | null
         }
         Insert: {
@@ -1109,6 +1361,8 @@ export type Database = {
           gap_type: string
           id?: string
           placement_id: string
+          severity?: Database["public"]["Enums"]["ct_gap_severity"]
+          tag?: string | null
           uc_id?: string | null
         }
         Update: {
@@ -1119,6 +1373,8 @@ export type Database = {
           gap_type?: string
           id?: string
           placement_id?: string
+          severity?: Database["public"]["Enums"]["ct_gap_severity"]
+          tag?: string | null
           uc_id?: string | null
         }
         Relationships: [
@@ -3309,6 +3565,10 @@ export type Database = {
         Args: { _current: number; _expected: number }
         Returns: undefined
       }
+      ct_can_access_department: {
+        Args: { _department_id: string }
+        Returns: boolean
+      }
       ct_can_manage_master: { Args: never; Returns: boolean }
       ct_can_view_placement: {
         Args: { _placement_id: string }
@@ -3356,6 +3616,25 @@ export type Database = {
           _to_user: string
         }
         Returns: undefined
+      }
+      ct_ips_hold_request: {
+        Args: {
+          _expected_version?: number
+          _hold_reason: string
+          _request_id: string
+        }
+        Returns: Json
+      }
+      ct_ips_modify_request: {
+        Args: {
+          _end_date: string
+          _expected_version?: number
+          _note: string
+          _request_id: string
+          _start_date: string
+          _training_module_id: string
+        }
+        Returns: Json
       }
       ct_ips_start_review: {
         Args: { _expected_version?: number; _request_id: string }
@@ -3445,6 +3724,21 @@ export type Database = {
         Args: { _roles: Database["public"]["Enums"]["app_role"][] }
         Returns: undefined
       }
+      ct_submit_daily_log: {
+        Args: {
+          _attendance: Database["public"]["Enums"]["ct_attendance_status"]
+          _client_uuid: string
+          _gap_tags: string[]
+          _log_date: string
+          _placement_id: string
+          _safety_breach: boolean
+          _safety_notes: string
+          _score: number
+          _shift_hours: number
+          _task_notes: string
+        }
+        Returns: Json
+      }
       ct_submit_evaluation: {
         Args: {
           _comment: string
@@ -3468,6 +3762,18 @@ export type Database = {
         Returns: Json
       }
       ct_submit_request: { Args: { _request_id: string }; Returns: undefined }
+      ct_upsert_department_config: {
+        Args: {
+          _attendance_threshold: number
+          _department_id: string
+          _max_allowed_gaps: number
+          _passing_threshold: number
+          _weight_daily: number
+          _weight_industry: number
+          _weight_tvet: number
+        }
+        Returns: string
+      }
       current_department_id: { Args: never; Returns: string }
       current_trainer_registry_id: { Args: never; Returns: string }
       decide_approval: {
@@ -3604,8 +3910,10 @@ export type Database = {
       app_role: "MA" | "DH" | "T" | "PD" | "CO" | "VT" | "EM" | "TR" | "IPS"
       approval_decision: "pending" | "approved" | "rejected"
       approval_type: "semester" | "session"
+      ct_attendance_status: "PRESENT" | "LATE" | "ABSENT" | "EXCUSED"
       ct_competency_rating: "GREEN" | "YELLOW" | "RED"
       ct_evaluator_source: "TRAINER" | "MENTOR"
+      ct_gap_severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
       ct_logbook_status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED"
       ct_placement_status:
         | "PENDING"
@@ -3635,7 +3943,10 @@ export type Database = {
         | "APPROVED"
         | "REJECTED"
         | "RETURNED_FOR_CORRECTION"
+        | "ON_HOLD"
+        | "MODIFIED"
       ct_sms_status: "QUEUED" | "SENDING" | "SENT" | "DELIVERED" | "FAILED"
+      ct_status_color: "GREEN" | "YELLOW" | "RED"
       ct_uc_result: "P" | "NP"
       entity_active: "ACTIVE" | "INACTIVE"
       entity_status: "ACTIVE" | "SUSPENDED"
@@ -3795,8 +4106,10 @@ export const Constants = {
       app_role: ["MA", "DH", "T", "PD", "CO", "VT", "EM", "TR", "IPS"],
       approval_decision: ["pending", "approved", "rejected"],
       approval_type: ["semester", "session"],
+      ct_attendance_status: ["PRESENT", "LATE", "ABSENT", "EXCUSED"],
       ct_competency_rating: ["GREEN", "YELLOW", "RED"],
       ct_evaluator_source: ["TRAINER", "MENTOR"],
+      ct_gap_severity: ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
       ct_logbook_status: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
       ct_placement_status: [
         "PENDING",
@@ -3828,8 +4141,11 @@ export const Constants = {
         "APPROVED",
         "REJECTED",
         "RETURNED_FOR_CORRECTION",
+        "ON_HOLD",
+        "MODIFIED",
       ],
       ct_sms_status: ["QUEUED", "SENDING", "SENT", "DELIVERED", "FAILED"],
+      ct_status_color: ["GREEN", "YELLOW", "RED"],
       ct_uc_result: ["P", "NP"],
       entity_active: ["ACTIVE", "INACTIVE"],
       entity_status: ["ACTIVE", "SUSPENDED"],
