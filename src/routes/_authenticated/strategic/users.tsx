@@ -205,10 +205,10 @@ function UsersPage() {
                   <FormFull>
                     <SelectField
                       label="Department"
-                      required={form.role !== "MA"}
+                      required={form.role === "DH" || form.role === "T"}
                       value={form.department_id}
                       onChange={(v) => setForm({ ...form, department_id: v })}
-                      placeholder={form.role === "MA" ? "(optional)" : "Select department"}
+                      placeholder={form.role === "DH" || form.role === "T" ? "Select department" : "(optional)"}
                       options={(depts ?? []).map((d) => ({ value: d.id, label: d.name }))}
                     />
                   </FormFull>
@@ -269,7 +269,7 @@ function UsersPage() {
                         active: u.active !== false,
                       });
                       setNewAvatarPath(""); setNewPassword(""); setEditPhone(u.phone ?? ""); setEditEmail(u.email ?? "");
-                      setEditRoles((u.roles ?? []).filter((r: string) => r === "MA" || r === "DH" || r === "T") as any);
+                      setEditRoles((u.roles ?? []).filter((r: string) => ["MA", "DH", "T", "IPS", "PD"].includes(r)) as any);
                       setEditTrainerDepts(u.department_ids?.length ? u.department_ids : (u.department_id ? [u.department_id] : []));
                       setEditPrimary(u.primary_department_id ?? u.department_id ?? "");
                       setEditDHDept(u.department_id ?? "");
@@ -348,7 +348,7 @@ function UsersPage() {
 
               <FormSection title="Roles & departments">
                 <div className="flex flex-wrap gap-4">
-                  {(["MA", "DH", "T"] as const).map((r) => (
+                  {(["MA", "DH", "T", "IPS", "PD"] as const).map((r) => (
                     <label key={r} className="flex items-center gap-2 text-sm">
                       <Checkbox
                         checked={editRoles.includes(r)}
@@ -356,7 +356,11 @@ function UsersPage() {
                           setEditRoles((prev) => v ? Array.from(new Set([...prev, r])) : prev.filter((x) => x !== r));
                         }}
                       />
-                      {r === "MA" ? "Master Admin" : r === "DH" ? "Department Head" : "Trainer"}
+                      {r === "MA" ? "Master Admin"
+                        : r === "DH" ? "Department Head"
+                        : r === "T" ? "Trainer"
+                        : r === "IPS" ? "Industrial Practical Supervisor"
+                        : "Program Director"}
                     </label>
                   ))}
                 </div>
