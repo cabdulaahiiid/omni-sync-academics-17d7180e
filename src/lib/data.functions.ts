@@ -55,7 +55,7 @@ export const getMe = createServerFn({ method: "GET" })
       profile,
       avatar_url,
       suspended,
-      roles: roles.map((r) => r.role as string),
+      roles: roles.map((r) => r.role) as import("@/lib/auth/roles").AppRole[],
       industrialDepartmentId: (industrialDeptRes?.data ?? null) as string | null,
       isIndustrialDh: Boolean(isIndustrialDhRes?.data),
       profileFound: Boolean(profile),
