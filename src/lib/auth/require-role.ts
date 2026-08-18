@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type AppRole = "MA" | "DH" | "T" | "PD" | "CO" | "VT" | "EM" | "TR";
+export type AppRole = "MA" | "DH" | "T" | "PD" | "CO" | "VT" | "EM" | "TR" | "IPS";
 
 export class ForbiddenError extends Error {
   status = 403;
@@ -21,7 +21,7 @@ async function getUserRoles(ctx: Ctx): Promise<AppRole[]> {
   if (error) return [];
   return (data ?? [])
     .map((r: { role: string }) => r.role)
-    .filter((r): r is AppRole => ["MA","DH","T","PD","CO","VT","EM","TR"].includes(r));
+    .filter((r): r is AppRole => ["MA","DH","T","PD","CO","VT","EM","TR","IPS"].includes(r));
 }
 
 export async function requireRole(

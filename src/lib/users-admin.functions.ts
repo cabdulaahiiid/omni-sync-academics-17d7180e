@@ -62,7 +62,7 @@ export const createUserAccount = createServerFn({ method: "POST" })
       email: z.string().email(),
       full_name: z.string().min(1).max(160),
       password: z.string().min(8).max(72),
-      role: z.enum(["MA", "DH", "T"]),
+      role: z.enum(["MA", "DH", "T", "IPS", "PD"]),
       department_id: z.string().uuid().nullable().optional(),
       phone: z
         .string()
@@ -147,7 +147,7 @@ export const updateUserRoles = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       user_id: z.string().uuid(),
-      roles: z.array(z.enum(["MA", "DH", "T"])).min(1),
+      roles: z.array(z.enum(["MA", "DH", "T", "IPS", "PD"])).min(1),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {

@@ -954,6 +954,62 @@ export type Database = {
           },
         ]
       }
+      ct_request_decisions: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_role: string | null
+          comment: string | null
+          created_at: string
+          delegated_to: string | null
+          department_id: string | null
+          id: string
+          new_status: Database["public"]["Enums"]["ct_request_status"] | null
+          previous_status:
+            | Database["public"]["Enums"]["ct_request_status"]
+            | null
+          request_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_role?: string | null
+          comment?: string | null
+          created_at?: string
+          delegated_to?: string | null
+          department_id?: string | null
+          id?: string
+          new_status?: Database["public"]["Enums"]["ct_request_status"] | null
+          previous_status?:
+            | Database["public"]["Enums"]["ct_request_status"]
+            | null
+          request_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_role?: string | null
+          comment?: string | null
+          created_at?: string
+          delegated_to?: string | null
+          department_id?: string | null
+          id?: string
+          new_status?: Database["public"]["Enums"]["ct_request_status"] | null
+          previous_status?:
+            | Database["public"]["Enums"]["ct_request_status"]
+            | null
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ct_request_decisions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "ct_training_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ct_request_delegations: {
         Row: {
           created_at: string
@@ -1487,6 +1543,8 @@ export type Database = {
           created_at: string
           eligible: boolean
           id: string
+          manual_override: boolean
+          override_reason: string | null
           request_id: string
           student_id: string
           theory_percent: number | null
@@ -1495,6 +1553,8 @@ export type Database = {
           created_at?: string
           eligible?: boolean
           id?: string
+          manual_override?: boolean
+          override_reason?: string | null
           request_id: string
           student_id: string
           theory_percent?: number | null
@@ -1503,6 +1563,8 @@ export type Database = {
           created_at?: string
           eligible?: boolean
           id?: string
+          manual_override?: boolean
+          override_reason?: string | null
           request_id?: string
           student_id?: string
           theory_percent?: number | null
@@ -1528,11 +1590,17 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          decided_at: string | null
+          decision_note: string | null
           department_id: string
           id: string
+          initiation_note: string | null
+          ips_actor_id: string | null
           level_id: string | null
+          manual_initiation: boolean
           notes: string | null
           occupation_id: string
+          pd_actor_id: string | null
           reference: string | null
           requested_end_date: string
           requested_start_date: string
@@ -1548,11 +1616,17 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          decided_at?: string | null
+          decision_note?: string | null
           department_id: string
           id?: string
+          initiation_note?: string | null
+          ips_actor_id?: string | null
           level_id?: string | null
+          manual_initiation?: boolean
           notes?: string | null
           occupation_id: string
+          pd_actor_id?: string | null
           reference?: string | null
           requested_end_date: string
           requested_start_date: string
@@ -1568,11 +1642,17 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          decided_at?: string | null
+          decision_note?: string | null
           department_id?: string
           id?: string
+          initiation_note?: string | null
+          ips_actor_id?: string | null
           level_id?: string | null
+          manual_initiation?: boolean
           notes?: string | null
           occupation_id?: string
+          pd_actor_id?: string | null
           reference?: string | null
           requested_end_date?: string
           requested_start_date?: string
@@ -3197,6 +3277,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      ct_actor_role_label: { Args: never; Returns: string }
       ct_allocate_roster: {
         Args: { _allocations: Json; _request_id: string; _schedule: Json }
         Returns: Json
@@ -3230,7 +3311,19 @@ export type Database = {
         Returns: Json
       }
       ct_finalize_roster: { Args: { _request_id: string }; Returns: Json }
+      ct_industrial_department_id: { Args: never; Returns: string }
+      ct_ips_decide_request: {
+        Args: { _comment: string; _decision: string; _request_id: string }
+        Returns: Json
+      }
+      ct_ips_delegate_request: {
+        Args: { _note: string; _request_id: string; _to_user: string }
+        Returns: undefined
+      }
+      ct_ips_start_review: { Args: { _request_id: string }; Returns: undefined }
       ct_is_admin: { Args: never; Returns: boolean }
+      ct_is_industrial_dh: { Args: never; Returns: boolean }
+      ct_is_ips: { Args: never; Returns: boolean }
       ct_is_placement_mentor: {
         Args: { _placement_id: string }
         Returns: boolean
@@ -3239,6 +3332,7 @@ export type Database = {
         Args: { _placement_id: string }
         Returns: boolean
       }
+      ct_is_program_director: { Args: never; Returns: boolean }
       ct_is_staff: { Args: never; Returns: boolean }
       ct_log_event: {
         Args: {
@@ -3259,9 +3353,30 @@ export type Database = {
       }
       ct_mentor_enterprise_ids: { Args: never; Returns: string[] }
       ct_my_student_id: { Args: never; Returns: string }
+      ct_pd_bulk_return_to_ips: {
+        Args: { _note: string; _request_ids: string[] }
+        Returns: Json
+      }
+      ct_pd_decide_request: {
+        Args: { _comment: string; _decision: string; _request_id: string }
+        Returns: Json
+      }
+      ct_pd_has_request: { Args: { _request_id: string }; Returns: boolean }
+      ct_pd_start_review: { Args: { _request_id: string }; Returns: undefined }
       ct_push_to_assessment: {
         Args: { _evaluation_id: string }
         Returns: string
+      }
+      ct_record_decision: {
+        Args: {
+          _action: string
+          _comment: string
+          _delegated_to: string
+          _new: Database["public"]["Enums"]["ct_request_status"]
+          _prev: Database["public"]["Enums"]["ct_request_status"]
+          _request_id: string
+        }
+        Returns: undefined
       }
       ct_record_supervision: {
         Args: {
@@ -3434,7 +3549,7 @@ export type Database = {
       wipe_entire_system: { Args: never; Returns: Json }
     }
     Enums: {
-      app_role: "MA" | "DH" | "T" | "PD" | "CO" | "VT" | "EM" | "TR"
+      app_role: "MA" | "DH" | "T" | "PD" | "CO" | "VT" | "EM" | "TR" | "IPS"
       approval_decision: "pending" | "approved" | "rejected"
       approval_type: "semester" | "session"
       ct_competency_rating: "GREEN" | "YELLOW" | "RED"
@@ -3459,6 +3574,15 @@ export type Database = {
         | "ACTIVE"
         | "COMPLETED"
         | "CANCELLED"
+        | "PENDING_APPROVAL"
+        | "UNDER_IPS_REVIEW"
+        | "DELEGATED_TO_PD"
+        | "PD_REVIEW"
+        | "PD_APPROVED"
+        | "IPS_FINAL_APPROVAL"
+        | "APPROVED"
+        | "REJECTED"
+        | "RETURNED_FOR_CORRECTION"
       ct_sms_status: "QUEUED" | "SENDING" | "SENT" | "DELIVERED" | "FAILED"
       ct_uc_result: "P" | "NP"
       entity_active: "ACTIVE" | "INACTIVE"
@@ -3616,7 +3740,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["MA", "DH", "T", "PD", "CO", "VT", "EM", "TR"],
+      app_role: ["MA", "DH", "T", "PD", "CO", "VT", "EM", "TR", "IPS"],
       approval_decision: ["pending", "approved", "rejected"],
       approval_type: ["semester", "session"],
       ct_competency_rating: ["GREEN", "YELLOW", "RED"],
@@ -3643,6 +3767,15 @@ export const Constants = {
         "ACTIVE",
         "COMPLETED",
         "CANCELLED",
+        "PENDING_APPROVAL",
+        "UNDER_IPS_REVIEW",
+        "DELEGATED_TO_PD",
+        "PD_REVIEW",
+        "PD_APPROVED",
+        "IPS_FINAL_APPROVAL",
+        "APPROVED",
+        "REJECTED",
+        "RETURNED_FOR_CORRECTION",
       ],
       ct_sms_status: ["QUEUED", "SENDING", "SENT", "DELIVERED", "FAILED"],
       ct_uc_result: ["P", "NP"],

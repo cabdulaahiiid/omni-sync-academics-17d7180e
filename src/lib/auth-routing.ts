@@ -1,8 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logAuthEvent } from "@/lib/auth/telemetry";
 
-type AppRole = "MA" | "DH" | "T";
-export type RoleHome = "/strategic" | "/operational" | "/ground";
+type AppRole = "MA" | "DH" | "T" | "IPS" | "PD";
+export type RoleHome = "/strategic" | "/operational" | "/ground" | "/cooperative-training";
 
 const ROLE_RETRY_DELAYS_MS = [0, 150, 300, 600, 900, 1200];
 
@@ -25,6 +25,8 @@ export function getHomeForRoles(roles: AppRole[]): RoleHome | null {
   if (set.has("MA")) return "/strategic";
   if (set.has("DH")) return "/operational";
   if (set.has("T")) return "/ground";
+  if (set.has("IPS")) return "/cooperative-training";
+  if (set.has("PD")) return "/cooperative-training";
   return null;
 }
 
@@ -48,7 +50,9 @@ export async function loadRolesAfterAuthReady(userId: string): Promise<AppRole[]
 
     const roles = (data ?? [])
       .map((row) => row.role)
-      .filter((role): role is AppRole => role === "MA" || role === "DH" || role === "T");
+      .filter((role): role is AppRole =>
+        role === "MA" || role === "DH" || role === "T" || role === "IPS" || role === "PD",
+      );
 
     if (roles.length > 0) {
       void logAuthEvent(supabase, {

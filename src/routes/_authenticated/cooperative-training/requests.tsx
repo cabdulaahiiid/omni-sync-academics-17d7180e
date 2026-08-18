@@ -95,8 +95,8 @@ function RequestsPage() {
     } catch (e) { toastError(e); }
   }
 
-  const canCreate = roles.some((r) => ["MA", "DH", "PD", "CO"].includes(r));
-  const canDelegate = roles.some((r) => ["MA", "PD"].includes(r));
+  const canCreate = roles.some((r) => ["MA", "DH", "IPS"].includes(r));
+  const canDelegate = roles.some((r) => ["MA", "IPS"].includes(r));
 
   return (
     <div className="space-y-6">
@@ -147,7 +147,7 @@ function RequestsPage() {
                 </FormGrid>
               </FormSection>
 
-              <FormSection title="Theory completion queue" description="Only trainees who reached the theory threshold and have no active placement can be added.">
+              <FormSection title="Theory completion queue" description="Trainees below the theory threshold can still be selected manually — the request is then flagged MANUALLY INITIATED for the supervisor.">
                 {!form.department_id ? (
                   <p className="text-sm text-muted-foreground">Choose a department to load trainees.</p>
                 ) : eligible.isLoading ? (
@@ -164,7 +164,7 @@ function RequestsPage() {
                             <td className="p-2">
                               <Checkbox
                                 checked={selected.includes(s.id)}
-                                disabled={!s.eligible}
+                                disabled={s.already_placed}
                                 onCheckedChange={(c) =>
                                   setSelected((prev) => (c ? [...prev, s.id] : prev.filter((x) => x !== s.id)))
                                 }
@@ -176,7 +176,7 @@ function RequestsPage() {
                             <td className="p-2">
                               {s.already_placed ? <Badge variant="secondary">Already placed</Badge>
                                 : s.eligible ? <Badge>Eligible</Badge>
-                                : <Badge variant="outline">Below {eligible.data?.threshold ?? 80}%</Badge>}
+                                : <Badge variant="outline">Manual — below {eligible.data?.threshold ?? 80}%</Badge>}
                             </td>
                           </tr>
                         ))}
@@ -186,6 +186,14 @@ function RequestsPage() {
                 )}
               </FormSection>
 
+              {selected.some((id) => {
+                const s = (eligible.data?.students ?? []).find((x: any) => x.id === id);
+                return s && !s.eligible;
+              }) && (
+                <p className="rounded-md bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  MANUALLY INITIATED — THEORY &lt; {eligible.data?.threshold ?? 80}%. This will be recorded on the request and shown to the supervisor.
+                </p>
+              )}
               {missing.length > 0 && (
                 <p className="text-xs text-muted-foreground">Still required: {missing.join(", ")}.</p>
               )}
