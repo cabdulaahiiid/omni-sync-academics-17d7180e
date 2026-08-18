@@ -136,16 +136,15 @@ function StudentsHub() {
   const bulk = useMutation({
     mutationFn: () => {
       const rows = csvRows.map((r) => ({
-        registration_number: r.student_id_code || r.registration_number || "",
-        full_name: r.full_name || r.name || "",
-        level_name: r.level_name || r.level || bulkLevelName,
-        section_name: r.section_name || r.section || bulkSectionName,
+        registration_number: r.student_id_code || "",
+        full_name: r.full_name || "",
+        level_name: r.level_name || bulkLevelName,
+        section_name: r.section_name || bulkSectionName,
         gender: normalizeGender(r.gender),
-        telephone: r.telephone || r.phone || null,
-        parent_guardian_name: r.parent_guardian_name || r.guardian_name || null,
-        parent_guardian_telephone: r.parent_guardian_telephone || r.guardian_telephone || null,
-        parent_guardian_relationship:
-          (r.parent_guardian_relationship || r.guardian_relationship || "") as any || null,
+        telephone: r.telephone || null,
+        parent_guardian_name: r.parent_guardian_name || null,
+        parent_guardian_telephone: r.parent_guardian_telephone || null,
+        parent_guardian_relationship: (r.parent_guardian_relationship || "") as any || null,
       })).filter((r) => r.full_name);
       if (!bulkLevelName || !bulkSectionName) {
         throw new Error("Select the Level and Section above before importing — the file does not carry them.");
