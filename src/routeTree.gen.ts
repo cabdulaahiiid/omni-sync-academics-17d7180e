@@ -19,11 +19,13 @@ import { Route as AuthenticatedStrategicRouteImport } from './routes/_authentica
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOperationalRouteImport } from './routes/_authenticated/operational'
 import { Route as AuthenticatedGroundRouteImport } from './routes/_authenticated/ground'
+import { Route as AuthenticatedCooperativeTrainingRouteImport } from './routes/_authenticated/cooperative-training'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedStrategicIndexRouteImport } from './routes/_authenticated/strategic/index'
 import { Route as AuthenticatedOperationalIndexRouteImport } from './routes/_authenticated/operational/index'
 import { Route as AuthenticatedGroundIndexRouteImport } from './routes/_authenticated/ground/index'
+import { Route as AuthenticatedCooperativeTrainingIndexRouteImport } from './routes/_authenticated/cooperative-training/index'
 import { Route as ManualModulesSlugRouteImport } from './routes/manual/modules.$slug'
 import { Route as ApiPublicSmsDispatchRouteImport } from './routes/api/public/sms-dispatch'
 import { Route as AuthenticatedStrategicVenuesRouteImport } from './routes/_authenticated/strategic/venues'
@@ -57,6 +59,7 @@ import { Route as AuthenticatedGroundReportsRouteImport } from './routes/_authen
 import { Route as AuthenticatedGroundProfileRouteImport } from './routes/_authenticated/ground/profile'
 import { Route as AuthenticatedGroundCompletedRouteImport } from './routes/_authenticated/ground/completed'
 import { Route as AuthenticatedGroundScheduleIdRouteImport } from './routes/_authenticated/ground/$scheduleId'
+import { Route as AuthenticatedCooperativeTrainingRequestsRouteImport } from './routes/_authenticated/cooperative-training/requests'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedStrategicDepartmentsIdRouteImport } from './routes/_authenticated/strategic/departments.$id'
@@ -111,6 +114,12 @@ const AuthenticatedGroundRoute = AuthenticatedGroundRouteImport.update({
   path: '/ground',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedCooperativeTrainingRoute =
+  AuthenticatedCooperativeTrainingRouteImport.update({
+    id: '/cooperative-training',
+    path: '/cooperative-training',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
   Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
@@ -140,6 +149,12 @@ const AuthenticatedGroundIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedGroundRoute,
+  } as any)
+const AuthenticatedCooperativeTrainingIndexRoute =
+  AuthenticatedCooperativeTrainingIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedCooperativeTrainingRoute,
   } as any)
 const ManualModulesSlugRoute = ManualModulesSlugRouteImport.update({
   id: '/modules/$slug',
@@ -337,6 +352,12 @@ const AuthenticatedGroundScheduleIdRoute =
     path: '/$scheduleId',
     getParentRoute: () => AuthenticatedGroundRoute,
   } as any)
+const AuthenticatedCooperativeTrainingRequestsRoute =
+  AuthenticatedCooperativeTrainingRequestsRouteImport.update({
+    id: '/requests',
+    path: '/requests',
+    getParentRoute: () => AuthenticatedCooperativeTrainingRoute,
+  } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -362,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/cooperative-training': typeof AuthenticatedCooperativeTrainingRouteWithChildren
   '/ground': typeof AuthenticatedGroundRouteWithChildren
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/profile': typeof AuthenticatedProfileRoute
@@ -369,6 +391,7 @@ export interface FileRoutesByFullPath {
   '/manual/': typeof ManualIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/cooperative-training/requests': typeof AuthenticatedCooperativeTrainingRequestsRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/ground/completed': typeof AuthenticatedGroundCompletedRoute
   '/ground/profile': typeof AuthenticatedGroundProfileRoute
@@ -402,6 +425,7 @@ export interface FileRoutesByFullPath {
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/api/public/sms-dispatch': typeof ApiPublicSmsDispatchRoute
   '/manual/modules/$slug': typeof ManualModulesSlugRoute
+  '/cooperative-training/': typeof AuthenticatedCooperativeTrainingIndexRoute
   '/ground/': typeof AuthenticatedGroundIndexRoute
   '/operational/': typeof AuthenticatedOperationalIndexRoute
   '/strategic/': typeof AuthenticatedStrategicIndexRoute
@@ -417,6 +441,7 @@ export interface FileRoutesByTo {
   '/manual': typeof ManualIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/cooperative-training/requests': typeof AuthenticatedCooperativeTrainingRequestsRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/ground/completed': typeof AuthenticatedGroundCompletedRoute
   '/ground/profile': typeof AuthenticatedGroundProfileRoute
@@ -450,6 +475,7 @@ export interface FileRoutesByTo {
   '/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/api/public/sms-dispatch': typeof ApiPublicSmsDispatchRoute
   '/manual/modules/$slug': typeof ManualModulesSlugRoute
+  '/cooperative-training': typeof AuthenticatedCooperativeTrainingIndexRoute
   '/ground': typeof AuthenticatedGroundIndexRoute
   '/operational': typeof AuthenticatedOperationalIndexRoute
   '/strategic': typeof AuthenticatedStrategicIndexRoute
@@ -464,6 +490,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_authenticated/cooperative-training': typeof AuthenticatedCooperativeTrainingRouteWithChildren
   '/_authenticated/ground': typeof AuthenticatedGroundRouteWithChildren
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
@@ -471,6 +498,7 @@ export interface FileRoutesById {
   '/manual/': typeof ManualIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/_authenticated/cooperative-training/requests': typeof AuthenticatedCooperativeTrainingRequestsRoute
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/_authenticated/ground/completed': typeof AuthenticatedGroundCompletedRoute
   '/_authenticated/ground/profile': typeof AuthenticatedGroundProfileRoute
@@ -504,6 +532,7 @@ export interface FileRoutesById {
   '/_authenticated/strategic/venues': typeof AuthenticatedStrategicVenuesRoute
   '/api/public/sms-dispatch': typeof ApiPublicSmsDispatchRoute
   '/manual/modules/$slug': typeof ManualModulesSlugRoute
+  '/_authenticated/cooperative-training/': typeof AuthenticatedCooperativeTrainingIndexRoute
   '/_authenticated/ground/': typeof AuthenticatedGroundIndexRoute
   '/_authenticated/operational/': typeof AuthenticatedOperationalIndexRoute
   '/_authenticated/strategic/': typeof AuthenticatedStrategicIndexRoute
@@ -518,6 +547,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/cooperative-training'
     | '/ground'
     | '/operational'
     | '/profile'
@@ -525,6 +555,7 @@ export interface FileRouteTypes {
     | '/manual/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/cooperative-training/requests'
     | '/ground/$scheduleId'
     | '/ground/completed'
     | '/ground/profile'
@@ -558,6 +589,7 @@ export interface FileRouteTypes {
     | '/strategic/venues'
     | '/api/public/sms-dispatch'
     | '/manual/modules/$slug'
+    | '/cooperative-training/'
     | '/ground/'
     | '/operational/'
     | '/strategic/'
@@ -573,6 +605,7 @@ export interface FileRouteTypes {
     | '/manual'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/cooperative-training/requests'
     | '/ground/$scheduleId'
     | '/ground/completed'
     | '/ground/profile'
@@ -606,6 +639,7 @@ export interface FileRouteTypes {
     | '/strategic/venues'
     | '/api/public/sms-dispatch'
     | '/manual/modules/$slug'
+    | '/cooperative-training'
     | '/ground'
     | '/operational'
     | '/strategic'
@@ -619,6 +653,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/_authenticated/cooperative-training'
     | '/_authenticated/ground'
     | '/_authenticated/operational'
     | '/_authenticated/profile'
@@ -626,6 +661,7 @@ export interface FileRouteTypes {
     | '/manual/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/_authenticated/cooperative-training/requests'
     | '/_authenticated/ground/$scheduleId'
     | '/_authenticated/ground/completed'
     | '/_authenticated/ground/profile'
@@ -659,6 +695,7 @@ export interface FileRouteTypes {
     | '/_authenticated/strategic/venues'
     | '/api/public/sms-dispatch'
     | '/manual/modules/$slug'
+    | '/_authenticated/cooperative-training/'
     | '/_authenticated/ground/'
     | '/_authenticated/operational/'
     | '/_authenticated/strategic/'
@@ -750,6 +787,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroundRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/cooperative-training': {
+      id: '/_authenticated/cooperative-training'
+      path: '/cooperative-training'
+      fullPath: '/cooperative-training'
+      preLoaderRoute: typeof AuthenticatedCooperativeTrainingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
@@ -784,6 +828,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ground/'
       preLoaderRoute: typeof AuthenticatedGroundIndexRouteImport
       parentRoute: typeof AuthenticatedGroundRoute
+    }
+    '/_authenticated/cooperative-training/': {
+      id: '/_authenticated/cooperative-training/'
+      path: '/'
+      fullPath: '/cooperative-training/'
+      preLoaderRoute: typeof AuthenticatedCooperativeTrainingIndexRouteImport
+      parentRoute: typeof AuthenticatedCooperativeTrainingRoute
     }
     '/manual/modules/$slug': {
       id: '/manual/modules/$slug'
@@ -1016,6 +1067,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroundScheduleIdRouteImport
       parentRoute: typeof AuthenticatedGroundRoute
     }
+    '/_authenticated/cooperative-training/requests': {
+      id: '/_authenticated/cooperative-training/requests'
+      path: '/requests'
+      fullPath: '/cooperative-training/requests'
+      preLoaderRoute: typeof AuthenticatedCooperativeTrainingRequestsRouteImport
+      parentRoute: typeof AuthenticatedCooperativeTrainingRoute
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -1039,6 +1097,24 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedCooperativeTrainingRouteChildren {
+  AuthenticatedCooperativeTrainingRequestsRoute: typeof AuthenticatedCooperativeTrainingRequestsRoute
+  AuthenticatedCooperativeTrainingIndexRoute: typeof AuthenticatedCooperativeTrainingIndexRoute
+}
+
+const AuthenticatedCooperativeTrainingRouteChildren: AuthenticatedCooperativeTrainingRouteChildren =
+  {
+    AuthenticatedCooperativeTrainingRequestsRoute:
+      AuthenticatedCooperativeTrainingRequestsRoute,
+    AuthenticatedCooperativeTrainingIndexRoute:
+      AuthenticatedCooperativeTrainingIndexRoute,
+  }
+
+const AuthenticatedCooperativeTrainingRouteWithChildren =
+  AuthenticatedCooperativeTrainingRoute._addFileChildren(
+    AuthenticatedCooperativeTrainingRouteChildren,
+  )
 
 interface AuthenticatedGroundRouteChildren {
   AuthenticatedGroundScheduleIdRoute: typeof AuthenticatedGroundScheduleIdRoute
@@ -1162,6 +1238,7 @@ const AuthenticatedStrategicRouteWithChildren =
   )
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedCooperativeTrainingRoute: typeof AuthenticatedCooperativeTrainingRouteWithChildren
   AuthenticatedGroundRoute: typeof AuthenticatedGroundRouteWithChildren
   AuthenticatedOperationalRoute: typeof AuthenticatedOperationalRouteWithChildren
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
@@ -1170,6 +1247,8 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedCooperativeTrainingRoute:
+    AuthenticatedCooperativeTrainingRouteWithChildren,
   AuthenticatedGroundRoute: AuthenticatedGroundRouteWithChildren,
   AuthenticatedOperationalRoute: AuthenticatedOperationalRouteWithChildren,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
