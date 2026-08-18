@@ -191,7 +191,7 @@ function DepartmentsPage() {
                   <TableCell><Badge variant={dept.status === "ACTIVE" ? "default" : "secondary"}>{dept.status}</Badge></TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" onClick={() => { setEditing(dept); setName(dept.name); setDescription(dept.description ?? ""); setStatus(dept.status); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => { if (confirm(`Delete ${dept.name}?`)) delMut.mutate(dept.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => void startDelete(dept)}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               );
@@ -199,6 +199,43 @@ function DepartmentsPage() {
           </TableBody>
         </Table>
       </Card>
+
+      <Dialog open={!!delTarget} onOpenChange={(o) => { if (!o) { setDelTarget(null); setDelPreview(null); setDelConfirm(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete {delTarget?.name}?</DialogTitle></DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              This permanently deletes the department and everything linked to it. This cannot be undone.
+            </p>
+            {delPreview ? (
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg border bg-muted/30 p-3 text-[13px]">
+                {(["levels","sections","students","trainers","modules","schedules","schedule_plans","training_requests","placements","users_linked"] as const).map((k) => (
+                  <li key={k} className="flex justify-between gap-2">
+                    <span className="capitalize text-muted-foreground">{k.replace(/_/g, " ")}</span>
+                    <span className="font-semibold">{String(delPreview[k] ?? 0)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground">Checking what will be removed…</p>
+            )}
+            <div className="space-y-1.5">
+              <Label>Type <span className="font-semibold">{delTarget?.name}</span> to confirm</Label>
+              <Input value={delConfirm} onChange={(e) => setDelConfirm(e.target.value)} placeholder={delTarget?.name ?? ""} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDelTarget(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={delMut.isPending || delConfirm.trim().toLowerCase() !== (delTarget?.name ?? "").trim().toLowerCase()}
+              onClick={() => delMut.mutate()}
+            >
+              {delMut.isPending ? "Deleting…" : "Delete permanently"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
