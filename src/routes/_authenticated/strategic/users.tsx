@@ -198,6 +198,8 @@ function UsersPage() {
                       { value: "MA", label: "Master Admin" },
                       { value: "DH", label: "Department Head" },
                       { value: "T", label: "Trainer" },
+                      { value: "IPS", label: "Industrial Practical Supervisor" },
+                      { value: "PD", label: "Program Director" },
                     ]}
                   />
                   <FormFull>
