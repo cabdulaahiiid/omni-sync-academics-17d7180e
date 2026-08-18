@@ -147,8 +147,11 @@ function StudentsHub() {
         parent_guardian_relationship:
           (r.parent_guardian_relationship || r.guardian_relationship || "") as any || null,
       })).filter((r) => r.full_name);
+      if (!bulkLevelName || !bulkSectionName) {
+        throw new Error("Select the Level and Section above before importing — the file does not carry them.");
+      }
       if (rows.some((r) => !r.level_name || !r.section_name)) {
-        throw new Error("Some rows have no level or section. Fix: fill the level_name and section_name columns in the file, or pick the Level and Section above before importing.");
+        throw new Error("Some rows have no level or section. Fix: pick the Level and Section above before importing.");
       }
       return bulkFn({ data: { rows } });
     },
@@ -278,8 +281,8 @@ function StudentsHub() {
           </div>
           {fileError && <ErrorPanel error={fileError} />}
           <CsvDropzone
-            helpText="Excel (.xlsx) or CSV. Required: full_name. Optional: student_id_code, gender, telephone, level_name, section_name, parent_guardian_name, parent_guardian_telephone, parent_guardian_relationship. Blank level/section use the selectors above."
-            sampleHeaders={["student_id_code", "full_name", "gender", "telephone", "level_name", "section_name", "parent_guardian_name", "parent_guardian_telephone", "parent_guardian_relationship"]}
+            helpText="Excel (.xlsx) or CSV. Required: full_name. Optional: student_id_code, gender, telephone, parent_guardian_name, parent_guardian_telephone, parent_guardian_relationship. Level and Section come from the selectors above."
+            sampleHeaders={["student_id_code", "full_name", "gender", "telephone", "parent_guardian_name", "parent_guardian_telephone", "parent_guardian_relationship"]}
             requiredHeaders={["full_name"]}
             onFileError={(m) => {
               setFileError(m); setCsvRows([]); setCsvName("");
