@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, ClipboardList, Building2, GraduationCap, BookOpen,
-  ShieldCheck, Stethoscope, ClipboardCheck, HardHat, Award,
+  ShieldCheck, Stethoscope, ClipboardCheck, HardHat, Award, Settings2, TrendingDown,
 } from "lucide-react";
 import { useMe } from "@/hooks/use-me";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,8 @@ const TABS: Tab[] = [
   { to: "/cooperative-training/supervision", label: "Supervision", icon: Stethoscope, roles: ["MA", "IPS", "PD", "T", "VT"] },
   { to: "/cooperative-training/evaluation", label: "Evaluation", icon: Award, roles: ["MA", "IPS", "PD", "T", "VT"] },
   { to: "/cooperative-training/reports", label: "Reports", icon: GraduationCap, roles: ["MA", "IPS", "PD"] },
+  { to: "/cooperative-training/gaps", label: "Skill gaps", icon: TrendingDown, roles: ["MA", "DH", "IPS", "PD"] },
+  { to: "/cooperative-training/settings", label: "Department setup", icon: Settings2, roles: ["MA", "DH"] },
 ];
 
 function CooperativeTrainingShell() {
