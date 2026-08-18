@@ -1612,6 +1612,7 @@ export type Database = {
           training_module_id: string | null
           updated_at: string
           updated_by: string | null
+          version: number
         }
         Insert: {
           created_at?: string
@@ -1638,6 +1639,7 @@ export type Database = {
           training_module_id?: string | null
           updated_at?: string
           updated_by?: string | null
+          version?: number
         }
         Update: {
           created_at?: string
@@ -1664,6 +1666,7 @@ export type Database = {
           training_module_id?: string | null
           updated_at?: string
           updated_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -3282,6 +3285,10 @@ export type Database = {
         Args: { _allocations: Json; _request_id: string; _schedule: Json }
         Returns: Json
       }
+      ct_assert_version: {
+        Args: { _current: number; _expected: number }
+        Returns: undefined
+      }
       ct_can_manage_master: { Args: never; Returns: boolean }
       ct_can_view_placement: {
         Args: { _placement_id: string }
@@ -3313,14 +3320,27 @@ export type Database = {
       ct_finalize_roster: { Args: { _request_id: string }; Returns: Json }
       ct_industrial_department_id: { Args: never; Returns: string }
       ct_ips_decide_request: {
-        Args: { _comment: string; _decision: string; _request_id: string }
+        Args: {
+          _comment: string
+          _decision: string
+          _expected_version?: number
+          _request_id: string
+        }
         Returns: Json
       }
       ct_ips_delegate_request: {
-        Args: { _note: string; _request_id: string; _to_user: string }
+        Args: {
+          _expected_version?: number
+          _note: string
+          _request_id: string
+          _to_user: string
+        }
         Returns: undefined
       }
-      ct_ips_start_review: { Args: { _request_id: string }; Returns: undefined }
+      ct_ips_start_review: {
+        Args: { _expected_version?: number; _request_id: string }
+        Returns: undefined
+      }
       ct_is_admin: { Args: never; Returns: boolean }
       ct_is_industrial_dh: { Args: never; Returns: boolean }
       ct_is_ips: { Args: never; Returns: boolean }
@@ -3354,15 +3374,27 @@ export type Database = {
       ct_mentor_enterprise_ids: { Args: never; Returns: string[] }
       ct_my_student_id: { Args: never; Returns: string }
       ct_pd_bulk_return_to_ips: {
-        Args: { _note: string; _request_ids: string[] }
+        Args: {
+          _expected_versions?: Json
+          _note: string
+          _request_ids: string[]
+        }
         Returns: Json
       }
       ct_pd_decide_request: {
-        Args: { _comment: string; _decision: string; _request_id: string }
+        Args: {
+          _comment: string
+          _decision: string
+          _expected_version?: number
+          _request_id: string
+        }
         Returns: Json
       }
       ct_pd_has_request: { Args: { _request_id: string }; Returns: boolean }
-      ct_pd_start_review: { Args: { _request_id: string }; Returns: undefined }
+      ct_pd_start_review: {
+        Args: { _expected_version?: number; _request_id: string }
+        Returns: undefined
+      }
       ct_push_to_assessment: {
         Args: { _evaluation_id: string }
         Returns: string

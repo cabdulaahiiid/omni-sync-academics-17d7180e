@@ -60,8 +60,13 @@ import { Route as AuthenticatedGroundProfileRouteImport } from './routes/_authen
 import { Route as AuthenticatedGroundCompletedRouteImport } from './routes/_authenticated/ground/completed'
 import { Route as AuthenticatedGroundScheduleIdRouteImport } from './routes/_authenticated/ground/$scheduleId'
 import { Route as AuthenticatedCooperativeTrainingSupervisorRouteImport } from './routes/_authenticated/cooperative-training/supervisor'
+import { Route as AuthenticatedCooperativeTrainingSupervisionRouteImport } from './routes/_authenticated/cooperative-training/supervision'
 import { Route as AuthenticatedCooperativeTrainingRequestsRouteImport } from './routes/_authenticated/cooperative-training/requests'
+import { Route as AuthenticatedCooperativeTrainingReportsRouteImport } from './routes/_authenticated/cooperative-training/reports'
 import { Route as AuthenticatedCooperativeTrainingProgramDirectorRouteImport } from './routes/_authenticated/cooperative-training/program-director'
+import { Route as AuthenticatedCooperativeTrainingPlacementsRouteImport } from './routes/_authenticated/cooperative-training/placements'
+import { Route as AuthenticatedCooperativeTrainingLogbooksRouteImport } from './routes/_authenticated/cooperative-training/logbooks'
+import { Route as AuthenticatedCooperativeTrainingEvaluationRouteImport } from './routes/_authenticated/cooperative-training/evaluation'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedStrategicDepartmentsIdRouteImport } from './routes/_authenticated/strategic/departments.$id'
@@ -360,16 +365,46 @@ const AuthenticatedCooperativeTrainingSupervisorRoute =
     path: '/supervisor',
     getParentRoute: () => AuthenticatedCooperativeTrainingRoute,
   } as any)
+const AuthenticatedCooperativeTrainingSupervisionRoute =
+  AuthenticatedCooperativeTrainingSupervisionRouteImport.update({
+    id: '/supervision',
+    path: '/supervision',
+    getParentRoute: () => AuthenticatedCooperativeTrainingRoute,
+  } as any)
 const AuthenticatedCooperativeTrainingRequestsRoute =
   AuthenticatedCooperativeTrainingRequestsRouteImport.update({
     id: '/requests',
     path: '/requests',
     getParentRoute: () => AuthenticatedCooperativeTrainingRoute,
   } as any)
+const AuthenticatedCooperativeTrainingReportsRoute =
+  AuthenticatedCooperativeTrainingReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedCooperativeTrainingRoute,
+  } as any)
 const AuthenticatedCooperativeTrainingProgramDirectorRoute =
   AuthenticatedCooperativeTrainingProgramDirectorRouteImport.update({
     id: '/program-director',
     path: '/program-director',
+    getParentRoute: () => AuthenticatedCooperativeTrainingRoute,
+  } as any)
+const AuthenticatedCooperativeTrainingPlacementsRoute =
+  AuthenticatedCooperativeTrainingPlacementsRouteImport.update({
+    id: '/placements',
+    path: '/placements',
+    getParentRoute: () => AuthenticatedCooperativeTrainingRoute,
+  } as any)
+const AuthenticatedCooperativeTrainingLogbooksRoute =
+  AuthenticatedCooperativeTrainingLogbooksRouteImport.update({
+    id: '/logbooks',
+    path: '/logbooks',
+    getParentRoute: () => AuthenticatedCooperativeTrainingRoute,
+  } as any)
+const AuthenticatedCooperativeTrainingEvaluationRoute =
+  AuthenticatedCooperativeTrainingEvaluationRouteImport.update({
+    id: '/evaluation',
+    path: '/evaluation',
     getParentRoute: () => AuthenticatedCooperativeTrainingRoute,
   } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
@@ -405,8 +440,13 @@ export interface FileRoutesByFullPath {
   '/manual/': typeof ManualIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/cooperative-training/evaluation': typeof AuthenticatedCooperativeTrainingEvaluationRoute
+  '/cooperative-training/logbooks': typeof AuthenticatedCooperativeTrainingLogbooksRoute
+  '/cooperative-training/placements': typeof AuthenticatedCooperativeTrainingPlacementsRoute
   '/cooperative-training/program-director': typeof AuthenticatedCooperativeTrainingProgramDirectorRoute
+  '/cooperative-training/reports': typeof AuthenticatedCooperativeTrainingReportsRoute
   '/cooperative-training/requests': typeof AuthenticatedCooperativeTrainingRequestsRoute
+  '/cooperative-training/supervision': typeof AuthenticatedCooperativeTrainingSupervisionRoute
   '/cooperative-training/supervisor': typeof AuthenticatedCooperativeTrainingSupervisorRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/ground/completed': typeof AuthenticatedGroundCompletedRoute
@@ -457,8 +497,13 @@ export interface FileRoutesByTo {
   '/manual': typeof ManualIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/cooperative-training/evaluation': typeof AuthenticatedCooperativeTrainingEvaluationRoute
+  '/cooperative-training/logbooks': typeof AuthenticatedCooperativeTrainingLogbooksRoute
+  '/cooperative-training/placements': typeof AuthenticatedCooperativeTrainingPlacementsRoute
   '/cooperative-training/program-director': typeof AuthenticatedCooperativeTrainingProgramDirectorRoute
+  '/cooperative-training/reports': typeof AuthenticatedCooperativeTrainingReportsRoute
   '/cooperative-training/requests': typeof AuthenticatedCooperativeTrainingRequestsRoute
+  '/cooperative-training/supervision': typeof AuthenticatedCooperativeTrainingSupervisionRoute
   '/cooperative-training/supervisor': typeof AuthenticatedCooperativeTrainingSupervisorRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/ground/completed': typeof AuthenticatedGroundCompletedRoute
@@ -516,8 +561,13 @@ export interface FileRoutesById {
   '/manual/': typeof ManualIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/_authenticated/cooperative-training/evaluation': typeof AuthenticatedCooperativeTrainingEvaluationRoute
+  '/_authenticated/cooperative-training/logbooks': typeof AuthenticatedCooperativeTrainingLogbooksRoute
+  '/_authenticated/cooperative-training/placements': typeof AuthenticatedCooperativeTrainingPlacementsRoute
   '/_authenticated/cooperative-training/program-director': typeof AuthenticatedCooperativeTrainingProgramDirectorRoute
+  '/_authenticated/cooperative-training/reports': typeof AuthenticatedCooperativeTrainingReportsRoute
   '/_authenticated/cooperative-training/requests': typeof AuthenticatedCooperativeTrainingRequestsRoute
+  '/_authenticated/cooperative-training/supervision': typeof AuthenticatedCooperativeTrainingSupervisionRoute
   '/_authenticated/cooperative-training/supervisor': typeof AuthenticatedCooperativeTrainingSupervisorRoute
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/_authenticated/ground/completed': typeof AuthenticatedGroundCompletedRoute
@@ -575,8 +625,13 @@ export interface FileRouteTypes {
     | '/manual/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/cooperative-training/evaluation'
+    | '/cooperative-training/logbooks'
+    | '/cooperative-training/placements'
     | '/cooperative-training/program-director'
+    | '/cooperative-training/reports'
     | '/cooperative-training/requests'
+    | '/cooperative-training/supervision'
     | '/cooperative-training/supervisor'
     | '/ground/$scheduleId'
     | '/ground/completed'
@@ -627,8 +682,13 @@ export interface FileRouteTypes {
     | '/manual'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/cooperative-training/evaluation'
+    | '/cooperative-training/logbooks'
+    | '/cooperative-training/placements'
     | '/cooperative-training/program-director'
+    | '/cooperative-training/reports'
     | '/cooperative-training/requests'
+    | '/cooperative-training/supervision'
     | '/cooperative-training/supervisor'
     | '/ground/$scheduleId'
     | '/ground/completed'
@@ -685,8 +745,13 @@ export interface FileRouteTypes {
     | '/manual/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/_authenticated/cooperative-training/evaluation'
+    | '/_authenticated/cooperative-training/logbooks'
+    | '/_authenticated/cooperative-training/placements'
     | '/_authenticated/cooperative-training/program-director'
+    | '/_authenticated/cooperative-training/reports'
     | '/_authenticated/cooperative-training/requests'
+    | '/_authenticated/cooperative-training/supervision'
     | '/_authenticated/cooperative-training/supervisor'
     | '/_authenticated/ground/$scheduleId'
     | '/_authenticated/ground/completed'
@@ -1100,6 +1165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCooperativeTrainingSupervisorRouteImport
       parentRoute: typeof AuthenticatedCooperativeTrainingRoute
     }
+    '/_authenticated/cooperative-training/supervision': {
+      id: '/_authenticated/cooperative-training/supervision'
+      path: '/supervision'
+      fullPath: '/cooperative-training/supervision'
+      preLoaderRoute: typeof AuthenticatedCooperativeTrainingSupervisionRouteImport
+      parentRoute: typeof AuthenticatedCooperativeTrainingRoute
+    }
     '/_authenticated/cooperative-training/requests': {
       id: '/_authenticated/cooperative-training/requests'
       path: '/requests'
@@ -1107,11 +1179,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCooperativeTrainingRequestsRouteImport
       parentRoute: typeof AuthenticatedCooperativeTrainingRoute
     }
+    '/_authenticated/cooperative-training/reports': {
+      id: '/_authenticated/cooperative-training/reports'
+      path: '/reports'
+      fullPath: '/cooperative-training/reports'
+      preLoaderRoute: typeof AuthenticatedCooperativeTrainingReportsRouteImport
+      parentRoute: typeof AuthenticatedCooperativeTrainingRoute
+    }
     '/_authenticated/cooperative-training/program-director': {
       id: '/_authenticated/cooperative-training/program-director'
       path: '/program-director'
       fullPath: '/cooperative-training/program-director'
       preLoaderRoute: typeof AuthenticatedCooperativeTrainingProgramDirectorRouteImport
+      parentRoute: typeof AuthenticatedCooperativeTrainingRoute
+    }
+    '/_authenticated/cooperative-training/placements': {
+      id: '/_authenticated/cooperative-training/placements'
+      path: '/placements'
+      fullPath: '/cooperative-training/placements'
+      preLoaderRoute: typeof AuthenticatedCooperativeTrainingPlacementsRouteImport
+      parentRoute: typeof AuthenticatedCooperativeTrainingRoute
+    }
+    '/_authenticated/cooperative-training/logbooks': {
+      id: '/_authenticated/cooperative-training/logbooks'
+      path: '/logbooks'
+      fullPath: '/cooperative-training/logbooks'
+      preLoaderRoute: typeof AuthenticatedCooperativeTrainingLogbooksRouteImport
+      parentRoute: typeof AuthenticatedCooperativeTrainingRoute
+    }
+    '/_authenticated/cooperative-training/evaluation': {
+      id: '/_authenticated/cooperative-training/evaluation'
+      path: '/evaluation'
+      fullPath: '/cooperative-training/evaluation'
+      preLoaderRoute: typeof AuthenticatedCooperativeTrainingEvaluationRouteImport
       parentRoute: typeof AuthenticatedCooperativeTrainingRoute
     }
     '/.mcp/invoke-tool/$tool': {
@@ -1139,18 +1239,33 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedCooperativeTrainingRouteChildren {
+  AuthenticatedCooperativeTrainingEvaluationRoute: typeof AuthenticatedCooperativeTrainingEvaluationRoute
+  AuthenticatedCooperativeTrainingLogbooksRoute: typeof AuthenticatedCooperativeTrainingLogbooksRoute
+  AuthenticatedCooperativeTrainingPlacementsRoute: typeof AuthenticatedCooperativeTrainingPlacementsRoute
   AuthenticatedCooperativeTrainingProgramDirectorRoute: typeof AuthenticatedCooperativeTrainingProgramDirectorRoute
+  AuthenticatedCooperativeTrainingReportsRoute: typeof AuthenticatedCooperativeTrainingReportsRoute
   AuthenticatedCooperativeTrainingRequestsRoute: typeof AuthenticatedCooperativeTrainingRequestsRoute
+  AuthenticatedCooperativeTrainingSupervisionRoute: typeof AuthenticatedCooperativeTrainingSupervisionRoute
   AuthenticatedCooperativeTrainingSupervisorRoute: typeof AuthenticatedCooperativeTrainingSupervisorRoute
   AuthenticatedCooperativeTrainingIndexRoute: typeof AuthenticatedCooperativeTrainingIndexRoute
 }
 
 const AuthenticatedCooperativeTrainingRouteChildren: AuthenticatedCooperativeTrainingRouteChildren =
   {
+    AuthenticatedCooperativeTrainingEvaluationRoute:
+      AuthenticatedCooperativeTrainingEvaluationRoute,
+    AuthenticatedCooperativeTrainingLogbooksRoute:
+      AuthenticatedCooperativeTrainingLogbooksRoute,
+    AuthenticatedCooperativeTrainingPlacementsRoute:
+      AuthenticatedCooperativeTrainingPlacementsRoute,
     AuthenticatedCooperativeTrainingProgramDirectorRoute:
       AuthenticatedCooperativeTrainingProgramDirectorRoute,
+    AuthenticatedCooperativeTrainingReportsRoute:
+      AuthenticatedCooperativeTrainingReportsRoute,
     AuthenticatedCooperativeTrainingRequestsRoute:
       AuthenticatedCooperativeTrainingRequestsRoute,
+    AuthenticatedCooperativeTrainingSupervisionRoute:
+      AuthenticatedCooperativeTrainingSupervisionRoute,
     AuthenticatedCooperativeTrainingSupervisorRoute:
       AuthenticatedCooperativeTrainingSupervisorRoute,
     AuthenticatedCooperativeTrainingIndexRoute:

@@ -13,6 +13,11 @@ const TABS: Tab[] = [
   { to: "/cooperative-training/requests", label: "Requests", icon: ClipboardList, roles: ["MA", "DH", "IPS"] },
   { to: "/cooperative-training/supervisor", label: "Supervisor queue", icon: ShieldCheck, roles: ["MA", "IPS"] },
   { to: "/cooperative-training/program-director", label: "Director review", icon: ClipboardCheck, roles: ["MA", "PD"] },
+  { to: "/cooperative-training/placements", label: "Placements", icon: Building2, roles: ["MA", "IPS", "PD", "DH", "T", "VT"] },
+  { to: "/cooperative-training/logbooks", label: "Logbooks", icon: BookOpen, roles: ["MA", "IPS", "PD", "T", "VT"] },
+  { to: "/cooperative-training/supervision", label: "Supervision", icon: Stethoscope, roles: ["MA", "IPS", "PD", "T", "VT"] },
+  { to: "/cooperative-training/evaluation", label: "Evaluation", icon: Award, roles: ["MA", "IPS", "PD", "T", "VT"] },
+  { to: "/cooperative-training/reports", label: "Reports", icon: GraduationCap, roles: ["MA", "IPS", "PD"] },
 ];
 
 function CooperativeTrainingShell() {

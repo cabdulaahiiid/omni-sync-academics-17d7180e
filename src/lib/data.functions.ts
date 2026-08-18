@@ -41,12 +41,23 @@ export const getMe = createServerFn({ method: "GET" })
         .createSignedUrl(profile.avatar_path, 60 * 60);
       avatar_url = signed?.signedUrl ?? null;
     }
+
+    // Industrial practical-training authority is resolved on the server from
+    // the department the head actually leads — never from a name typed in the
+    // browser.
+    const [industrialDeptRes, isIndustrialDhRes] = await Promise.all([
+      (supabase.rpc as any)("ct_industrial_department_id"),
+      (supabase.rpc as any)("ct_is_industrial_dh"),
+    ]);
+
     return {
       userId,
       profile,
       avatar_url,
       suspended,
-      roles: roles.map((r) => r.role as "MA" | "DH" | "T"),
+      roles: roles.map((r) => r.role) as import("@/lib/auth/roles").AppRole[],
+      industrialDepartmentId: (industrialDeptRes?.data ?? null) as string | null,
+      isIndustrialDh: Boolean(isIndustrialDhRes?.data),
       profileFound: Boolean(profile),
       roleCount: roles.length,
     };

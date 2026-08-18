@@ -2,13 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const idInput = (d: unknown) => z.object({ request_id: z.string().uuid() }).parse(d);
+const idInput = (d: unknown) =>
+  z.object({ request_id: z.string().uuid(), expected_version: z.number().int().optional().nullable() }).parse(d);
 const decisionInput = (d: unknown) =>
   z
     .object({
       request_id: z.string().uuid(),
       decision: z.enum(["APPROVE", "REJECT", "RETURN"]),
       comment: z.string().trim().max(1000).optional().nullable(),
+      expected_version: z.number().int().optional().nullable(),
     })
     .parse(d);
 
@@ -57,7 +59,10 @@ export const ipsStartReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
-    const { error } = await (context.supabase.rpc as any)("ct_ips_start_review", { _request_id: data.request_id });
+    const { error } = await (context.supabase.rpc as any)("ct_ips_start_review", {
+      _request_id: data.request_id,
+      _expected_version: data.expected_version ?? null,
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -70,6 +75,7 @@ export const ipsDecideRequest = createServerFn({ method: "POST" })
       _request_id: data.request_id,
       _decision: data.decision,
       _comment: data.comment ?? null,
+      _expected_version: data.expected_version ?? null,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -83,6 +89,7 @@ export const ipsDelegateToPd = createServerFn({ method: "POST" })
         request_id: z.string().uuid(),
         to_user_id: z.string().uuid(),
         note: z.string().trim().max(1000).optional().nullable(),
+        expected_version: z.number().int().optional().nullable(),
       })
       .parse(d),
   )
@@ -91,6 +98,7 @@ export const ipsDelegateToPd = createServerFn({ method: "POST" })
       _request_id: data.request_id,
       _to_user: data.to_user_id,
       _note: data.note ?? null,
+      _expected_version: data.expected_version ?? null,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -100,7 +108,10 @@ export const pdStartReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(idInput)
   .handler(async ({ data, context }) => {
-    const { error } = await (context.supabase.rpc as any)("ct_pd_start_review", { _request_id: data.request_id });
+    const { error } = await (context.supabase.rpc as any)("ct_pd_start_review", {
+      _request_id: data.request_id,
+      _expected_version: data.expected_version ?? null,
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -113,6 +124,7 @@ export const pdDecideRequest = createServerFn({ method: "POST" })
       _request_id: data.request_id,
       _decision: data.decision,
       _comment: data.comment ?? null,
+      _expected_version: data.expected_version ?? null,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -125,16 +137,22 @@ export const pdReturnBatchToIps = createServerFn({ method: "POST" })
       .object({
         request_ids: z.array(z.string().uuid()).min(1),
         note: z.string().trim().min(3, "Explain what the supervisor should look at.").max(1000),
+        expected_versions: z.record(z.string(), z.number().int()).optional().nullable(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await (context.supabase.rpc as any)("ct_pd_bulk_return_to_ips", {
+    const { data: result, error } = await (context.supabase.rpc as any)("ct_pd_bulk_return_to_ips", {
       _request_ids: data.request_ids,
       _note: data.note,
+      _expected_versions: data.expected_versions ?? null,
     });
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return (result ?? { processed: 0, skipped: 0, results: [] }) as {
+      processed: number;
+      skipped: number;
+      results: { request_id: string; outcome: string; reason?: string }[];
+    };
   });
 
 /** Program Directors the supervisor can delegate a request to. */

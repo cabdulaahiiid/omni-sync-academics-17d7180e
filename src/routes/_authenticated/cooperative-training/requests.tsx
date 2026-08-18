@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CT_KEYS } from "@/lib/ct/keys";
@@ -28,6 +28,9 @@ import { Badge } from "@/components/ui/badge";
 function RequestsPage() {
   const { data: me } = useMe();
   const roles = (me?.roles ?? []) as string[];
+  const isAdmin = roles.includes("MA");
+  const isIndustrialDh = Boolean(me?.isIndustrialDh);
+  const isSupervisor = roles.includes("IPS");
   const master = useMasterData();
   const curriculumFn = useServerFn(getCtCurriculum);
   const listFn = useServerFn(listCtRequests);
@@ -46,6 +49,15 @@ function RequestsPage() {
     title: "", notes: "", requested_start_date: "", requested_end_date: "",
   });
   const [selected, setSelected] = useState<string[]>([]);
+
+  // A Department Head can only file for the Industrial Department; the picker
+  // is locked to it so the department can never be swapped in the browser.
+  const lockedDepartmentId = !isAdmin && isIndustrialDh ? (me?.industrialDepartmentId ?? "") : "";
+  useEffect(() => {
+    if (lockedDepartmentId && form.department_id !== lockedDepartmentId) {
+      setForm((f) => ({ ...f, department_id: lockedDepartmentId, level_id: "", section_id: "" }));
+    }
+  }, [lockedDepartmentId, form.department_id]);
 
   const eligible = useQuery({
     queryKey: ["ct", "eligible", form.department_id, form.level_id, form.section_id],
@@ -95,11 +107,18 @@ function RequestsPage() {
     } catch (e) { toastError(e); }
   }
 
-  const canCreate = roles.some((r) => ["MA", "DH", "IPS"].includes(r));
+  // Only the Industrial Department Head (plus Admin and the Supervisor) may
+  // start a practical training request. Other DHs get read-only access.
+  const canCreate = isAdmin || isSupervisor || isIndustrialDh;
   const canDelegate = roles.some((r) => ["MA", "IPS"].includes(r));
 
   return (
     <div className="space-y-6">
+      {!canCreate && (
+        <p className="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          Practical training requests are initiated by the Industrial Department Head. You can follow the requests that belong to your department below.
+        </p>
+      )}
       {canCreate && (
         <Card>
           <CardHeader><CardTitle className="text-sm">New practical training request</CardTitle></CardHeader>
@@ -109,8 +128,12 @@ function RequestsPage() {
                 <FormGrid>
                   <SelectField
                     label="Department" required value={form.department_id}
+                    disabled={Boolean(lockedDepartmentId)}
                     onChange={(v) => setForm((f) => ({ ...f, department_id: v, level_id: "", section_id: "" }))}
-                    options={master.departments.map((d: any) => ({ value: d.id, label: d.name }))}
+                    options={(lockedDepartmentId
+                      ? master.departments.filter((d: any) => d.id === lockedDepartmentId)
+                      : master.departments
+                    ).map((d: any) => ({ value: d.id, label: d.name }))}
                   />
                   <SelectField
                     label="Occupation" required value={form.occupation_id}

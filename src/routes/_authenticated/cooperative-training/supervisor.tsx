@@ -105,20 +105,20 @@ function SupervisorPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         {r.status === "PENDING_APPROVAL" && (
                           <Button size="sm" variant="outline" disabled={busy === r.id}
-                            onClick={() => run(r.id, () => startFn({ data: { request_id: r.id } }), "Marked as under review.")}>
+                            onClick={() => run(r.id, () => startFn({ data: { request_id: r.id, expected_version: r.version ?? null } }), "Marked as under review.")}>
                             Start review
                           </Button>
                         )}
                         <Button size="sm" disabled={busy === r.id}
-                          onClick={() => run(r.id, () => decideFn({ data: { request_id: r.id, decision: "APPROVE", comment: comment || null } }), "Request approved.")}>
+                          onClick={() => run(r.id, () => decideFn({ data: { request_id: r.id, decision: "APPROVE", comment: comment || null, expected_version: r.version ?? null } }), "Request approved.")}>
                           Approve
                         </Button>
                         <Button size="sm" variant="destructive" disabled={busy === r.id}
-                          onClick={() => run(r.id, () => decideFn({ data: { request_id: r.id, decision: "REJECT", comment } }), "Request rejected.")}>
+                          onClick={() => run(r.id, () => decideFn({ data: { request_id: r.id, decision: "REJECT", comment, expected_version: r.version ?? null } }), "Request rejected.")}>
                           Reject
                         </Button>
                         <Button size="sm" variant="outline" disabled={busy === r.id}
-                          onClick={() => run(r.id, () => decideFn({ data: { request_id: r.id, decision: "RETURN", comment } }), "Returned for correction.")}>
+                          onClick={() => run(r.id, () => decideFn({ data: { request_id: r.id, decision: "RETURN", comment, expected_version: r.version ?? null } }), "Returned for correction.")}>
                           Return for correction
                         </Button>
                         <select
@@ -127,7 +127,7 @@ function SupervisorPage() {
                           onChange={(e) => {
                             const to = e.target.value;
                             e.target.value = "";
-                            if (to) run(r.id, () => delegateFn({ data: { request_id: r.id, to_user_id: to, note: comment || null } }), "Delegated to the Program Director.");
+                            if (to) run(r.id, () => delegateFn({ data: { request_id: r.id, to_user_id: to, note: comment || null, expected_version: r.version ?? null } }), "Delegated to the Program Director.");
                           }}
                         >
                           <option value="">Delegate to Program Director…</option>
