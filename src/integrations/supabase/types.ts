@@ -3261,6 +3261,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_create_user_records: {
+        Args: {
+          _avatar_path: string
+          _department_id: string
+          _email: string
+          _full_name: string
+          _phone: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: Json
+      }
+      admin_delete_department: {
+        Args: { _confirm_name: string; _department_id: string }
+        Returns: Json
+      }
+      admin_department_delete_preview: {
+        Args: { _department_id: string }
+        Returns: Json
+      }
       admin_set_dh_department: {
         Args: { _department_id: string; _user_id: string }
         Returns: undefined
