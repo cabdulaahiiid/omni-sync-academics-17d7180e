@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, FileText, X } from "lucide-react";
 
@@ -52,9 +53,10 @@ export function CsvDropzone({
       onFileError?.(message);
     };
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-    if (ext !== "csv" && ext !== "txt") {
+    const isExcel = ext === "xlsx" || ext === "xls" || ext === "xlsm";
+    if (!isExcel && ext !== "csv" && ext !== "txt") {
       fail(
-        `"${file.name}" is a .${ext} file, but this upload accepts CSV only. Fix: open the file, choose File → Save As → CSV, then upload the .csv version (or use the template button above).`,
+        `"${file.name}" is a .${ext} file. This upload accepts Excel (.xlsx, .xls) or CSV files. Fix: download the sample template above, paste your data into it, and upload that file.`,
       );
       return;
     }
@@ -62,15 +64,13 @@ export function CsvDropzone({
       fail(`"${file.name}" is empty (0 bytes). Fix: add your rows under the header line, save the file, and upload it again.`);
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      fail(`"${file.name}" is larger than 5 MB. Fix: split it into batches of about 1,000 rows and upload them one after another.`);
+    if (file.size > 10 * 1024 * 1024) {
+      fail(`"${file.name}" is larger than 10 MB. Fix: split it into batches of about 1,000 rows and upload them one after another.`);
       return;
     }
     setName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = String(e.target?.result ?? "");
-      const rows = parseCsv(text);
+
+    const finish = (rows: ParsedRow[]) => {
       if (rows.length === 0) {
         fail(`"${file.name}" has a header row but no data rows. Fix: add at least one record below the header and upload again.`);
         return;
@@ -85,7 +85,45 @@ export function CsvDropzone({
       }
       onParsed(rows, file.name);
     };
+
+    const reader = new FileReader();
     reader.onerror = () => fail(`"${file.name}" could not be read. Fix: close it in Excel, then upload it again.`);
+    if (isExcel) {
+      reader.onload = (e) => {
+        try {
+          const wb = XLSX.read(e.target?.result as ArrayBuffer, { type: "array" });
+          const sheetName = wb.SheetNames[0];
+          if (!sheetName) {
+            fail(`"${file.name}" has no worksheets. Fix: download the template and paste your rows into its data sheet.`);
+            return;
+          }
+          const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[sheetName], {
+            defval: "",
+            raw: false,
+          });
+          const rows: ParsedRow[] = raw.map((r) => {
+            const out: ParsedRow = {};
+            for (const [k, v] of Object.entries(r)) {
+              out[String(k).trim().toLowerCase()] = String(v ?? "").trim();
+            }
+            return out;
+          });
+          finish(rows.filter((r) => Object.values(r).some((v) => v !== "")));
+        } catch {
+          fail(`"${file.name}" could not be opened as an Excel workbook. Fix: re-save it as .xlsx from Excel, or use the sample template, then upload again.`);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+    reader.onload = (e) => {
+      const rows = parseCsv(String(e.target?.result ?? "")).map((r) => {
+        const out: ParsedRow = {};
+        for (const [k, v] of Object.entries(r)) out[k.trim().toLowerCase()] = String(v ?? "").trim();
+        return out;
+      });
+      finish(rows);
+    };
     reader.readAsText(file);
   }
 
@@ -101,7 +139,7 @@ export function CsvDropzone({
       className={`rounded-2xl border-2 border-dashed p-6 text-center transition-colors ${over ? "border-primary bg-primary/5" : "border-muted-foreground/30"}`}
     >
       <UploadCloud className="mx-auto h-8 w-8 text-muted-foreground" />
-      <p className="mt-2 text-sm font-medium">Drag and drop a CSV file, or click to select</p>
+      <p className="mt-2 text-sm font-medium">Drag and drop an Excel (.xlsx) or CSV file, or click to select</p>
       {helpText && <p className="mt-1 text-xs text-muted-foreground">{helpText}</p>}
       {sampleHeaders && (
         <p className="mt-2 font-mono text-[11px] text-muted-foreground">{sampleHeaders.join(",")}</p>
@@ -109,7 +147,7 @@ export function CsvDropzone({
       <input
         ref={ref}
         type="file"
-        accept=".csv,text/csv"
+        accept=".xlsx,.xls,.xlsm,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
