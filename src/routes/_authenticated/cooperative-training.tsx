@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, ClipboardList, Building2, GraduationCap, BookOpen,
-  ShieldCheck, Stethoscope, ClipboardCheck, HardHat, Award, Settings2, TrendingDown,
+  ShieldCheck, Stethoscope, ClipboardCheck, Award, Settings2, TrendingDown,
 } from "lucide-react";
 import { useMe } from "@/hooks/use-me";
 import { cn } from "@/lib/utils";
