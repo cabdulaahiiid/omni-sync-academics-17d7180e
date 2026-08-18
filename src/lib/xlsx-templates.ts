@@ -72,14 +72,20 @@ export const STUDENTS_ROSTER_TEMPLATE: TemplateSpec = {
   fileName: "students-roster-template.xlsx",
   sheetName: "Students",
   columns: [
-    { name: "student_id_code", required: true, type: "text", example: "TVET-2026-0001", notes: "Unique registration number" },
-    { name: "full_name", required: true, type: "text", example: "Jane Doe" },
-    { name: "gender", required: false, type: "text", allowed: "M, F", example: "F" },
+    { name: "student_id_code", required: false, type: "text (unique)", example: "ICT-26-0001", notes: "Leave blank to let the system generate it" },
+    { name: "full_name", required: true, type: "text", example: "Abdi Mohammed Ali" },
+    { name: "gender", required: false, type: "text", allowed: "Male, Female (M / F accepted)", example: "Female" },
+    { name: "telephone", required: false, type: "phone (unique)", allowed: "09XXXXXXXX or 07XXXXXXXX", example: "0912345678" },
+    { name: "level_name", required: false, type: "text", allowed: "Must match a level in your department", example: "I", notes: "Blank = use the Level selector on screen" },
+    { name: "section_name", required: false, type: "text", allowed: "Must match a section under that level", example: "A", notes: "Blank = use the Section selector on screen" },
+    { name: "parent_guardian_name", required: false, type: "text", example: "Ahmed Hassan" },
+    { name: "parent_guardian_telephone", required: false, type: "phone", allowed: "09XXXXXXXX or 07XXXXXXXX", example: "0911223344" },
+    { name: "parent_guardian_relationship", required: false, type: "text", allowed: "Father, Mother, Brother, Sister, Uncle, Aunt, Grandfather, Grandmother, Guardian, Other", example: "Father" },
   ],
   examples: [
-    { student_id_code: "TVET-2026-0001", full_name: "Jane Doe", gender: "F" },
-    { student_id_code: "TVET-2026-0002", full_name: "John Smith", gender: "M" },
-    { student_id_code: "TVET-2026-0003", full_name: "Alex Mwangi", gender: "" },
+    { student_id_code: "ICT-26-0001", full_name: "Abdi Mohammed Ali", gender: "Male", telephone: "0912345678", level_name: "I", section_name: "A", parent_guardian_name: "Ahmed Hassan", parent_guardian_telephone: "0911223344", parent_guardian_relationship: "Father" },
+    { student_id_code: "ICT-26-0002", full_name: "Bahja Maxamad Cali", gender: "Female", telephone: "0912345679", level_name: "I", section_name: "A", parent_guardian_name: "Maxamad Cali", parent_guardian_telephone: "0911223345", parent_guardian_relationship: "Father" },
+    { student_id_code: "", full_name: "Sagal Yusuf Omar", gender: "Female", telephone: "", level_name: "I", section_name: "A", parent_guardian_name: "", parent_guardian_telephone: "", parent_guardian_relationship: "" },
   ],
 };
 

@@ -135,15 +135,21 @@ function StudentsHub() {
 
   const bulk = useMutation({
     mutationFn: () => {
-      if (!bulkLevelName || !bulkSectionName) throw new Error("Select the level and section this file belongs to before importing.");
       const rows = csvRows.map((r) => ({
         registration_number: r.student_id_code || r.registration_number || "",
-        full_name: r.full_name || "",
-        level_name: bulkLevelName,
-        section_name: bulkSectionName,
+        full_name: r.full_name || r.name || "",
+        level_name: r.level_name || r.level || bulkLevelName,
+        section_name: r.section_name || r.section || bulkSectionName,
         gender: normalizeGender(r.gender),
         telephone: r.telephone || r.phone || null,
+        parent_guardian_name: r.parent_guardian_name || r.guardian_name || null,
+        parent_guardian_telephone: r.parent_guardian_telephone || r.guardian_telephone || null,
+        parent_guardian_relationship:
+          (r.parent_guardian_relationship || r.guardian_relationship || "") as any || null,
       })).filter((r) => r.full_name);
+      if (rows.some((r) => !r.level_name || !r.section_name)) {
+        throw new Error("Some rows have no level or section. Fix: fill the level_name and section_name columns in the file, or pick the Level and Section above before importing.");
+      }
       return bulkFn({ data: { rows } });
     },
     onSuccess: (r) => {
@@ -272,9 +278,9 @@ function StudentsHub() {
           </div>
           {fileError && <ErrorPanel error={fileError} />}
           <CsvDropzone
-            helpText="Required columns: student_id_code, full_name (optional: gender, telephone). Level and section come from the selectors above."
-            sampleHeaders={["student_id_code", "full_name", "gender"]}
-            requiredHeaders={["student_id_code", "full_name"]}
+            helpText="Excel (.xlsx) or CSV. Required: full_name. Optional: student_id_code, gender, telephone, level_name, section_name, parent_guardian_name, parent_guardian_telephone, parent_guardian_relationship. Blank level/section use the selectors above."
+            sampleHeaders={["student_id_code", "full_name", "gender", "telephone", "level_name", "section_name", "parent_guardian_name", "parent_guardian_telephone", "parent_guardian_relationship"]}
+            requiredHeaders={["full_name"]}
             onFileError={(m) => {
               setFileError(m); setCsvRows([]); setCsvName("");
               toast.error("This file cannot be imported", { description: m, duration: 10000 });
