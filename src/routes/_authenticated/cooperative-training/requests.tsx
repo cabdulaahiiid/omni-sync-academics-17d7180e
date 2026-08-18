@@ -95,8 +95,8 @@ function RequestsPage() {
     } catch (e) { toastError(e); }
   }
 
-  const canCreate = roles.some((r) => ["MA", "DH", "PD", "CO"].includes(r));
-  const canDelegate = roles.some((r) => ["MA", "PD"].includes(r));
+  const canCreate = roles.some((r) => ["MA", "DH", "IPS"].includes(r));
+  const canDelegate = roles.some((r) => ["MA", "IPS"].includes(r));
 
   return (
     <div className="space-y-6">
