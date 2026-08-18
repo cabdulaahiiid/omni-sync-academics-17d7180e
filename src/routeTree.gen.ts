@@ -18,6 +18,7 @@ import { Route as ManualIndexRouteImport } from './routes/manual/index'
 import { Route as AuthenticatedStrategicRouteImport } from './routes/_authenticated/strategic'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOperationalRouteImport } from './routes/_authenticated/operational'
+import { Route as AuthenticatedIndustryRouteImport } from './routes/_authenticated/industry'
 import { Route as AuthenticatedGroundRouteImport } from './routes/_authenticated/ground'
 import { Route as AuthenticatedCooperativeTrainingRouteImport } from './routes/_authenticated/cooperative-training'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -118,6 +119,11 @@ const AuthenticatedOperationalRoute =
     path: '/operational',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedIndustryRoute = AuthenticatedIndustryRouteImport.update({
+  id: '/industry',
+  path: '/industry',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedGroundRoute = AuthenticatedGroundRouteImport.update({
   id: '/ground',
   path: '/ground',
@@ -448,6 +454,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/cooperative-training': typeof AuthenticatedCooperativeTrainingRouteWithChildren
   '/ground': typeof AuthenticatedGroundRouteWithChildren
+  '/industry': typeof AuthenticatedIndustryRoute
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/profile': typeof AuthenticatedProfileRoute
   '/strategic': typeof AuthenticatedStrategicRouteWithChildren
@@ -509,6 +516,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/industry': typeof AuthenticatedIndustryRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/manual': typeof ManualIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -573,6 +581,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/cooperative-training': typeof AuthenticatedCooperativeTrainingRouteWithChildren
   '/_authenticated/ground': typeof AuthenticatedGroundRouteWithChildren
+  '/_authenticated/industry': typeof AuthenticatedIndustryRoute
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/strategic': typeof AuthenticatedStrategicRouteWithChildren
@@ -639,6 +648,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/cooperative-training'
     | '/ground'
+    | '/industry'
     | '/operational'
     | '/profile'
     | '/strategic'
@@ -700,6 +710,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/industry'
     | '/profile'
     | '/manual'
     | '/.lovable/oauth/consent'
@@ -763,6 +774,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/cooperative-training'
     | '/_authenticated/ground'
+    | '/_authenticated/industry'
     | '/_authenticated/operational'
     | '/_authenticated/profile'
     | '/_authenticated/strategic'
@@ -895,6 +907,13 @@ declare module '@tanstack/react-router' {
       path: '/operational'
       fullPath: '/operational'
       preLoaderRoute: typeof AuthenticatedOperationalRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/industry': {
+      id: '/_authenticated/industry'
+      path: '/industry'
+      fullPath: '/industry'
+      preLoaderRoute: typeof AuthenticatedIndustryRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/ground': {
@@ -1447,6 +1466,7 @@ const AuthenticatedStrategicRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedCooperativeTrainingRoute: typeof AuthenticatedCooperativeTrainingRouteWithChildren
   AuthenticatedGroundRoute: typeof AuthenticatedGroundRouteWithChildren
+  AuthenticatedIndustryRoute: typeof AuthenticatedIndustryRoute
   AuthenticatedOperationalRoute: typeof AuthenticatedOperationalRouteWithChildren
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedStrategicRoute: typeof AuthenticatedStrategicRouteWithChildren
@@ -1457,6 +1477,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCooperativeTrainingRoute:
     AuthenticatedCooperativeTrainingRouteWithChildren,
   AuthenticatedGroundRoute: AuthenticatedGroundRouteWithChildren,
+  AuthenticatedIndustryRoute: AuthenticatedIndustryRoute,
   AuthenticatedOperationalRoute: AuthenticatedOperationalRouteWithChildren,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedStrategicRoute: AuthenticatedStrategicRouteWithChildren,
