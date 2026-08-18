@@ -66,7 +66,7 @@ export const ctCheckinDay1 = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { data: res, error } = await context.supabase.rpc("ct_checkin_day1", {
+    const { data: res, error } = await (context.supabase.rpc as any)("ct_checkin_day1", {
       _placement_id: data.placement_id,
       _lat: data.latitude,
       _lng: data.longitude,
@@ -93,7 +93,7 @@ export const ctSubmitLogbookDay = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { data: res, error } = await context.supabase.rpc("ct_submit_logbook_day", {
+    const { data: res, error } = await (context.supabase.rpc as any)("ct_submit_logbook_day", {
       _client_uuid: data.client_uuid,
       _placement_id: data.placement_id,
       _entry_date: data.entry_date,

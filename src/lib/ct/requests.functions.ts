@@ -129,7 +129,7 @@ export const createCtRequest = createServerFn({ method: "POST" })
     if (new Date(payload.requested_end_date) < new Date(payload.requested_start_date)) {
       throw new Error("The end date must be on or after the start date.");
     }
-    const { data: id, error } = await context.supabase.rpc("ct_create_request", {
+    const { data: id, error } = await (context.supabase.rpc as any)("ct_create_request", {
       _payload: payload as any,
       _student_ids: student_ids,
     });
@@ -142,7 +142,7 @@ export const submitCtRequest = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ request_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireRole(context, ["MA", "DH", "PD", "CO"], "submitCtRequest");
-    const { error } = await context.supabase.rpc("ct_submit_request", { _request_id: data.request_id });
+    const { error } = await (context.supabase.rpc as any)("ct_submit_request", { _request_id: data.request_id });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -160,7 +160,7 @@ export const delegateCtRequest = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await requireRole(context, ["MA", "PD"], "delegateCtRequest");
-    const { error } = await context.supabase.rpc("ct_delegate_request", {
+    const { error } = await (context.supabase.rpc as any)("ct_delegate_request", {
       _request_id: data.request_id,
       _to_user: data.to_user_id,
       _note: data.note ?? null,

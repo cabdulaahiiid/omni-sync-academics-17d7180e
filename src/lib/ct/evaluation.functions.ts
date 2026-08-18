@@ -75,7 +75,7 @@ export const submitCtEvaluation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => submitSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("ct_submit_evaluation", {
+    const { data: id, error } = await (context.supabase.rpc as any)("ct_submit_evaluation", {
       _placement_id: data.placement_id,
       _source: data.source,
       _uc_results: data.uc_results as any,
@@ -91,7 +91,7 @@ export const finalizeCtEvaluation = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ evaluation_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireRole(context, ["MA", "DH", "VT", "T", "CO"], "finalizeCtEvaluation");
-    const { data: res, error } = await context.supabase.rpc("ct_finalize_evaluation", {
+    const { data: res, error } = await (context.supabase.rpc as any)("ct_finalize_evaluation", {
       _evaluation_id: data.evaluation_id,
     });
     if (error) throw new Error(error.message);
@@ -108,7 +108,7 @@ export const pushCtToAssessment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ evaluation_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireRole(context, ["MA", "DH", "CO"], "pushCtToAssessment");
-    const { data: id, error } = await context.supabase.rpc("ct_push_to_assessment", {
+    const { data: id, error } = await (context.supabase.rpc as any)("ct_push_to_assessment", {
       _evaluation_id: data.evaluation_id,
     });
     if (error) throw new Error(error.message);

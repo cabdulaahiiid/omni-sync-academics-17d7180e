@@ -36,7 +36,7 @@ export const ctDecideLogbook = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.rpc("ct_mentor_decide_logbook", {
+    const { error } = await (context.supabase.rpc as any)("ct_mentor_decide_logbook", {
       _entry_id: data.entry_id,
       _decision: data.decision,
       _comment: data.comment ?? null,

@@ -45,7 +45,7 @@ export const recordCtSupervision = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await requireRole(context, ["MA", "DH", "VT", "T", "CO"], "recordCtSupervision");
-    const { data: visitId, error } = await context.supabase.rpc("ct_record_supervision", {
+    const { data: visitId, error } = await (context.supabase.rpc as any)("ct_record_supervision", {
       _placement_id: data.placement_id,
       _visit_date: data.visit_date,
       _lat: data.latitude ?? null,
@@ -84,7 +84,7 @@ export const detectCtAbsences = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ placement_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireRole(context, ["MA", "DH", "CO"], "detectCtAbsences");
-    const { data: res, error } = await context.supabase.rpc("ct_detect_absences", {
+    const { data: res, error } = await (context.supabase.rpc as any)("ct_detect_absences", {
       _placement_id: data.placement_id,
     });
     if (error) throw new Error(error.message);
