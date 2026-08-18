@@ -62,7 +62,7 @@ function SettingsPage() {
       toast.success("Evaluation settings saved for this department.");
       await qc.invalidateQueries({ queryKey: ["ct", "dept-setup"] });
     } catch (e) {
-      toast.error(explainError(e).what, { description: explainError(e).how });
+      toast.error(explainError(e).title, { description: explainError(e).solution });
     }
   }
 
@@ -83,7 +83,7 @@ function SettingsPage() {
       toast.success("Competency added to your department checklist.");
       await qc.invalidateQueries({ queryKey: ["ct", "dept-setup"] });
     } catch (e) {
-      toast.error(explainError(e).what, { description: explainError(e).how });
+      toast.error(explainError(e).title, { description: explainError(e).solution });
     }
   }
 
@@ -185,7 +185,7 @@ function SettingsPage() {
                           await delComp({ data: { id: c.id } });
                           await qc.invalidateQueries({ queryKey: ["ct", "dept-setup"] });
                         } catch (e) {
-                          toast.error(explainError(e).what, { description: explainError(e).how });
+                          toast.error(explainError(e).title, { description: explainError(e).solution });
                         }
                       }}
                     >
