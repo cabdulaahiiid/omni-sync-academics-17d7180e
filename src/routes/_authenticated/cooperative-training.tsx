@@ -9,8 +9,10 @@ import { cn } from "@/lib/utils";
 type Tab = { to: string; label: string; icon: typeof LayoutDashboard; roles: string[]; end?: boolean };
 
 const TABS: Tab[] = [
-  { to: "/cooperative-training", label: "Overview", icon: LayoutDashboard, roles: ["MA", "DH", "PD", "CO", "VT", "T", "EM", "TR"], end: true },
-  { to: "/cooperative-training/requests", label: "Requests", icon: ClipboardList, roles: ["MA", "DH", "PD", "CO"] },
+  { to: "/cooperative-training", label: "Overview", icon: LayoutDashboard, roles: ["MA", "DH", "IPS", "PD", "CO", "VT", "T", "EM", "TR"], end: true },
+  { to: "/cooperative-training/requests", label: "Requests", icon: ClipboardList, roles: ["MA", "DH", "IPS"] },
+  { to: "/cooperative-training/supervisor", label: "Supervisor queue", icon: ShieldCheck, roles: ["MA", "IPS"] },
+  { to: "/cooperative-training/program-director", label: "Director review", icon: ClipboardCheck, roles: ["MA", "PD"] },
 ];
 
 function CooperativeTrainingShell() {
