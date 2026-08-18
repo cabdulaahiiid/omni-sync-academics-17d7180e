@@ -95,28 +95,21 @@ export const createUserAccount = createServerFn({ method: "POST" })
       const { error: mvErr } = await supabaseAdmin.storage.from("avatars").move(data.avatar_path, finalAvatar);
       if (mvErr) throw new Error(mvErr.message);
     }
-    await supabaseAdmin.from("profiles").upsert({
-      id: uid,
-      full_name: data.full_name,
-      email: data.email,
-      phone: data.phone,
-      department_id: data.department_id ?? null,
-      avatar_path: finalAvatar,
+    // Profile + role + department link + trainer record are written in ONE
+    // database transaction; if any part fails nothing is saved and the auth
+    // user is removed, so a half-created user can never exist.
+    const { error: recErr } = await (context.supabase.rpc as any)("admin_create_user_records", {
+      _user_id: uid,
+      _full_name: data.full_name,
+      _email: data.email,
+      _phone: data.phone,
+      _department_id: data.department_id ?? null,
+      _role: data.role,
+      _avatar_path: finalAvatar,
     });
-    await supabaseAdmin.from("user_roles").insert({ user_id: uid, role: data.role });
-    if (data.role === "DH" && data.department_id) {
-      await supabaseAdmin.from("department_heads").insert({ user_id: uid, department_id: data.department_id });
-    }
-    if (data.role === "T" && data.department_id) {
-      const { data: tr } = await supabaseAdmin.from("trainer_registry").insert({
-        full_name: data.full_name,
-        email: data.email,
-        phone: data.phone,
-        department_id: data.department_id,
-      }).select().single();
-      if (tr) {
-        await supabaseAdmin.from("profiles").update({ trainer_registry_id: tr.id }).eq("id", uid);
-      }
+    if (recErr) {
+      await supabaseAdmin.auth.admin.deleteUser(uid).catch(() => undefined);
+      throw new Error(recErr.message);
     }
     await context.supabase.from("audit_logs").insert({
       actor_id: context.userId, action_type: "CREATE_USER", entity_type: "profiles", entity_id: uid,
