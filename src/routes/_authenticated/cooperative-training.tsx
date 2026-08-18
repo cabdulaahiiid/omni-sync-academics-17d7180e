@@ -11,14 +11,6 @@ type Tab = { to: string; label: string; icon: typeof LayoutDashboard; roles: str
 const TABS: Tab[] = [
   { to: "/cooperative-training", label: "Overview", icon: LayoutDashboard, roles: ["MA", "DH", "PD", "CO", "VT", "T", "EM", "TR"], end: true },
   { to: "/cooperative-training/requests", label: "Requests", icon: ClipboardList, roles: ["MA", "DH", "PD", "CO"] },
-  { to: "/cooperative-training/allocation", label: "Allocation & Roster", icon: HardHat, roles: ["MA", "DH", "PD", "CO"] },
-  { to: "/cooperative-training/my-training", label: "My Training", icon: GraduationCap, roles: ["MA", "TR"] },
-  { to: "/cooperative-training/mentor", label: "Mentor Approvals", icon: ClipboardCheck, roles: ["MA", "EM"] },
-  { to: "/cooperative-training/supervision", label: "Supervision", icon: Stethoscope, roles: ["MA", "DH", "CO", "VT", "T"] },
-  { to: "/cooperative-training/evaluations", label: "Evaluation & Gaps", icon: Award, roles: ["MA", "DH", "CO", "VT", "T", "EM"] },
-  { to: "/cooperative-training/assessment", label: "Assessment Queue", icon: ShieldCheck, roles: ["MA", "DH", "CO"] },
-  { to: "/cooperative-training/curriculum", label: "Curriculum", icon: BookOpen, roles: ["MA", "DH"] },
-  { to: "/cooperative-training/enterprises", label: "Enterprises", icon: Building2, roles: ["MA", "DH", "CO"] },
 ];
 
 function CooperativeTrainingShell() {

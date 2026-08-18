@@ -191,8 +191,8 @@ function RequestsPage() {
               )}
               <ErrorPanel error={create.error} />
               <div className="flex justify-end">
-                <Button disabled={missing.length > 0 || create.isPending} onClick={() => create.submit(undefined as never)}>
-                  {create.isPending ? "Saving…" : "Save request"}
+                <Button disabled={missing.length > 0 || create.isSaving} onClick={() => create.submit()}>
+                  {create.isSaving ? "Saving…" : "Save request"}
                 </Button>
               </div>
             </FormBody>
