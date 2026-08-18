@@ -2,7 +2,12 @@ import { toastError } from "@/lib/errors/toast";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listDepartments, upsertDepartment, deleteDepartment } from "@/lib/data.functions";
+import {
+  listDepartments,
+  upsertDepartment,
+  previewDepartmentDelete,
+  cascadeDeleteDepartment,
+} from "@/lib/data.functions";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +62,8 @@ function DepartmentsPage() {
   const { authReady, hasSession } = useAuthSession();
   const list = useServerFn(listDepartments);
   const upsert = useServerFn(upsertDepartment);
-  const del = useServerFn(deleteDepartment);
+  const previewDel = useServerFn(previewDepartmentDelete);
+  const cascadeDel = useServerFn(cascadeDeleteDepartment);
   const { data: rows, isLoading } = useQuery({ queryKey: ["departments"], queryFn: () => list(), enabled: authReady && hasSession, throwOnError: false });
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Dept | null>(null);
@@ -65,6 +71,9 @@ function DepartmentsPage() {
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<"ACTIVE" | "SUSPENDED">("ACTIVE");
   const invalidateMaster = useInvalidateMasterData();
+  const [delTarget, setDelTarget] = useState<Dept | null>(null);
+  const [delPreview, setDelPreview] = useState<Record<string, number | string> | null>(null);
+  const [delConfirm, setDelConfirm] = useState("");
 
   const saveMut = useMutation({
     mutationFn: () => upsert({ data: { id: editing?.id, name, description, status } }),
@@ -72,10 +81,29 @@ function DepartmentsPage() {
     onError: (e: Error) => toastError(e),
   });
   const delMut = useMutation({
-    mutationFn: (id: string) => del({ data: { id } }),
-    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["departments"] }); invalidateMaster(); },
+    mutationFn: () =>
+      cascadeDel({ data: { id: delTarget!.id, confirm_name: delConfirm.trim() } }),
+    onSuccess: () => {
+      toast.success("Department and all its records were deleted");
+      qc.invalidateQueries();
+      invalidateMaster();
+      setDelTarget(null);
+      setDelPreview(null);
+      setDelConfirm("");
+    },
     onError: (e: Error) => toastError(e),
   });
+
+  async function startDelete(dept: Dept) {
+    setDelTarget(dept);
+    setDelPreview(null);
+    setDelConfirm("");
+    try {
+      setDelPreview(await previewDel({ data: { id: dept.id } }));
+    } catch (e) {
+      toastError(e as Error);
+    }
+  }
 
   const filteredRows = (rows ?? []).filter((d: any) => {
     if (filterStatus && d.status !== filterStatus) return false;
