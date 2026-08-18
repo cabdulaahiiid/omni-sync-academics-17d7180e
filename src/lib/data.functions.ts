@@ -50,12 +50,34 @@ export const getMe = createServerFn({ method: "GET" })
       (supabase.rpc as any)("ct_is_industrial_dh"),
     ]);
 
+    // Department label shown in the shells ("ICT · Department Head").
+    let departmentId: string | null = (profile as any)?.department_id ?? null;
+    if (!departmentId) {
+      const { data: dh } = await supabase
+        .from("department_heads")
+        .select("department_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      departmentId = dh?.department_id ?? null;
+    }
+    let departmentName: string | null = null;
+    if (departmentId) {
+      const { data: dept } = await supabase
+        .from("departments")
+        .select("name")
+        .eq("id", departmentId)
+        .maybeSingle();
+      departmentName = dept?.name ?? null;
+    }
+
     return {
       userId,
       profile,
       avatar_url,
       suspended,
       roles: roles.map((r) => r.role) as import("@/lib/auth/roles").AppRole[],
+      departmentId,
+      departmentName,
       industrialDepartmentId: (industrialDeptRes?.data ?? null) as string | null,
       isIndustrialDh: Boolean(isIndustrialDhRes?.data),
       profileFound: Boolean(profile),
@@ -165,6 +187,34 @@ export const deleteDepartment = createServerFn({ method: "POST" })
       entity_id: data.id,
     });
     return { ok: true };
+  });
+
+// Preview what a department cascade delete would remove (Master Admin only).
+export const previewDepartmentDelete = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await (context.supabase.rpc as any)(
+      "admin_department_delete_preview",
+      { _department_id: data.id },
+    );
+    if (error) throw new Error(error.message);
+    return res as Record<string, number | string>;
+  });
+
+// Permanently delete a department and every dependent record, in one transaction.
+export const cascadeDeleteDepartment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), confirm_name: z.string().min(1) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await (context.supabase.rpc as any)("admin_delete_department", {
+      _department_id: data.id,
+      _confirm_name: data.confirm_name,
+    });
+    if (error) throw new Error(error.message);
+    return res as Record<string, number | string>;
   });
 
 // ===== Levels (read-only; auto-seeded per department) =====

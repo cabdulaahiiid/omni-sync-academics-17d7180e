@@ -30,7 +30,12 @@ function GroundShell() {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
   }
   const initials = (me?.profile?.full_name || me?.profile?.email || "TR").slice(0, 2).toUpperCase();
-  const roleLabel = me?.roles?.includes("MA") ? "Master Admin" : "Trainer";
+  const baseRoleLabel = me?.roles?.includes("MA") ? "Master Admin" : "Trainer";
+  const roleLabel = me?.roles?.includes("MA")
+    ? baseRoleLabel
+    : me?.departmentName
+      ? `${me.departmentName} · Trainer`
+      : baseRoleLabel;
   const firstName = (me?.profile?.full_name || "Trainer").split(" ")[0];
   const greeting = (() => {
     const h = new Date().getHours();
