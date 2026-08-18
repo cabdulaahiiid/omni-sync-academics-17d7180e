@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireRole } from "@/lib/auth/require-role";
+import { evaluateTrainee } from "@/lib/ct/eligibility";
 
 /**
  * Theory-completion queue. Attendance for each student is recomputed here from
@@ -60,14 +61,11 @@ export const listCtEligibleTrainees = createServerFn({ method: "POST" })
     return {
       threshold,
       students: (students ?? []).map((s) => {
-        const t = totals.get(s.id);
-        const percent = t && t.all > 0 ? Math.round((t.present / t.all) * 100) : null;
-        return {
-          ...s,
-          theory_percent: percent,
-          already_placed: placed.has(s.id),
-          eligible: percent !== null && percent >= threshold && !placed.has(s.id),
-        };
+        const verdict = evaluateTrainee(totals.get(s.id), {
+          threshold,
+          alreadyPlaced: placed.has(s.id),
+        });
+        return { ...s, ...verdict };
       }),
     };
   });
