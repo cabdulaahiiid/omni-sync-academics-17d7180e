@@ -171,3 +171,53 @@ export const listProgramDirectors = createServerFn({ method: "GET" })
       .in("id", ids);
     return (profiles ?? []) as any[];
   });
+
+/** Supervisor: put a request on hold with a mandatory reason (version guarded). */
+export const ipsHoldRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        request_id: z.string().uuid(),
+        hold_reason: z.string().trim().min(5, "Explain why this request is being held.").max(1000),
+        expected_version: z.number().int().optional().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase.rpc as any)("ct_ips_hold_request", {
+      _request_id: data.request_id,
+      _hold_reason: data.hold_reason,
+      _expected_version: data.expected_version ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Supervisor: adjust dates / module on a request (version guarded). */
+export const ipsModifyRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        request_id: z.string().uuid(),
+        start_date: z.string().optional().nullable(),
+        end_date: z.string().optional().nullable(),
+        training_module_id: z.string().uuid().optional().nullable(),
+        note: z.string().trim().max(1000).optional().nullable(),
+        expected_version: z.number().int().optional().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase.rpc as any)("ct_ips_modify_request", {
+      _request_id: data.request_id,
+      _start_date: data.start_date || null,
+      _end_date: data.end_date || null,
+      _training_module_id: data.training_module_id || null,
+      _note: data.note || null,
+      _expected_version: data.expected_version ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
