@@ -3434,7 +3434,7 @@ export type Database = {
       wipe_entire_system: { Args: never; Returns: Json }
     }
     Enums: {
-      app_role: "MA" | "DH" | "T" | "PD" | "CO" | "VT" | "EM" | "TR"
+      app_role: "MA" | "DH" | "T" | "PD" | "CO" | "VT" | "EM" | "TR" | "IPS"
       approval_decision: "pending" | "approved" | "rejected"
       approval_type: "semester" | "session"
       ct_competency_rating: "GREEN" | "YELLOW" | "RED"
@@ -3459,6 +3459,15 @@ export type Database = {
         | "ACTIVE"
         | "COMPLETED"
         | "CANCELLED"
+        | "PENDING_APPROVAL"
+        | "UNDER_IPS_REVIEW"
+        | "DELEGATED_TO_PD"
+        | "PD_REVIEW"
+        | "PD_APPROVED"
+        | "IPS_FINAL_APPROVAL"
+        | "APPROVED"
+        | "REJECTED"
+        | "RETURNED_FOR_CORRECTION"
       ct_sms_status: "QUEUED" | "SENDING" | "SENT" | "DELIVERED" | "FAILED"
       ct_uc_result: "P" | "NP"
       entity_active: "ACTIVE" | "INACTIVE"
@@ -3616,7 +3625,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["MA", "DH", "T", "PD", "CO", "VT", "EM", "TR"],
+      app_role: ["MA", "DH", "T", "PD", "CO", "VT", "EM", "TR", "IPS"],
       approval_decision: ["pending", "approved", "rejected"],
       approval_type: ["semester", "session"],
       ct_competency_rating: ["GREEN", "YELLOW", "RED"],
@@ -3643,6 +3652,15 @@ export const Constants = {
         "ACTIVE",
         "COMPLETED",
         "CANCELLED",
+        "PENDING_APPROVAL",
+        "UNDER_IPS_REVIEW",
+        "DELEGATED_TO_PD",
+        "PD_REVIEW",
+        "PD_APPROVED",
+        "IPS_FINAL_APPROVAL",
+        "APPROVED",
+        "REJECTED",
+        "RETURNED_FOR_CORRECTION",
       ],
       ct_sms_status: ["QUEUED", "SENDING", "SENT", "DELIVERED", "FAILED"],
       ct_uc_result: ["P", "NP"],
