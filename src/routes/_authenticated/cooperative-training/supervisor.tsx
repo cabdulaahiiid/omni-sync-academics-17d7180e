@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ipsDecideRequest, ipsDelegateToPd, ipsStartReview,
+  ipsHoldRequest, ipsModifyRequest,
   listCtWorkflowQueue, listProgramDirectors,
 } from "@/lib/ct/workflow.functions";
 import { toastError } from "@/lib/errors/toast";
@@ -13,9 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-const ACTIONABLE = ["PENDING_APPROVAL", "UNDER_IPS_REVIEW", "PD_APPROVED", "IPS_FINAL_APPROVAL"];
+const ACTIONABLE = ["PENDING_APPROVAL", "UNDER_IPS_REVIEW", "PD_APPROVED", "IPS_FINAL_APPROVAL", "ON_HOLD", "MODIFIED"];
+const DECIDABLE = ["PENDING_APPROVAL", "UNDER_IPS_REVIEW", "PD_APPROVED", "IPS_FINAL_APPROVAL"];
 
 function SupervisorPage() {
   const queueFn = useServerFn(listCtWorkflowQueue);
@@ -23,11 +27,15 @@ function SupervisorPage() {
   const startFn = useServerFn(ipsStartReview);
   const decideFn = useServerFn(ipsDecideRequest);
   const delegateFn = useServerFn(ipsDelegateToPd);
+  const holdFn = useServerFn(ipsHoldRequest);
+  const modifyFn = useServerFn(ipsModifyRequest);
 
   const queue = useQuery({ queryKey: ["ct", "workflow", "ips"], queryFn: () => queueFn(), staleTime: 5_000 });
   const directors = useQuery({ queryKey: ["ct", "program-directors"], queryFn: () => pdFn(), staleTime: 60_000 });
   const [comments, setComments] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [modifying, setModifying] = useState<string | null>(null);
+  const [modifyForm, setModifyForm] = useState<{ start_date: string; end_date: string }>({ start_date: "", end_date: "" });
 
   async function run(id: string, fn: () => Promise<unknown>, message: string) {
     setBusy(id);
@@ -62,6 +70,7 @@ function SupervisorPage() {
               const overrides = members.filter((m: any) => m.manual_override);
               const history = (queue.data?.decisions ?? []).filter((d: any) => d.request_id === r.id);
               const canDecide = ACTIONABLE.includes(r.status);
+              const canDecideNow = DECIDABLE.includes(r.status);
               const comment = comments[r.id] ?? "";
               return (
                 <div key={r.id} className="rounded-lg border border-border/60 p-3">
@@ -109,17 +118,34 @@ function SupervisorPage() {
                             Start review
                           </Button>
                         )}
-                        <Button size="sm" disabled={busy === r.id}
+                        <Button size="sm" disabled={busy === r.id || !canDecideNow}
                           onClick={() => run(r.id, () => decideFn({ data: { request_id: r.id, decision: "APPROVE", comment: comment || null, expected_version: r.version ?? null } }), "Request approved.")}>
                           Approve
                         </Button>
-                        <Button size="sm" variant="destructive" disabled={busy === r.id}
+                        <Button size="sm" variant="destructive" disabled={busy === r.id || !canDecideNow}
                           onClick={() => run(r.id, () => decideFn({ data: { request_id: r.id, decision: "REJECT", comment, expected_version: r.version ?? null } }), "Request rejected.")}>
                           Reject
                         </Button>
-                        <Button size="sm" variant="outline" disabled={busy === r.id}
+                        <Button size="sm" variant="outline" disabled={busy === r.id || !canDecideNow}
                           onClick={() => run(r.id, () => decideFn({ data: { request_id: r.id, decision: "RETURN", comment, expected_version: r.version ?? null } }), "Returned for correction.")}>
                           Return for correction
+                        </Button>
+                        <Button size="sm" variant="outline" disabled={busy === r.id}
+                          onClick={() => {
+                            if (comment.trim().length < 5) {
+                              toast.error("Give a reason before holding", { description: "Type at least a short explanation in the comment box — the Department Head is notified with it." });
+                              return;
+                            }
+                            run(r.id, () => holdFn({ data: { request_id: r.id, hold_reason: comment, expected_version: r.version ?? null } }), "Request placed on hold.");
+                          }}>
+                          Hold
+                        </Button>
+                        <Button size="sm" variant="outline" disabled={busy === r.id}
+                          onClick={() => {
+                            setModifying(modifying === r.id ? null : r.id);
+                            setModifyForm({ start_date: r.requested_start_date ?? "", end_date: r.requested_end_date ?? "" });
+                          }}>
+                          Modify
                         </Button>
                         <select
                           className="h-8 rounded-md border border-input bg-background px-2 text-xs"
@@ -136,6 +162,35 @@ function SupervisorPage() {
                           ))}
                         </select>
                       </div>
+                      {modifying === r.id && (
+                        <div className="grid gap-3 rounded-lg border border-border/60 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`start-${r.id}`}>Start date</Label>
+                            <Input id={`start-${r.id}`} type="date" value={modifyForm.start_date}
+                              onChange={(e) => setModifyForm((f) => ({ ...f, start_date: e.target.value }))} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`end-${r.id}`}>End date</Label>
+                            <Input id={`end-${r.id}`} type="date" value={modifyForm.end_date}
+                              onChange={(e) => setModifyForm((f) => ({ ...f, end_date: e.target.value }))} />
+                          </div>
+                          <Button size="sm" disabled={busy === r.id}
+                            onClick={() => {
+                              setModifying(null);
+                              run(r.id, () => modifyFn({
+                                data: {
+                                  request_id: r.id,
+                                  start_date: modifyForm.start_date || null,
+                                  end_date: modifyForm.end_date || null,
+                                  note: comment || null,
+                                  expected_version: r.version ?? null,
+                                },
+                              }), "Request updated — the Department Head is notified.");
+                            }}>
+                            Save changes
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
 

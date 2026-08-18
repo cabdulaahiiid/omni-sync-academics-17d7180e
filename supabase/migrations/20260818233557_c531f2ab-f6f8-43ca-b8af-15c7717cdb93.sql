@@ -1,0 +1,10 @@
+REVOKE EXECUTE ON FUNCTION public.ct_upsert_department_config(uuid,numeric,numeric,numeric,numeric,numeric,integer) FROM anon, public;
+REVOKE EXECUTE ON FUNCTION public.ct_submit_daily_log(uuid,uuid,date,public.ct_attendance_status,numeric,integer,boolean,text,text,text[]) FROM anon, public;
+REVOKE EXECUTE ON FUNCTION public.ct_ips_hold_request(uuid,text,integer) FROM anon, public;
+REVOKE EXECUTE ON FUNCTION public.ct_ips_modify_request(uuid,date,date,uuid,text,integer) FROM anon, public;
+REVOKE EXECUTE ON FUNCTION public.ct_can_access_department(uuid) FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.ct_upsert_department_config(uuid,numeric,numeric,numeric,numeric,numeric,integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ct_submit_daily_log(uuid,uuid,date,public.ct_attendance_status,numeric,integer,boolean,text,text,text[]) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ct_ips_hold_request(uuid,text,integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ct_ips_modify_request(uuid,date,date,uuid,text,integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ct_can_access_department(uuid) TO authenticated;

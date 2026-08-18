@@ -46,6 +46,74 @@ export function computeEvaluation(
 }
 
 /** Great-circle distance in metres (same formula as the check-in RPC). */
+export type DepartmentEvalConfig = {
+  weight_daily: number;
+  weight_industry: number;
+  weight_tvet: number;
+  passing_threshold: number;
+  attendance_threshold: number;
+  max_allowed_gaps: number;
+};
+
+export const DEFAULT_DEPARTMENT_CONFIG: DepartmentEvalConfig = {
+  weight_daily: 40,
+  weight_industry: 40,
+  weight_tvet: 20,
+  passing_threshold: 60,
+  attendance_threshold: 80,
+  max_allowed_gaps: 0,
+};
+
+export type DailyLog = {
+  attendance: "PRESENT" | "LATE" | "ABSENT" | "EXCUSED";
+  score?: number | null;
+  safety_breach?: boolean;
+};
+
+export type CompositeInput = {
+  logs: DailyLog[];
+  industryScore: number;
+  tvetScore: number;
+  skillGapCount: number;
+};
+
+export type CompositeOutcome = {
+  dailyAvgScore: number;
+  attendanceRate: number;
+  compositeScore: number;
+  safetyBreachCount: number;
+  color: "GREEN" | "YELLOW" | "RED";
+};
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Mirror of `ct_finalize_evaluation`: composite score and 3-colour status. */
+export function computeComposite(input: CompositeInput, cfg: DepartmentEvalConfig): CompositeOutcome {
+  const scored = input.logs.filter((l) => typeof l.score === "number");
+  const rawAvg = scored.length ? scored.reduce((s, l) => s + (l.score as number), 0) / scored.length : null;
+  const dailyAvgScore = rawAvg === null ? round2(input.industryScore) : round2(((rawAvg - 1) / 4) * 100);
+  const days = input.logs.length;
+  const credited =
+    input.logs.filter((l) => l.attendance === "PRESENT").length +
+    0.5 * input.logs.filter((l) => l.attendance === "LATE").length;
+  const attendanceRate = days > 0 ? round2((credited / days) * 100) : 100;
+  const safetyBreachCount = input.logs.filter((l) => l.safety_breach).length;
+  const compositeScore = round2(
+    (cfg.weight_daily * dailyAvgScore + cfg.weight_industry * input.industryScore + cfg.weight_tvet * input.tvetScore) /
+      100,
+  );
+  let color: CompositeOutcome["color"];
+  if (compositeScore < cfg.passing_threshold || attendanceRate < cfg.attendance_threshold || safetyBreachCount > 0) {
+    color = "RED";
+  } else if (input.skillGapCount > cfg.max_allowed_gaps) {
+    color = "YELLOW";
+  } else {
+    color = "GREEN";
+  }
+  return { dailyAvgScore, attendanceRate, compositeScore, safetyBreachCount, color };
+}
+
+/** Great-circle distance in metres (same formula as the check-in RPC). */
 export function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
   const toRad = (d: number) => (d * Math.PI) / 180;

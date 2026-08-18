@@ -31,10 +31,29 @@ export interface CachedRoster {
   cached_at: number;
 }
 
+export interface CtDailyLogEntry {
+  client_uuid: string;
+  placement_id: string;
+  log_date: string;
+  attendance: "PRESENT" | "LATE" | "ABSENT" | "EXCUSED";
+  shift_hours: number;
+  score: number | null;
+  safety_breach: boolean;
+  task_notes: string | null;
+  safety_notes: string | null;
+  gap_tags: string[];
+  status: OutboxStatus;
+  attempts: number;
+  last_error?: string;
+  created_at: number;
+  updated_at: number;
+}
+
 class OfflineDB extends Dexie {
   outbox!: Table<OutboxEntry, string>;
   schedules!: Table<CachedSchedule, string>;
   rosters!: Table<CachedRoster, string>;
+  ctDailyLogs!: Table<CtDailyLogEntry, string>;
 
   constructor() {
     super("tvet_offline");
@@ -42,6 +61,12 @@ class OfflineDB extends Dexie {
       outbox: "client_uuid, schedule_id, status, created_at",
       schedules: "id, cached_at",
       rosters: "schedule_id, cached_at",
+    });
+    this.version(2).stores({
+      outbox: "client_uuid, schedule_id, status, created_at",
+      schedules: "id, cached_at",
+      rosters: "schedule_id, cached_at",
+      ctDailyLogs: "client_uuid, placement_id, status, created_at",
     });
   }
 }
