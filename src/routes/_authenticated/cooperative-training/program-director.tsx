@@ -112,20 +112,20 @@ function ProgramDirectorPage() {
                       <div className="flex flex-wrap gap-2">
                         {r.status === "DELEGATED_TO_PD" && (
                           <Button size="sm" variant="outline" disabled={busy}
-                            onClick={() => run(() => startFn({ data: { request_id: r.id } }), "Marked as under review.")}>
+                            onClick={() => run(() => startFn({ data: { request_id: r.id, expected_version: r.version ?? null } }), "Marked as under review.")}>
                             Start review
                           </Button>
                         )}
                         <Button size="sm" disabled={busy}
-                          onClick={() => run(() => decideFn({ data: { request_id: r.id, decision: "APPROVE", comment: comment || null } }), "Recommended for supervisor final approval.")}>
+                          onClick={() => run(() => decideFn({ data: { request_id: r.id, decision: "APPROVE", comment: comment || null, expected_version: r.version ?? null } }), "Recommended for supervisor final approval.")}>
                           Approve
                         </Button>
                         <Button size="sm" variant="destructive" disabled={busy}
-                          onClick={() => run(() => decideFn({ data: { request_id: r.id, decision: "REJECT", comment } }), "Request rejected.")}>
+                          onClick={() => run(() => decideFn({ data: { request_id: r.id, decision: "REJECT", comment, expected_version: r.version ?? null } }), "Request rejected.")}>
                           Reject
                         </Button>
                         <Button size="sm" variant="outline" disabled={busy}
-                          onClick={() => run(() => decideFn({ data: { request_id: r.id, decision: "RETURN", comment } }), "Returned for correction.")}>
+                          onClick={() => run(() => decideFn({ data: { request_id: r.id, decision: "RETURN", comment, expected_version: r.version ?? null } }), "Returned for correction.")}>
                           Return for correction
                         </Button>
                       </div>
@@ -142,8 +142,16 @@ function ProgramDirectorPage() {
               <Textarea rows={2} placeholder="Explain what the supervisor should look at" value={batchNote} onChange={(e) => setBatchNote(e.target.value)} />
               <Button size="sm" variant="outline" disabled={busy || batchNote.trim().length < 3}
                 onClick={() => run(async () => {
-                  await returnFn({ data: { request_ids: selected, note: batchNote.trim() } });
+                  const versions: Record<string, number> = {};
+                  for (const id of selected) {
+                    const req = ((queue.data?.requests ?? []) as any[]).find((x) => x.id === id);
+                    if (typeof req?.version === "number") versions[id] = req.version;
+                  }
+                  const res = await returnFn({ data: { request_ids: selected, note: batchNote.trim(), expected_versions: versions } });
                   setSelected([]); setBatchNote("");
+                  if (res.skipped > 0) {
+                    toast.warning(`${res.processed} returned, ${res.skipped} skipped because they had already changed.`);
+                  }
                 }, "Returned to the supervisor.")}>
                 Return to supervisor
               </Button>
