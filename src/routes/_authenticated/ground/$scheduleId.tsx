@@ -422,8 +422,8 @@ function SetupStep({ data, progress, mode, setMode, lessonPlan, setLessonPlan, o
 
 
 /* ---------------- Step 4: Session Started / Check-In ---------------- */
-function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, canStart, geo, geofenceEnabled, bypass, checking, onCheckIn, onBack }: any) {
-  // Ring target: counts down to window open, then to window close.
+function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, sessionDurationMs, canStart, geo, geofenceEnabled, bypass, checking, onCheckIn, onBack }: any) {
+  // Ring target: counts down to session start, then down the full session length.
   const target = useMemo(() => {
     if (!windowCloseMs) return null;
     if (serverNow < windowOpenMs) return new Date(windowOpenMs).toISOString();
@@ -431,9 +431,9 @@ function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, canStar
   }, [serverNow, windowOpenMs, windowCloseMs]);
   const beforeOpen = serverNow < windowOpenMs;
   const afterClose = serverNow > windowCloseMs;
-  const windowLabel = beforeOpen ? "until window opens" : afterClose ? "window closed" : "to check in";
-  // Ring fill: beforeOpen fills against a 10-min countdown; once open, against the 10-min window.
-  const ringTotalMs = 10 * 60_000;
+  const windowLabel = beforeOpen ? "until session starts" : afterClose ? "session ended" : "left in this session";
+  // Ring fills against the full scheduled session duration (e.g. 120 minutes).
+  const ringTotalMs = sessionDurationMs || 10 * 60_000;
 
   return (
     <>
@@ -447,7 +447,9 @@ function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, canStar
             <p className="text-center text-[11px] text-slate-500">Accuracy: {Math.round(geo.coords.accuracy)}m</p>
           )}
           <CountdownTimer until={target} label={windowLabel} variant="ring" offsetMs={offsetMs} totalMs={ringTotalMs} />
-          <p className="text-center text-xs text-muted-foreground">Attendance window: last 10 minutes of the session</p>
+          <p className="text-center text-xs text-muted-foreground">
+            Check-in is open for the whole session · attendance roster unlocks in the last 10 minutes
+          </p>
         </CardContent>
       </Card>
 
@@ -481,7 +483,7 @@ function CheckInStep({ serverNow, offsetMs, windowOpenMs, windowCloseMs, canStar
           disabled={!canStart || (geofenceEnabled && !bypass && !geo.inRadius) || checking}
           onClick={onCheckIn}>
           <MapPin className="mr-2 h-4 w-4" />
-          {checking ? "Checking in…" : beforeOpen ? "Check-in opens in last 10 min" : afterClose ? "Check-in window closed" : "Check-In Location"}
+          {checking ? "Checking in…" : beforeOpen ? "Check-in opens at the session start time" : afterClose ? "Session has ended" : "Check-In Location"}
         </Button>
         <Button variant="ghost" className="w-full" onClick={onBack}>Back to setup</Button>
       </div>
