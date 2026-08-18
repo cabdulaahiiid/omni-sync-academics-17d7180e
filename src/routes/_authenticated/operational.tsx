@@ -14,7 +14,7 @@ import { COLLEGE_SHORT_NAME, COLLEGE_FULL_NAME, COLLEGE_LOGO_URL } from "@/compo
 import { Breadcrumbs } from "@/components/erp/breadcrumbs";
 import {
   LayoutDashboard, CalendarRange,
-  Activity, FileBarChart, LogOut, Menu, ShieldCheck, Upload, ClipboardCheck, GraduationCap, FileClock,
+  Activity, FileBarChart, LogOut, Menu, ShieldCheck, Upload, ClipboardCheck, GraduationCap, FileClock, HardHat,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/operational")({
@@ -49,6 +49,11 @@ function OperationalShell() {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
   }
   const initials = (me?.profile?.full_name || me?.profile?.email || "DH").slice(0, 2).toUpperCase();
+  // Only the Department Head who actually leads the Industrial Department (or
+  // an admin) gets the practical-training entry point.
+  const nav = (me?.isIndustrialDh || me?.roles?.includes("MA"))
+    ? [...NAV, { to: "/cooperative-training", label: "Industrial Practical Training", icon: HardHat }]
+    : NAV;
   return (
     <div className="flex h-screen overflow-hidden bg-muted/30">
       <aside className={cn(
@@ -63,7 +68,7 @@ function OperationalShell() {
           </div>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
