@@ -205,6 +205,9 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
       level_id: string;
       section_id: string;
       department_id: string;
+      parent_guardian_name: string | null;
+      parent_guardian_telephone: string | null;
+      parent_guardian_relationship: string | null;
     };
     const knownLevels = (levels ?? []).map((l) => String(l.name)).join(", ") || "none defined";
     const inserts: (StudentInsert & { __row: number })[] = [];
@@ -276,6 +279,9 @@ export const bulkInsertStudents = createServerFn({ method: "POST" })
         level_id: lvl,
         section_id: sec,
         department_id: deptId,
+        parent_guardian_name: r.parent_guardian_name || null,
+        parent_guardian_telephone: r.parent_guardian_telephone ?? null,
+        parent_guardian_relationship: r.parent_guardian_relationship ?? null,
       });
     });
     const describeInsertError = (err: { code?: string; message: string; details?: string | null }) => {
