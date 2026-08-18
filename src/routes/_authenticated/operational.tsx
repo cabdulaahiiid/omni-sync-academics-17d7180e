@@ -21,7 +21,9 @@ export const Route = createFileRoute("/_authenticated/operational")({
   component: OperationalShell,
 });
 
-const NAV = [
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean };
+
+const NAV: NavItem[] = [
   { to: "/operational", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/operational/matrix", label: "Schedules", icon: CalendarRange },
   { to: "/operational/semester-upload", label: "Schedule Builder", icon: Upload },
