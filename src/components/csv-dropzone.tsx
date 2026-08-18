@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, FileText, X } from "lucide-react";
+import { canonicalizeRow, normalizeHeader } from "@/lib/import-headers";
 
 export type ParsedRow = Record<string, string>;
 
@@ -75,8 +76,8 @@ export function CsvDropzone({
         fail(`"${file.name}" has a header row but no data rows. Fix: add at least one record below the header and upload again.`);
         return;
       }
-      const headers = Object.keys(rows[0]).map((h) => h.trim().toLowerCase());
-      const missing = (requiredHeaders ?? []).filter((h) => !headers.includes(h.toLowerCase()));
+      const headers = Object.keys(rows[0]);
+      const missing = (requiredHeaders ?? []).filter((h) => !headers.includes(normalizeHeader(h)));
       if (missing.length) {
         fail(
           `The file is missing the column${missing.length > 1 ? "s" : ""} ${missing.map((m) => `"${m}"`).join(", ")}. Found: ${headers.join(", ")}. Fix: download the template, copy your data into it without renaming any header, then upload again.`,
@@ -101,13 +102,7 @@ export function CsvDropzone({
             defval: "",
             raw: false,
           });
-          const rows: ParsedRow[] = raw.map((r) => {
-            const out: ParsedRow = {};
-            for (const [k, v] of Object.entries(r)) {
-              out[String(k).trim().toLowerCase()] = String(v ?? "").trim();
-            }
-            return out;
-          });
+          const rows: ParsedRow[] = raw.map((r) => canonicalizeRow(r));
           finish(rows.filter((r) => Object.values(r).some((v) => v !== "")));
         } catch {
           fail(`"${file.name}" could not be opened as an Excel workbook. Fix: re-save it as .xlsx from Excel, or use the sample template, then upload again.`);
@@ -117,11 +112,7 @@ export function CsvDropzone({
       return;
     }
     reader.onload = (e) => {
-      const rows = parseCsv(String(e.target?.result ?? "")).map((r) => {
-        const out: ParsedRow = {};
-        for (const [k, v] of Object.entries(r)) out[k.trim().toLowerCase()] = String(v ?? "").trim();
-        return out;
-      });
+      const rows = parseCsv(String(e.target?.result ?? "")).map((r) => canonicalizeRow(r));
       finish(rows);
     };
     reader.readAsText(file);
