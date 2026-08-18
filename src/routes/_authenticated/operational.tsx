@@ -66,7 +66,9 @@ function OperationalShell() {
           <img src={COLLEGE_LOGO_URL} alt="" className="h-9 w-9 rounded-xl bg-white object-contain p-0.5" />
           <div className="flex min-w-0 flex-col leading-tight">
             <span className="truncate text-[13px] font-semibold tracking-wide text-white">{COLLEGE_SHORT_NAME}</span>
-            <span className="text-[10px] uppercase tracking-widest text-white/60">Department Head</span>
+            <span className="truncate text-[10px] uppercase tracking-widest text-white/60">
+              {me?.departmentName ? `${me.departmentName} · Department Head` : "Department Head"}
+            </span>
           </div>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
@@ -123,7 +125,13 @@ function OperationalShell() {
                 {me?.profile?.full_name || me?.profile?.email || "User"}
               </span>
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                {me?.roles?.includes("MA") ? "Master Admin" : me?.roles?.includes("DH") ? "Department Head" : "User"}
+                {me?.roles?.includes("MA")
+                  ? "Master Admin"
+                  : me?.roles?.includes("DH")
+                    ? me?.departmentName
+                      ? `${me.departmentName} · Department Head`
+                      : "Department Head"
+                    : "User"}
               </span>
             </div>
           </Link>
