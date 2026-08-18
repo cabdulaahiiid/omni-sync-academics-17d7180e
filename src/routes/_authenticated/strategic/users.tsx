@@ -60,7 +60,7 @@ function UsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editRoles, setEditRoles] = useState<("MA" | "DH" | "T")[]>([]);
+  const [editRoles, setEditRoles] = useState<("MA" | "DH" | "T" | "IPS" | "PD")[]>([]);
   const [editTrainerDepts, setEditTrainerDepts] = useState<string[]>([]);
   const [editPrimary, setEditPrimary] = useState<string>("");
   const [editDHDept, setEditDHDept] = useState<string>("");
