@@ -90,8 +90,8 @@ function SessionDetail() {
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
   // Server-anchored "now" so a wrong device clock cannot shift the window.
   const serverNow = now + offsetMs;
-  // Attendance window = last 10 minutes of the session.
-  const windowOpenMs = endMs ? endMs - 10 * 60_000 : 0;
+  // Check-in is allowed for the whole scheduled session (5 min grace before start).
+  const windowOpenMs = startMs ? startMs - 5 * 60_000 : 0;
   const windowCloseMs = endMs;
   const canStart = !!endMs && serverNow >= windowOpenMs && serverNow <= windowCloseMs;
 
@@ -284,6 +284,7 @@ function SessionDetail() {
           offsetMs={offsetMs}
           windowOpenMs={windowOpenMs}
           windowCloseMs={windowCloseMs}
+          sessionDurationMs={endMs && startMs ? endMs - startMs : 0}
           canStart={canStart}
           geo={geo}
           geofenceEnabled={geofenceEnabled}
