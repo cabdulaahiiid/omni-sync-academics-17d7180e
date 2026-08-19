@@ -8,7 +8,9 @@ import { cn } from "@/lib/utils";
 import { AppShell } from "@/components/erp/app-shell";
 import { operationalNavFor } from "@/components/erp/operational-nav";
 import { NavHeader } from "@/components/erp/nav-header";
-import { canAccess, type ModuleKey } from "@/lib/auth/role-matrix";
+import { canAccess, canEnterPracticalTraining, type ModuleKey } from "@/lib/auth/role-matrix";
+import { EmptyState } from "@/components/erp/empty-state";
+import { HardHat } from "lucide-react";
 
 type Tab = { to: string; label: string; icon: typeof LayoutDashboard; module: ModuleKey; end?: boolean };
 
@@ -31,6 +33,20 @@ function CooperativeTrainingShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const roles = (me?.roles ?? []) as string[];
   const tabs = TABS.filter((t) => canAccess(t.module, roles));
+  const allowed = canEnterPracticalTraining(me);
+
+  if (me && !allowed) {
+    return (
+      <AppShell nav={operationalNavFor(me)}>
+        <NavHeader title="Industrial Practical Training" />
+        <EmptyState
+          icon={HardHat}
+          title="No active practical placement"
+          description="This workspace unlocks automatically once a coordinator assigns you as the visiting trainer on an active industrial placement."
+        />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell nav={operationalNavFor(me)}>
