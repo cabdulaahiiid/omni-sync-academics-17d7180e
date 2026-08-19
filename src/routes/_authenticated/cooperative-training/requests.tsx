@@ -9,6 +9,7 @@ import {
   listCtRequests, submitCtRequest,
 } from "@/lib/ct/requests.functions";
 import { useMasterData } from "@/hooks/use-master-data";
+import { listCtDepartmentTrainers } from "@/lib/ct/trainers.functions";
 import { useMe } from "@/hooks/use-me";
 import { useFormSubmit } from "@/hooks/use-form-submit";
 import { toastError } from "@/lib/errors/toast";
@@ -43,6 +44,13 @@ function RequestsPage() {
   const curriculum = useQuery({ queryKey: CT_KEYS.curriculum, queryFn: () => curriculumFn(), staleTime: 60_000 });
   const requests = useQuery({ queryKey: CT_KEYS.requests, queryFn: () => listFn(), staleTime: 10_000 });
   const coordinators = useQuery({ queryKey: ["ct", "coordinators"], queryFn: () => coordinatorsFn(), staleTime: 60_000 });
+  const trainersFn = useServerFn(listCtDepartmentTrainers);
+  const deptTrainers = useQuery({
+    queryKey: ["ct", "department-trainers", form.department_id],
+    queryFn: () => trainersFn({ data: { department_id: form.department_id } }),
+    enabled: Boolean(form.department_id),
+    staleTime: 60_000,
+  });
 
   const [form, setForm] = useState({
     department_id: "", occupation_id: "", level_id: "", section_id: "",
@@ -205,6 +213,41 @@ function RequestsPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+              </FormSection>
+
+              <FormSection
+                title="Department trainer capacity"
+                description="Trainers registered to the selected department, their current practical-training load and the department competency tags they cover."
+              >
+                {!form.department_id ? (
+                  <p className="text-sm text-muted-foreground">Choose a department to see its trainers.</p>
+                ) : deptTrainers.isLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading trainers…</p>
+                ) : (deptTrainers.data?.trainers ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No trainers are registered to this department yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {(deptTrainers.data?.trainers ?? []).map((t: any) => (
+                        <div key={t.id} className="rounded-lg border border-border/60 px-3 py-1.5 text-xs">
+                          <span className="font-medium">{t.full_name}</span>
+                          <span className="text-muted-foreground"> · {t.assigned_load} trainee(s)</span>
+                          <Badge className="ml-2" variant={t.availability === "FULL" ? "outline" : "secondary"}>
+                            {t.availability === "FULL" ? "At capacity" : t.availability === "FREE" ? "Free" : "Available"}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                    {(deptTrainers.data?.competencies ?? []).length > 0 && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Department competencies: {(deptTrainers.data?.competencies ?? []).map((c: any) => c.name).join(", ")}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-muted-foreground">
+                      Assign the responsible trainer per trainee on the Placements screen once the request is allocated.
+                    </p>
                   </div>
                 )}
               </FormSection>
