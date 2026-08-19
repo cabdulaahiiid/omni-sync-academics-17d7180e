@@ -5,6 +5,9 @@ import {
 } from "lucide-react";
 import { useMe } from "@/hooks/use-me";
 import { cn } from "@/lib/utils";
+import { AppShell } from "@/components/erp/app-shell";
+import { operationalNavFor } from "@/components/erp/operational-nav";
+import { NavHeader } from "@/components/erp/nav-header";
 
 type Tab = { to: string; label: string; icon: typeof LayoutDashboard; roles: string[]; end?: boolean };
 
@@ -29,14 +32,13 @@ function CooperativeTrainingShell() {
   const tabs = TABS.filter((t) => t.roles.some((r) => roles.includes(r)));
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b border-border/60 bg-card">
-        <div className="mx-auto w-full max-w-[1600px] px-4 py-4 sm:px-6">
-          <h1 className="text-lg font-semibold tracking-tight">Cooperative &amp; Industrial Practical Training</h1>
-          <p className="text-xs text-muted-foreground">
-            Theory completion, enterprise placement, digital logbook, supervision and competency assessment.
-          </p>
-          <nav className="mt-3 flex flex-wrap gap-1" aria-label="Cooperative training sections">
+    <AppShell nav={operationalNavFor(me)}>
+      <NavHeader
+        title="Cooperative &amp; Industrial Practical Training"
+        description="Theory completion, enterprise placement, digital logbook, supervision and competency assessment."
+      />
+      <div className="rounded-xl border border-border/60 bg-card p-2">
+        <nav className="flex flex-wrap gap-1" aria-label="Cooperative training sections">
             {tabs.map((t) => {
               const active = t.end ? pathname === t.to : pathname.startsWith(t.to);
               const Icon = t.icon;
@@ -54,13 +56,12 @@ function CooperativeTrainingShell() {
                 </Link>
               );
             })}
-          </nav>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-6 sm:px-6">
+        </nav>
+      </div>
+      <div className="mt-4">
         <Outlet />
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
 
