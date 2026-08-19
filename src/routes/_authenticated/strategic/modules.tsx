@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, Plus } from "lucide-react";
+import { Upload, FileSpreadsheet, Plus, ListTree } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -20,6 +20,7 @@ import { DownloadTemplateButton } from "@/components/download-template-button";
 import { MODULES_TEMPLATE } from "@/lib/xlsx-templates";
 import { useMasterData, useInvalidateMasterData } from "@/hooks/use-master-data";
 import { MODULE_TYPE_OPTIONS } from "@/lib/master-data";
+import { ModulePracticalTemplateDialog } from "@/components/practical/module-practical-template-dialog";
 
 export const Route = createFileRoute("/_authenticated/strategic/modules")({
   component: ModulesPage,
@@ -38,6 +39,7 @@ function ModulesPage() {
   const bulk = useServerFn(bulkInsertModules);
   const { data: modules, isLoading } = useQuery({ queryKey: ["modules"], queryFn: () => list(), enabled: authReady && hasSession, throwOnError: false });
   const [open, setOpen] = useState(false);
+  const [templateFor, setTemplateFor] = useState<{ id: string; code: string; name: string; type: string } | null>(null);
   const [parsed, setParsed] = useState<Row[]>([]);
   const [fileName, setFileName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
