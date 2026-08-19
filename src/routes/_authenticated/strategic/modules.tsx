@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, Plus } from "lucide-react";
+import { Upload, FileSpreadsheet, Plus, ListTree } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -20,6 +20,7 @@ import { DownloadTemplateButton } from "@/components/download-template-button";
 import { MODULES_TEMPLATE } from "@/lib/xlsx-templates";
 import { useMasterData, useInvalidateMasterData } from "@/hooks/use-master-data";
 import { MODULE_TYPE_OPTIONS } from "@/lib/master-data";
+import { ModulePracticalTemplateDialog } from "@/components/practical/module-practical-template-dialog";
 
 export const Route = createFileRoute("/_authenticated/strategic/modules")({
   component: ModulesPage,
@@ -38,6 +39,7 @@ function ModulesPage() {
   const bulk = useServerFn(bulkInsertModules);
   const { data: modules, isLoading } = useQuery({ queryKey: ["modules"], queryFn: () => list(), enabled: authReady && hasSession, throwOnError: false });
   const [open, setOpen] = useState(false);
+  const [templateFor, setTemplateFor] = useState<{ id: string; code: string; name: string; type: string } | null>(null);
   const [parsed, setParsed] = useState<Row[]>([]);
   const [fileName, setFileName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -253,10 +255,10 @@ function ModulesPage() {
       </div>
       <Card>
         <Table>
-          <TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Department</TableHead><TableHead>Level</TableHead><TableHead>Type</TableHead><TableHead>Hours</TableHead><TableHead>Sessions</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Department</TableHead><TableHead>Level</TableHead><TableHead>Type</TableHead><TableHead>Hours</TableHead><TableHead>Sessions</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Practical</TableHead></TableRow></TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
-            {!isLoading && !modules?.length && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No modules yet. Upload your registry to get started.</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
+            {!isLoading && !modules?.length && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">No modules yet. Upload your registry to get started.</TableCell></TableRow>}
             {modules?.map((m) => (
               <TableRow key={m.id}>
                 <TableCell className="font-mono text-xs">{m.code}</TableCell>
@@ -267,11 +269,29 @@ function ModulesPage() {
                 <TableCell>{m.total_hours}</TableCell>
                 <TableCell>{m.total_sessions}</TableCell>
                 <TableCell><Badge variant={m.status === "ACTIVE" ? "default" : "secondary"}>{m.status}</Badge></TableCell>
+                <TableCell className="text-right">
+                  {m.type === "Theory" ? (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setTemplateFor({ id: m.id, code: m.code, name: m.name, type: m.type })}
+                    >
+                      <ListTree className="mr-1.5 h-3.5 w-3.5" /> Template
+                    </Button>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </Card>
+      <ModulePracticalTemplateDialog
+        module_={templateFor}
+        open={!!templateFor}
+        onOpenChange={(v) => { if (!v) setTemplateFor(null); }}
+      />
     </div>
   );
 }

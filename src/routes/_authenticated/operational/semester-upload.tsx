@@ -26,6 +26,12 @@ import { useMe } from "@/hooks/use-me";
 import { useDhScheduleLive } from "@/hooks/use-dh-schedule-live";
 import { generatePlan, type Day as EngineDay } from "@/lib/scheduling/engine";
 import { getBuilderOptions, getTrainerLoad, validateBuilder, saveBuilderDraft } from "@/lib/semester-builder.functions";
+import { getModulePracticalTemplate } from "@/lib/practical-template.functions";
+import {
+  PracticalSessionEditor,
+  toDrafts,
+  type PracticalSessionDraft,
+} from "@/components/practical/practical-session-editor";
 import { requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
 
 export const Route = createFileRoute("/_authenticated/operational/semester-upload")({
@@ -156,6 +162,7 @@ function SemesterBuilderPage() {
   const [levelId, setLevelId] = useState<string>("");
   const [venueId, setVenueId] = useState<string>("");
   const [delivery, setDelivery] = useState<"Theory" | "Practical" | "Both">("Theory");
+  const [practicalTree, setPracticalTree] = useState<PracticalSessionDraft[]>([]);
   const [theoryDays, setTheoryDays] = useState<Day[]>([]);
   const [practicalDays, setPracticalDays] = useState<Day[]>([]);
   const [theorySessionName, setTheorySessionName] = useState("");
@@ -262,6 +269,22 @@ function SemesterBuilderPage() {
   }, [startTime, durationMin]);
 
   // ---- Validation -----------------------------------------------------------
+  // Master practical template for the selected module (Admin-defined).
+  const loadTemplate = useServerFn(getModulePracticalTemplate);
+  const { data: templateData } = useQuery({
+    queryKey: ["module-practical-template", moduleId],
+    queryFn: () => loadTemplate({ data: { module_id: moduleId } }),
+    enabled: !!moduleId && delivery !== "Theory",
+  });
+  const templateSessions = useMemo(
+    () => toDrafts(templateData?.sessions).filter((s) => s.active),
+    [templateData],
+  );
+  // Pre-fill the nested builder from the master list whenever the module changes.
+  useEffect(() => {
+    setPracticalTree(templateSessions.map((s) => ({ ...s, tasks: s.tasks.map((t) => ({ ...t })) })));
+  }, [moduleId, templateSessions]);
+
   const builderPayload = useMemo(() => ({
     semester_id: semesterId,
     department_id: me?.profile?.department_id ?? "",
@@ -314,7 +337,29 @@ function SemesterBuilderPage() {
 
   // ---- Save / Publish -------------------------------------------------------
   const saveMut = useMutation({
-    mutationFn: () => saveFn({ data: builderPayload }),
+    mutationFn: () =>
+      saveFn({
+        data: {
+          ...builderPayload,
+          practical_sessions:
+            delivery === "Theory"
+              ? []
+              : practicalTree
+                  .filter((s) => s.name.trim().length >= 2)
+                  .map((s) => ({
+                    name: s.name.trim(),
+                    allocated_hours: Number(s.allocated_hours) || 0,
+                    venue_hint: s.venue_hint.trim() || null,
+                    tasks: s.tasks
+                      .filter((t) => t.title.trim().length >= 2)
+                      .map((t) => ({
+                        title: t.title.trim(),
+                        competency_code: t.competency_code.trim() || null,
+                        description: t.description.trim() || null,
+                      })),
+                  })),
+        },
+      }),
     onSuccess: async (r) => {
       setDraftCount((n) => n + r.created);
       // Force-refetch every cache that surfaces drafts so the new sessions are
@@ -563,6 +608,38 @@ function SemesterBuilderPage() {
                   })}
                 </div>
                 <Input placeholder="Practical session name (e.g. Workshop)" value={practicalSessionName} onChange={(e) => setPracticalSessionName(e.target.value)} />
+              </div>
+            )}
+
+            {delivery !== "Theory" && (
+              <div className="space-y-3 rounded-xl border bg-card p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Practical sessions &amp; sub-sessions
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {moduleId
+                        ? templateSessions.length
+                          ? "Pre-filled from the module's master practical template. Adjust it for this schedule."
+                          : "This module has no master practical template yet — add the sessions this schedule needs."
+                        : "Select a module first to load its master practical template."}
+                    </p>
+                  </div>
+                  {templateSessions.length > 0 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setPracticalTree(templateSessions.map((s) => ({ ...s, tasks: s.tasks.map((t) => ({ ...t })) })))
+                      }
+                    >
+                      Reset to master template
+                    </Button>
+                  )}
+                </div>
+                <PracticalSessionEditor value={practicalTree} onChange={setPracticalTree} showActive={false} />
               </div>
             )}
           </SectionItem>
