@@ -45,18 +45,19 @@ function RequestsPage() {
   const requests = useQuery({ queryKey: CT_KEYS.requests, queryFn: () => listFn(), staleTime: 10_000 });
   const coordinators = useQuery({ queryKey: ["ct", "coordinators"], queryFn: () => coordinatorsFn(), staleTime: 60_000 });
   const trainersFn = useServerFn(listCtDepartmentTrainers);
-  const deptTrainers = useQuery({
-    queryKey: ["ct", "department-trainers", form.department_id],
-    queryFn: () => trainersFn({ data: { department_id: form.department_id } }),
-    enabled: Boolean(form.department_id),
-    staleTime: 60_000,
-  });
 
   const [form, setForm] = useState({
     department_id: "", occupation_id: "", level_id: "", section_id: "",
     title: "", notes: "", requested_start_date: "", requested_end_date: "",
   });
   const [selected, setSelected] = useState<string[]>([]);
+
+  const deptTrainers = useQuery({
+    queryKey: ["ct", "department-trainers", form.department_id],
+    queryFn: () => trainersFn({ data: { department_id: form.department_id } }),
+    enabled: Boolean(form.department_id),
+    staleTime: 60_000,
+  });
 
   // A Department Head can only file for the Industrial Department; the picker
   // is locked to it so the department can never be swapped in the browser.
