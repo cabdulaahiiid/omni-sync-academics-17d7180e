@@ -2399,6 +2399,106 @@ export type Database = {
           },
         ]
       }
+      module_practical_sessions: {
+        Row: {
+          active: boolean
+          allocated_hours: number
+          created_at: string
+          created_by: string | null
+          id: string
+          module_id: string
+          name: string
+          sequence: number
+          updated_at: string
+          updated_by: string | null
+          venue_hint: string | null
+        }
+        Insert: {
+          active?: boolean
+          allocated_hours?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          module_id: string
+          name: string
+          sequence?: number
+          updated_at?: string
+          updated_by?: string | null
+          venue_hint?: string | null
+        }
+        Update: {
+          active?: boolean
+          allocated_hours?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          module_id?: string
+          name?: string
+          sequence?: number
+          updated_at?: string
+          updated_by?: string | null
+          venue_hint?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_practical_sessions_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      module_practical_tasks: {
+        Row: {
+          active: boolean
+          competency_code: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          sequence: number
+          session_id: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          competency_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          sequence?: number
+          session_id: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          competency_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          sequence?: number
+          session_id?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_practical_tasks_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "module_practical_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modules: {
         Row: {
           code: string
@@ -2686,6 +2786,114 @@ export type Database = {
             columns: ["semester_id"]
             isOneToOne: false
             referencedRelation: "semester_registry"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_plan_practical_sessions: {
+        Row: {
+          allocated_hours: number
+          created_at: string
+          created_by: string | null
+          department_id: string
+          id: string
+          name: string
+          plan_id: string
+          sequence: number
+          updated_at: string
+          venue_hint: string | null
+        }
+        Insert: {
+          allocated_hours?: number
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          id?: string
+          name: string
+          plan_id: string
+          sequence?: number
+          updated_at?: string
+          venue_hint?: string | null
+        }
+        Update: {
+          allocated_hours?: number
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          id?: string
+          name?: string
+          plan_id?: string
+          sequence?: number
+          updated_at?: string
+          venue_hint?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_plan_practical_sessions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_plan_practical_sessions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_plan_practical_tasks: {
+        Row: {
+          competency_code: string | null
+          created_at: string
+          created_by: string | null
+          department_id: string
+          description: string | null
+          id: string
+          sequence: number
+          session_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          competency_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          description?: string | null
+          id?: string
+          sequence?: number
+          session_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          competency_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          description?: string | null
+          id?: string
+          sequence?: number
+          session_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_plan_practical_tasks_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_plan_practical_tasks_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_plan_practical_sessions"
             referencedColumns: ["id"]
           },
         ]
