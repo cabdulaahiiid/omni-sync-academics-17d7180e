@@ -50,6 +50,14 @@ export const getMe = createServerFn({ method: "GET" })
       (supabase.rpc as any)("ct_is_industrial_dh"),
     ]);
 
+    // Dynamic feature unlocking: the "Industrial Practical Training" surface
+    // only appears for a TVET trainer once they actually hold an active
+    // placement assignment. Resolved server-side so the browser cannot fake it.
+    const { data: onActivePlacement } = await (supabase.rpc as any)(
+      "ct_is_trainer_on_active_placement",
+      { _user_id: userId },
+    );
+
     // Department label shown in the shells ("ICT · Department Head").
     let departmentId: string | null = (profile as any)?.department_id ?? null;
     if (!departmentId) {
@@ -80,6 +88,7 @@ export const getMe = createServerFn({ method: "GET" })
       departmentName,
       industrialDepartmentId: (industrialDeptRes?.data ?? null) as string | null,
       isIndustrialDh: Boolean(isIndustrialDhRes?.data),
+      isTrainerOnActivePlacement: Boolean(onActivePlacement),
       profileFound: Boolean(profile),
       roleCount: roles.length,
     };
