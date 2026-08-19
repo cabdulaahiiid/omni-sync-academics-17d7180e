@@ -321,7 +321,29 @@ function SemesterBuilderPage() {
 
   // ---- Save / Publish -------------------------------------------------------
   const saveMut = useMutation({
-    mutationFn: () => saveFn({ data: builderPayload }),
+    mutationFn: () =>
+      saveFn({
+        data: {
+          ...builderPayload,
+          practical_sessions:
+            delivery === "Theory"
+              ? []
+              : practicalTree
+                  .filter((s) => s.name.trim().length >= 2)
+                  .map((s) => ({
+                    name: s.name.trim(),
+                    allocated_hours: Number(s.allocated_hours) || 0,
+                    venue_hint: s.venue_hint.trim() || null,
+                    tasks: s.tasks
+                      .filter((t) => t.title.trim().length >= 2)
+                      .map((t) => ({
+                        title: t.title.trim(),
+                        competency_code: t.competency_code.trim() || null,
+                        description: t.description.trim() || null,
+                      })),
+                  })),
+        },
+      }),
     onSuccess: async (r) => {
       setDraftCount((n) => n + r.created);
       // Force-refetch every cache that surfaces drafts so the new sessions are
