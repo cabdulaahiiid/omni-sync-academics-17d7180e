@@ -269,6 +269,22 @@ function SemesterBuilderPage() {
   }, [startTime, durationMin]);
 
   // ---- Validation -----------------------------------------------------------
+  // Master practical template for the selected module (Admin-defined).
+  const loadTemplate = useServerFn(getModulePracticalTemplate);
+  const { data: templateData } = useQuery({
+    queryKey: ["module-practical-template", moduleId],
+    queryFn: () => loadTemplate({ data: { module_id: moduleId } }),
+    enabled: !!moduleId && delivery !== "Theory",
+  });
+  const templateSessions = useMemo(
+    () => toDrafts(templateData?.sessions).filter((s) => s.active),
+    [templateData],
+  );
+  // Pre-fill the nested builder from the master list whenever the module changes.
+  useEffect(() => {
+    setPracticalTree(templateSessions.map((s) => ({ ...s, tasks: s.tasks.map((t) => ({ ...t })) })));
+  }, [moduleId, templateSessions]);
+
   const builderPayload = useMemo(() => ({
     semester_id: semesterId,
     department_id: me?.profile?.department_id ?? "",
