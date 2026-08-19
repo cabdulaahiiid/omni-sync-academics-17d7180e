@@ -610,6 +610,38 @@ function SemesterBuilderPage() {
                 <Input placeholder="Practical session name (e.g. Workshop)" value={practicalSessionName} onChange={(e) => setPracticalSessionName(e.target.value)} />
               </div>
             )}
+
+            {delivery !== "Theory" && (
+              <div className="space-y-3 rounded-xl border bg-card p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Practical sessions &amp; sub-sessions
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {moduleId
+                        ? templateSessions.length
+                          ? "Pre-filled from the module's master practical template. Adjust it for this schedule."
+                          : "This module has no master practical template yet — add the sessions this schedule needs."
+                        : "Select a module first to load its master practical template."}
+                    </p>
+                  </div>
+                  {templateSessions.length > 0 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setPracticalTree(templateSessions.map((s) => ({ ...s, tasks: s.tasks.map((t) => ({ ...t })) })))
+                      }
+                    >
+                      Reset to master template
+                    </Button>
+                  )}
+                </div>
+                <PracticalSessionEditor value={practicalTree} onChange={setPracticalTree} showActive={false} />
+              </div>
+            )}
           </SectionItem>
 
           <SectionItem step={7} title="Schedule Timing" icon={Clock} value="s7" complete={!!(startDate && startTime)}>
