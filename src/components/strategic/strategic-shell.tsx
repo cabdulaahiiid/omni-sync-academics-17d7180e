@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/hooks/use-me";
-import { pickHome } from "@/lib/auth/roles";
+import { pickHome, roleLabel } from "@/lib/auth/roles";
 import {
   LayoutDashboard,
   Building2,
@@ -141,7 +141,7 @@ export function StrategicShell() {
           <img src={COLLEGE_LOGO_URL} alt="Jigjiga Polytechnic College logo" className="h-9 w-9 rounded-lg bg-white object-contain p-0.5" />
           <div className="flex min-w-0 flex-col leading-tight">
             <span className="truncate text-[12px] font-semibold tracking-wide text-white">{COLLEGE_SHORT_NAME}</span>
-            <span className="text-[10px] uppercase tracking-widest text-white/50">Master Admin</span>
+            <span className="text-[10px] uppercase tracking-widest text-white/50">{roleLabel(["MA"])}</span>
           </div>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 pb-3 pt-2">
@@ -253,13 +253,7 @@ export function StrategicShell() {
                 {me?.profile?.full_name || me?.profile?.email || "User"}
               </span>
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                {me?.roles?.includes("MA")
-                  ? "Master Admin"
-                  : me?.roles?.includes("DH")
-                  ? "Department Head"
-                  : me?.roles?.includes("T")
-                  ? "Trainer"
-                  : "User"}
+{roleLabel(me?.roles)}
               </span>
             </div>
           </Link>

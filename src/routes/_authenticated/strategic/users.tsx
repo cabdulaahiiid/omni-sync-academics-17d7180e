@@ -1,4 +1,5 @@
 import { toastError } from "@/lib/errors/toast";
+import { ASSIGNABLE_ROLES, codeLabel } from "@/lib/auth/roles";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -195,11 +196,7 @@ function UsersPage() {
                     value={form.role}
                     onChange={(v) => setForm({ ...form, role: v as any })}
                     options={[
-                      { value: "MA", label: "Master Admin" },
-                      { value: "DH", label: "Department Head" },
-                      { value: "T", label: "Trainer" },
-                      { value: "IPS", label: "Industrial Practical Supervisor" },
-                      { value: "PD", label: "Program Director" },
+                      ...ASSIGNABLE_ROLES.map((r) => ({ value: r, label: codeLabel(r) })),
                     ]}
                   />
                   <FormFull>
@@ -348,7 +345,7 @@ function UsersPage() {
 
               <FormSection title="Roles & departments">
                 <div className="flex flex-wrap gap-4">
-                  {(["MA", "DH", "T", "IPS", "PD"] as const).map((r) => (
+                  {ASSIGNABLE_ROLES.map((r) => (
                     <label key={r} className="flex items-center gap-2 text-sm">
                       <Checkbox
                         checked={editRoles.includes(r)}
@@ -356,11 +353,7 @@ function UsersPage() {
                           setEditRoles((prev) => v ? Array.from(new Set([...prev, r])) : prev.filter((x) => x !== r));
                         }}
                       />
-                      {r === "MA" ? "Master Admin"
-                        : r === "DH" ? "Department Head"
-                        : r === "T" ? "Trainer"
-                        : r === "IPS" ? "Industrial Practical Supervisor"
-                        : "Program Director"}
+                      {codeLabel(r)}
                     </label>
                   ))}
                 </div>
