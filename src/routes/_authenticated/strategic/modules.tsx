@@ -255,10 +255,10 @@ function ModulesPage() {
       </div>
       <Card>
         <Table>
-          <TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Department</TableHead><TableHead>Level</TableHead><TableHead>Type</TableHead><TableHead>Hours</TableHead><TableHead>Sessions</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Department</TableHead><TableHead>Level</TableHead><TableHead>Type</TableHead><TableHead>Hours</TableHead><TableHead>Sessions</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Practical</TableHead></TableRow></TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
-            {!isLoading && !modules?.length && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No modules yet. Upload your registry to get started.</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">Loading…</TableCell></TableRow>}
+            {!isLoading && !modules?.length && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">No modules yet. Upload your registry to get started.</TableCell></TableRow>}
             {modules?.map((m) => (
               <TableRow key={m.id}>
                 <TableCell className="font-mono text-xs">{m.code}</TableCell>
@@ -269,11 +269,29 @@ function ModulesPage() {
                 <TableCell>{m.total_hours}</TableCell>
                 <TableCell>{m.total_sessions}</TableCell>
                 <TableCell><Badge variant={m.status === "ACTIVE" ? "default" : "secondary"}>{m.status}</Badge></TableCell>
+                <TableCell className="text-right">
+                  {m.type === "Theory" ? (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setTemplateFor({ id: m.id, code: m.code, name: m.name, type: m.type })}
+                    >
+                      <ListTree className="mr-1.5 h-3.5 w-3.5" /> Template
+                    </Button>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </Card>
+      <ModulePracticalTemplateDialog
+        module_={templateFor}
+        open={!!templateFor}
+        onOpenChange={(v) => { if (!v) setTemplateFor(null); }}
+      />
     </div>
   );
 }
