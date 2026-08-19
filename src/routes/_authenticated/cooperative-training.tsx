@@ -8,28 +8,29 @@ import { cn } from "@/lib/utils";
 import { AppShell } from "@/components/erp/app-shell";
 import { operationalNavFor } from "@/components/erp/operational-nav";
 import { NavHeader } from "@/components/erp/nav-header";
+import { canAccess, type ModuleKey } from "@/lib/auth/role-matrix";
 
-type Tab = { to: string; label: string; icon: typeof LayoutDashboard; roles: string[]; end?: boolean };
+type Tab = { to: string; label: string; icon: typeof LayoutDashboard; module: ModuleKey; end?: boolean };
 
 const TABS: Tab[] = [
-  { to: "/cooperative-training", label: "Overview", icon: LayoutDashboard, roles: ["MA", "DH", "IPS", "PD", "CO", "VT", "T", "EM", "TR"], end: true },
-  { to: "/cooperative-training/requests", label: "Requests", icon: ClipboardList, roles: ["MA", "DH", "IPS"] },
-  { to: "/cooperative-training/supervisor", label: "Supervisor queue", icon: ShieldCheck, roles: ["MA", "IPS"] },
-  { to: "/cooperative-training/program-director", label: "Director review", icon: ClipboardCheck, roles: ["MA", "PD"] },
-  { to: "/cooperative-training/placements", label: "Placements", icon: Building2, roles: ["MA", "IPS", "PD", "DH", "T", "VT"] },
-  { to: "/cooperative-training/logbooks", label: "Logbooks", icon: BookOpen, roles: ["MA", "IPS", "PD", "T", "VT"] },
-  { to: "/cooperative-training/supervision", label: "Supervision", icon: Stethoscope, roles: ["MA", "IPS", "PD", "T", "VT"] },
-  { to: "/cooperative-training/evaluation", label: "Evaluation", icon: Award, roles: ["MA", "IPS", "PD", "T", "VT"] },
-  { to: "/cooperative-training/reports", label: "Reports", icon: GraduationCap, roles: ["MA", "IPS", "PD"] },
-  { to: "/cooperative-training/gaps", label: "Skill gaps", icon: TrendingDown, roles: ["MA", "DH", "IPS", "PD"] },
-  { to: "/cooperative-training/settings", label: "Department setup", icon: Settings2, roles: ["MA", "DH"] },
+  { to: "/cooperative-training", label: "Overview", icon: LayoutDashboard, module: "ctOverview", end: true },
+  { to: "/cooperative-training/requests", label: "Requests", icon: ClipboardList, module: "ctRequests" },
+  { to: "/cooperative-training/supervisor", label: "Supervisor queue", icon: ShieldCheck, module: "ctSupervisorQueue" },
+  { to: "/cooperative-training/program-director", label: "Director review", icon: ClipboardCheck, module: "ctDirectorReview" },
+  { to: "/cooperative-training/placements", label: "Placements", icon: Building2, module: "ctPlacements" },
+  { to: "/cooperative-training/logbooks", label: "Logbooks", icon: BookOpen, module: "ctLogbooks" },
+  { to: "/cooperative-training/supervision", label: "Supervision", icon: Stethoscope, module: "ctSupervision" },
+  { to: "/cooperative-training/evaluation", label: "Evaluation", icon: Award, module: "ctEvaluation" },
+  { to: "/cooperative-training/reports", label: "Reports", icon: GraduationCap, module: "ctReports" },
+  { to: "/cooperative-training/gaps", label: "Skill gaps", icon: TrendingDown, module: "ctGaps" },
+  { to: "/cooperative-training/settings", label: "Department setup", icon: Settings2, module: "ctSettings" },
 ];
 
 function CooperativeTrainingShell() {
   const { data: me } = useMe();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const roles = (me?.roles ?? []) as string[];
-  const tabs = TABS.filter((t) => t.roles.some((r) => roles.includes(r)));
+  const tabs = TABS.filter((t) => canAccess(t.module, roles));
 
   return (
     <AppShell nav={operationalNavFor(me)}>
