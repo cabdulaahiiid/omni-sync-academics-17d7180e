@@ -26,6 +26,17 @@ const LABELS: Record<string, string> = {
   drafts: "Drafts",
   attendance: "Attendance",
   "live-monitor": "Live Monitoring",
+  "cooperative-training": "Industrial Practical Training",
+  requests: "Requests",
+  supervisor: "Supervisor Queue",
+  "program-director": "Director Review",
+  placements: "Placements",
+  logbooks: "Logbooks",
+  supervision: "Supervision",
+  evaluation: "Evaluation",
+  gaps: "Skill Gaps",
+  industry: "Industry Trainer",
+  profile: "My Profile",
 };
 
 function pretty(seg: string) {
