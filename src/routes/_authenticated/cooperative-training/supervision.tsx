@@ -4,6 +4,7 @@ import { DataTable, WorkspaceCard } from "@/components/ct/workspace-table";
 import { EmptyState } from "@/components/erp/empty-state";
 import { supervisionGap } from "@/lib/ct/workspace-model";
 import { Badge } from "@/components/ui/badge";
+import { TrainerPicker } from "@/components/ct/trainer-picker";
 
 function SupervisionPage() {
   const w = useCtWorkspace();
@@ -20,7 +21,7 @@ function SupervisionPage() {
         ) : w.placements.length === 0 ? (
           <EmptyState title="No placements to supervise" description="Supervision starts once trainees are placed." />
         ) : (
-          <DataTable head={["Trainee", "Enterprise", "Visits", "Last visit", "Coverage"]}>
+          <DataTable head={["Trainee", "Enterprise", "Assigned trainer", "Visits", "Last visit", "Coverage"]}>
             {w.placements.map((p: any) => {
               const visits = w.visitsByPlacement.get(String(p.id)) ?? [];
               const gap = supervisionGap(visits, p);
@@ -29,6 +30,14 @@ function SupervisionPage() {
                 <tr key={p.id} className="border-t border-border/60">
                   <td className="p-2">{student?.full_name ?? "—"}</td>
                   <td className="p-2">{w.enterprises.get(String(p.enterprise_id))?.name ?? "—"}</td>
+                  <td className="p-2">
+                    <TrainerPicker
+                      placementId={String(p.id)}
+                      departmentId={p.department_id}
+                      value={p.visiting_trainer_id}
+                      disabled={Boolean(p.locked)}
+                    />
+                  </td>
                   <td className="p-2">{gap.visits}</td>
                   <td className="p-2 text-xs text-muted-foreground">{gap.lastVisit ?? "Never"}</td>
                   <td className="p-2">

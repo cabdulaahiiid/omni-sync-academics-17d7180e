@@ -3,6 +3,7 @@ import {
   ClipboardCheck, GraduationCap, FileClock, HardHat,
 } from "lucide-react";
 import type { ShellNavItem } from "@/components/erp/app-shell";
+import { canAccess } from "@/lib/auth/role-matrix";
 
 export const OPERATIONAL_NAV: ShellNavItem[] = [
   { to: "/operational", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -28,6 +29,8 @@ export const PRACTICAL_TRAINING_NAV_ITEM: ShellNavItem = {
 export function operationalNavFor(me: any): ShellNavItem[] {
   const roles: string[] = me?.roles ?? [];
   const showCt =
-    Boolean(me?.isIndustrialDh) || roles.some((r) => ["MA", "IPS", "PD"].includes(r));
+    Boolean(me?.isIndustrialDh) ||
+    canAccess("ctSupervisorQueue", roles) ||
+    canAccess("ctDirectorReview", roles);
   return showCt ? [...OPERATIONAL_NAV, PRACTICAL_TRAINING_NAV_ITEM] : OPERATIONAL_NAV;
 }

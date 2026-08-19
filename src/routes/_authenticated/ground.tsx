@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useMe } from "@/hooks/use-me";
-import { pickHome } from "@/lib/auth/roles";
+import { pickHome, roleLabel as roleLabelFor } from "@/lib/auth/roles";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,11 +30,11 @@ function GroundShell() {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
   }
   const initials = (me?.profile?.full_name || me?.profile?.email || "TR").slice(0, 2).toUpperCase();
-  const baseRoleLabel = me?.roles?.includes("MA") ? "Master Admin" : "Trainer";
+  const baseRoleLabel = roleLabelFor(me?.roles);
   const roleLabel = me?.roles?.includes("MA")
     ? baseRoleLabel
     : me?.departmentName
-      ? `${me.departmentName} · Trainer`
+      ? `${me.departmentName} · ${baseRoleLabel}`
       : baseRoleLabel;
   const firstName = (me?.profile?.full_name || "Trainer").split(" ")[0];
   const greeting = (() => {

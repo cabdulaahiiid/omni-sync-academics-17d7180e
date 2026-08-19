@@ -12,6 +12,7 @@ import { RoleSwitcher } from "@/components/role-switcher";
 import { OfflineBanner } from "@/components/offline-banner";
 import { COLLEGE_SHORT_NAME, COLLEGE_FULL_NAME, COLLEGE_LOGO_URL } from "@/components/erp/brand";
 import { Breadcrumbs } from "@/components/erp/breadcrumbs";
+import { roleLabel as roleLabelFor } from "@/lib/auth/roles";
 
 export type ShellNavItem = { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean };
 
@@ -35,17 +36,9 @@ export function AppShell({
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const initials = (me?.profile?.full_name || me?.profile?.email || "U").slice(0, 2).toUpperCase();
-  const roleLabel = me?.roles?.includes("MA")
-    ? "Master Admin"
-    : me?.roles?.includes("DH")
-      ? me?.departmentName
-        ? `${me.departmentName} · Department Head`
-        : "Department Head"
-      : me?.roles?.includes("IPS")
-        ? "Industrial Practical Supervisor"
-        : me?.roles?.includes("PD")
-          ? "Program Director"
-          : "User";
+  const baseRole = roleLabelFor(me?.roles);
+  const roleLabel =
+    me?.roles?.includes("DH") && me?.departmentName ? `${me.departmentName} · ${baseRole}` : baseRole;
 
   return (
     <div className="flex h-screen overflow-hidden bg-muted/30">
