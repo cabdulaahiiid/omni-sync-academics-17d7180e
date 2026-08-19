@@ -203,6 +203,30 @@ const BuilderInput = z.object({
   plan_id: z.string().uuid().nullish(),
 });
 
+/** Nested practical session / sub-session tree attached to this plan. */
+const PracticalTree = z
+  .array(
+    z.object({
+      name: z.string().trim().min(2).max(200),
+      allocated_hours: z.number().min(0).max(2000).default(0),
+      venue_hint: z.string().trim().max(120).optional().nullable(),
+      tasks: z
+        .array(
+          z.object({
+            title: z.string().trim().min(2).max(200),
+            competency_code: z.string().trim().max(40).optional().nullable(),
+            description: z.string().trim().max(1000).optional().nullable(),
+          }),
+        )
+        .max(50)
+        .default([]),
+    }),
+  )
+  .max(50)
+  .default([]);
+
+const BuilderSaveInput = BuilderInput.extend({ practical_sessions: PracticalTree.optional() });
+
 type BuilderInputT = z.infer<typeof BuilderInput>;
 
 /**
