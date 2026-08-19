@@ -34,7 +34,7 @@ function CooperativeTrainingShell() {
   return (
     <AppShell nav={operationalNavFor(me)}>
       <NavHeader
-        title="Cooperative &amp; Industrial Practical Training"
+        title="Cooperative & Industrial Practical Training"
         description="Theory completion, enterprise placement, digital logbook, supervision and competency assessment."
       />
       <div className="rounded-xl border border-border/60 bg-card p-2">
