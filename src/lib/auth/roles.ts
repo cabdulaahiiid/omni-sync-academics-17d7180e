@@ -62,7 +62,8 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 };
 
 /** Roles an administrator can assign to a person, in display order. */
-export const ASSIGNABLE_ROLES: AppRole[] = ["MA", "DH", "T", "IPS", "PD"];
+export const ASSIGNABLE_ROLES = ["MA", "DH", "T", "IPS", "PD"] as const;
+export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
 export const ROLE_HOME: Record<AppRole, "/strategic" | "/operational" | "/ground" | "/cooperative-training" | "/industry"> = {
   MA: "/strategic",
