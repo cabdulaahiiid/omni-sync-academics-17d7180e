@@ -200,13 +200,24 @@ function UsersPage() {
                     ]}
                   />
                   <FormFull>
-                    <SelectField
-                      label="Department"
-                      required={form.role === "DH" || form.role === "T"}
-                      value={form.department_id}
-                      onChange={(v) => setForm({ ...form, department_id: v })}
-                      placeholder={form.role === "DH" || form.role === "T" ? "Select department" : "(optional)"}
-                      options={(depts ?? []).map((d) => ({ value: d.id, label: d.name }))}
+{form.role === "DH" ? (
+  <FormFull>
+    <SelectField
+      label="Department"
+      required
+      value={form.department_id}
+      onChange={(v) => setForm({ ...form, department_id: v })}
+      placeholder="Select department"
+      options={(depts ?? []).map((d) => ({ value: d.id, label: d.name }))}
+    />
+  </FormFull>
+) : (
+  <FormFull>
+    <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+      Department assignment is not required for this role.
+    </div>
+  </FormFull>
+)}
                     />
                   </FormFull>
                 </FormGrid>
