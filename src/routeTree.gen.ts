@@ -20,6 +20,7 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedOperationalRouteImport } from './routes/_authenticated/operational'
 import { Route as AuthenticatedIndustryRouteImport } from './routes/_authenticated/industry'
 import { Route as AuthenticatedGroundRouteImport } from './routes/_authenticated/ground'
+import { Route as AuthenticatedEnterprisePortalRouteImport } from './routes/_authenticated/enterprise-portal'
 import { Route as AuthenticatedCooperativeTrainingRouteImport } from './routes/_authenticated/cooperative-training'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
@@ -60,6 +61,7 @@ import { Route as AuthenticatedGroundReportsRouteImport } from './routes/_authen
 import { Route as AuthenticatedGroundProfileRouteImport } from './routes/_authenticated/ground/profile'
 import { Route as AuthenticatedGroundCompletedRouteImport } from './routes/_authenticated/ground/completed'
 import { Route as AuthenticatedGroundScheduleIdRouteImport } from './routes/_authenticated/ground/$scheduleId'
+import { Route as AuthenticatedCoordinatorDashboardRouteImport } from './routes/_authenticated/coordinator/dashboard'
 import { Route as AuthenticatedCooperativeTrainingSupervisorRouteImport } from './routes/_authenticated/cooperative-training/supervisor'
 import { Route as AuthenticatedCooperativeTrainingSupervisionRouteImport } from './routes/_authenticated/cooperative-training/supervision'
 import { Route as AuthenticatedCooperativeTrainingSettingsRouteImport } from './routes/_authenticated/cooperative-training/settings'
@@ -129,6 +131,12 @@ const AuthenticatedGroundRoute = AuthenticatedGroundRouteImport.update({
   path: '/ground',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedEnterprisePortalRoute =
+  AuthenticatedEnterprisePortalRouteImport.update({
+    id: '/enterprise-portal',
+    path: '/enterprise-portal',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCooperativeTrainingRoute =
   AuthenticatedCooperativeTrainingRouteImport.update({
     id: '/cooperative-training',
@@ -367,6 +375,12 @@ const AuthenticatedGroundScheduleIdRoute =
     path: '/$scheduleId',
     getParentRoute: () => AuthenticatedGroundRoute,
   } as any)
+const AuthenticatedCoordinatorDashboardRoute =
+  AuthenticatedCoordinatorDashboardRouteImport.update({
+    id: '/coordinator/dashboard',
+    path: '/coordinator/dashboard',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCooperativeTrainingSupervisorRoute =
   AuthenticatedCooperativeTrainingSupervisorRouteImport.update({
     id: '/supervisor',
@@ -453,6 +467,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/cooperative-training': typeof AuthenticatedCooperativeTrainingRouteWithChildren
+  '/enterprise-portal': typeof AuthenticatedEnterprisePortalRoute
   '/ground': typeof AuthenticatedGroundRouteWithChildren
   '/industry': typeof AuthenticatedIndustryRoute
   '/operational': typeof AuthenticatedOperationalRouteWithChildren
@@ -471,6 +486,7 @@ export interface FileRoutesByFullPath {
   '/cooperative-training/settings': typeof AuthenticatedCooperativeTrainingSettingsRoute
   '/cooperative-training/supervision': typeof AuthenticatedCooperativeTrainingSupervisionRoute
   '/cooperative-training/supervisor': typeof AuthenticatedCooperativeTrainingSupervisorRoute
+  '/coordinator/dashboard': typeof AuthenticatedCoordinatorDashboardRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/ground/completed': typeof AuthenticatedGroundCompletedRoute
   '/ground/profile': typeof AuthenticatedGroundProfileRoute
@@ -516,6 +532,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/enterprise-portal': typeof AuthenticatedEnterprisePortalRoute
   '/industry': typeof AuthenticatedIndustryRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/manual': typeof ManualIndexRoute
@@ -531,6 +548,7 @@ export interface FileRoutesByTo {
   '/cooperative-training/settings': typeof AuthenticatedCooperativeTrainingSettingsRoute
   '/cooperative-training/supervision': typeof AuthenticatedCooperativeTrainingSupervisionRoute
   '/cooperative-training/supervisor': typeof AuthenticatedCooperativeTrainingSupervisorRoute
+  '/coordinator/dashboard': typeof AuthenticatedCoordinatorDashboardRoute
   '/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/ground/completed': typeof AuthenticatedGroundCompletedRoute
   '/ground/profile': typeof AuthenticatedGroundProfileRoute
@@ -580,6 +598,7 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/cooperative-training': typeof AuthenticatedCooperativeTrainingRouteWithChildren
+  '/_authenticated/enterprise-portal': typeof AuthenticatedEnterprisePortalRoute
   '/_authenticated/ground': typeof AuthenticatedGroundRouteWithChildren
   '/_authenticated/industry': typeof AuthenticatedIndustryRoute
   '/_authenticated/operational': typeof AuthenticatedOperationalRouteWithChildren
@@ -598,6 +617,7 @@ export interface FileRoutesById {
   '/_authenticated/cooperative-training/settings': typeof AuthenticatedCooperativeTrainingSettingsRoute
   '/_authenticated/cooperative-training/supervision': typeof AuthenticatedCooperativeTrainingSupervisionRoute
   '/_authenticated/cooperative-training/supervisor': typeof AuthenticatedCooperativeTrainingSupervisorRoute
+  '/_authenticated/coordinator/dashboard': typeof AuthenticatedCoordinatorDashboardRoute
   '/_authenticated/ground/$scheduleId': typeof AuthenticatedGroundScheduleIdRoute
   '/_authenticated/ground/completed': typeof AuthenticatedGroundCompletedRoute
   '/_authenticated/ground/profile': typeof AuthenticatedGroundProfileRoute
@@ -647,6 +667,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/cooperative-training'
+    | '/enterprise-portal'
     | '/ground'
     | '/industry'
     | '/operational'
@@ -665,6 +686,7 @@ export interface FileRouteTypes {
     | '/cooperative-training/settings'
     | '/cooperative-training/supervision'
     | '/cooperative-training/supervisor'
+    | '/coordinator/dashboard'
     | '/ground/$scheduleId'
     | '/ground/completed'
     | '/ground/profile'
@@ -710,6 +732,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/enterprise-portal'
     | '/industry'
     | '/profile'
     | '/manual'
@@ -725,6 +748,7 @@ export interface FileRouteTypes {
     | '/cooperative-training/settings'
     | '/cooperative-training/supervision'
     | '/cooperative-training/supervisor'
+    | '/coordinator/dashboard'
     | '/ground/$scheduleId'
     | '/ground/completed'
     | '/ground/profile'
@@ -773,6 +797,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/cooperative-training'
+    | '/_authenticated/enterprise-portal'
     | '/_authenticated/ground'
     | '/_authenticated/industry'
     | '/_authenticated/operational'
@@ -791,6 +816,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cooperative-training/settings'
     | '/_authenticated/cooperative-training/supervision'
     | '/_authenticated/cooperative-training/supervisor'
+    | '/_authenticated/coordinator/dashboard'
     | '/_authenticated/ground/$scheduleId'
     | '/_authenticated/ground/completed'
     | '/_authenticated/ground/profile'
@@ -921,6 +947,13 @@ declare module '@tanstack/react-router' {
       path: '/ground'
       fullPath: '/ground'
       preLoaderRoute: typeof AuthenticatedGroundRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/enterprise-portal': {
+      id: '/_authenticated/enterprise-portal'
+      path: '/enterprise-portal'
+      fullPath: '/enterprise-portal'
+      preLoaderRoute: typeof AuthenticatedEnterprisePortalRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/cooperative-training': {
@@ -1203,6 +1236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroundScheduleIdRouteImport
       parentRoute: typeof AuthenticatedGroundRoute
     }
+    '/_authenticated/coordinator/dashboard': {
+      id: '/_authenticated/coordinator/dashboard'
+      path: '/coordinator/dashboard'
+      fullPath: '/coordinator/dashboard'
+      preLoaderRoute: typeof AuthenticatedCoordinatorDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/cooperative-training/supervisor': {
       id: '/_authenticated/cooperative-training/supervisor'
       path: '/supervisor'
@@ -1465,22 +1505,27 @@ const AuthenticatedStrategicRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedCooperativeTrainingRoute: typeof AuthenticatedCooperativeTrainingRouteWithChildren
+  AuthenticatedEnterprisePortalRoute: typeof AuthenticatedEnterprisePortalRoute
   AuthenticatedGroundRoute: typeof AuthenticatedGroundRouteWithChildren
   AuthenticatedIndustryRoute: typeof AuthenticatedIndustryRoute
   AuthenticatedOperationalRoute: typeof AuthenticatedOperationalRouteWithChildren
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedStrategicRoute: typeof AuthenticatedStrategicRouteWithChildren
+  AuthenticatedCoordinatorDashboardRoute: typeof AuthenticatedCoordinatorDashboardRoute
   AuthenticatedPrintReportRoute: typeof AuthenticatedPrintReportRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCooperativeTrainingRoute:
     AuthenticatedCooperativeTrainingRouteWithChildren,
+  AuthenticatedEnterprisePortalRoute: AuthenticatedEnterprisePortalRoute,
   AuthenticatedGroundRoute: AuthenticatedGroundRouteWithChildren,
   AuthenticatedIndustryRoute: AuthenticatedIndustryRoute,
   AuthenticatedOperationalRoute: AuthenticatedOperationalRouteWithChildren,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedStrategicRoute: AuthenticatedStrategicRouteWithChildren,
+  AuthenticatedCoordinatorDashboardRoute:
+    AuthenticatedCoordinatorDashboardRoute,
   AuthenticatedPrintReportRoute: AuthenticatedPrintReportRoute,
 }
 
