@@ -515,7 +515,7 @@ export const validateBuilder = createServerFn({ method: "POST" })
 
 export const saveBuilderDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => BuilderInput.parse(d))
+  .inputValidator((d: unknown) => BuilderSaveInput.parse(d))
   .handler(async ({ data, context }) => {
     const roles = await requireRole(context, ["DH", "MA"], "saveBuilderDraft");
     const { supabase, userId } = context;
@@ -583,6 +583,44 @@ export const saveBuilderDraft = createServerFn({ method: "POST" })
       } as any);
       if (rpcError) throw new Error(rpcError.message);
       const r = (rpc ?? {}) as { plan_id?: string; sessions?: number };
+
+      // Nested practical sessions / sub-sessions travel with the plan so the
+      // industrial training request downstream shows the exact task list.
+      const planId = r.plan_id ?? null;
+      if (planId && data.delivery !== "Theory") {
+        await supabase.from("schedule_plan_practical_sessions").delete().eq("plan_id", planId);
+        for (const [i, s] of (data.practical_sessions ?? []).entries()) {
+          const { data: sessionRow, error: sErr } = await supabase
+            .from("schedule_plan_practical_sessions")
+            .insert({
+              plan_id: planId,
+              department_id: data.department_id,
+              name: s.name,
+              allocated_hours: s.allocated_hours,
+              venue_hint: s.venue_hint ?? null,
+              sequence: i + 1,
+              created_by: userId,
+            })
+            .select("id")
+            .single();
+          if (sErr) throw new Error(sErr.message);
+          if (s.tasks.length) {
+            const { error: tErr } = await supabase.from("schedule_plan_practical_tasks").insert(
+              s.tasks.map((t, j) => ({
+                session_id: sessionRow.id,
+                department_id: data.department_id,
+                title: t.title,
+                competency_code: t.competency_code ?? null,
+                description: t.description ?? null,
+                sequence: j + 1,
+                created_by: userId,
+              })),
+            );
+            if (tErr) throw new Error(tErr.message);
+          }
+        }
+      }
+
       return {
         ok: true,
         created: r.sessions ?? engine.total_sessions,
