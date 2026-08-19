@@ -1092,6 +1092,154 @@ export type Database = {
           },
         ]
       }
+      ct_practical_task_confirmations: {
+        Row: {
+          attendance: Database["public"]["Enums"]["ct_attendance_status"]
+          competency_code: string | null
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_comment: string | null
+          department_id: string
+          hours: number
+          id: string
+          performance_rating: number
+          placement_id: string
+          plan_task_id: string | null
+          remarks: string | null
+          safety_breach: boolean
+          status: Database["public"]["Enums"]["ct_task_confirm_status"]
+          submitted_at: string | null
+          submitted_by: string | null
+          task_date: string
+          task_title: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          attendance?: Database["public"]["Enums"]["ct_attendance_status"]
+          competency_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_comment?: string | null
+          department_id: string
+          hours?: number
+          id?: string
+          performance_rating?: number
+          placement_id: string
+          plan_task_id?: string | null
+          remarks?: string | null
+          safety_breach?: boolean
+          status?: Database["public"]["Enums"]["ct_task_confirm_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
+          task_date: string
+          task_title: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          attendance?: Database["public"]["Enums"]["ct_attendance_status"]
+          competency_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_comment?: string | null
+          department_id?: string
+          hours?: number
+          id?: string
+          performance_rating?: number
+          placement_id?: string
+          plan_task_id?: string | null
+          remarks?: string | null
+          safety_breach?: boolean
+          status?: Database["public"]["Enums"]["ct_task_confirm_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
+          task_date?: string
+          task_title?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ct_practical_task_confirmations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ct_practical_task_confirmations_placement_id_fkey"
+            columns: ["placement_id"]
+            isOneToOne: false
+            referencedRelation: "ct_student_placements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ct_practical_task_confirmations_plan_task_id_fkey"
+            columns: ["plan_task_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_plan_practical_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ct_practical_task_corrections: {
+        Row: {
+          after_state: Json
+          before_state: Json
+          confirmation_id: string
+          corrected_at: string
+          corrected_by: string | null
+          department_id: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          after_state: Json
+          before_state: Json
+          confirmation_id: string
+          corrected_at?: string
+          corrected_by?: string | null
+          department_id: string
+          id?: string
+          reason: string
+        }
+        Update: {
+          after_state?: Json
+          before_state?: Json
+          confirmation_id?: string
+          corrected_at?: string
+          corrected_by?: string | null
+          department_id?: string
+          id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ct_practical_task_corrections_confirmation_id_fkey"
+            columns: ["confirmation_id"]
+            isOneToOne: false
+            referencedRelation: "ct_practical_task_confirmations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ct_practical_task_corrections_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ct_remedial_actions: {
         Row: {
           completed: boolean
@@ -3792,9 +3940,47 @@ export type Database = {
         }
         Returns: Json
       }
+      ct_confirm_practical_task: {
+        Args: {
+          _attendance: Database["public"]["Enums"]["ct_attendance_status"]
+          _competency_code: string
+          _hours: number
+          _performance_rating: number
+          _placement_id: string
+          _plan_task_id: string
+          _remarks: string
+          _safety_breach: boolean
+          _task_date: string
+          _task_title: string
+        }
+        Returns: string
+      }
+      ct_coordinator_request_summary: { Args: never; Returns: Json }
+      ct_correct_practical_task: {
+        Args: {
+          _attendance: Database["public"]["Enums"]["ct_attendance_status"]
+          _confirmation_id: string
+          _expected_version: number
+          _hours: number
+          _performance_rating: number
+          _reason: string
+          _remarks: string
+          _safety_breach: boolean
+        }
+        Returns: Json
+      }
       ct_create_request: {
         Args: { _payload: Json; _student_ids: string[] }
         Returns: string
+      }
+      ct_decide_practical_task: {
+        Args: {
+          _comment: string
+          _confirmation_id: string
+          _decision: string
+          _expected_version: number
+        }
+        Returns: Json
       }
       ct_delegate_request: {
         Args: { _note: string; _request_id: string; _to_user: string }
@@ -3861,6 +4047,10 @@ export type Database = {
       }
       ct_is_program_director: { Args: never; Returns: boolean }
       ct_is_staff: { Args: never; Returns: boolean }
+      ct_is_trainer_on_active_placement: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       ct_log_event: {
         Args: {
           _entity_id: string
@@ -4155,6 +4345,12 @@ export type Database = {
         | "MODIFIED"
       ct_sms_status: "QUEUED" | "SENDING" | "SENT" | "DELIVERED" | "FAILED"
       ct_status_color: "GREEN" | "YELLOW" | "RED"
+      ct_task_confirm_status:
+        | "DRAFT"
+        | "SUBMITTED"
+        | "ENTERPRISE_APPROVED"
+        | "RETURNED"
+        | "LOCKED"
       ct_uc_result: "P" | "NP"
       entity_active: "ACTIVE" | "INACTIVE"
       entity_status: "ACTIVE" | "SUSPENDED"
@@ -4354,6 +4550,13 @@ export const Constants = {
       ],
       ct_sms_status: ["QUEUED", "SENDING", "SENT", "DELIVERED", "FAILED"],
       ct_status_color: ["GREEN", "YELLOW", "RED"],
+      ct_task_confirm_status: [
+        "DRAFT",
+        "SUBMITTED",
+        "ENTERPRISE_APPROVED",
+        "RETURNED",
+        "LOCKED",
+      ],
       ct_uc_result: ["P", "NP"],
       entity_active: ["ACTIVE", "INACTIVE"],
       entity_status: ["ACTIVE", "SUSPENDED"],

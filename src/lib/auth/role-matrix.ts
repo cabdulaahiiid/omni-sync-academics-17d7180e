@@ -62,6 +62,16 @@ export const MODULE_ACCESS = {
     UserRole.SYSTEM_ADMIN,
   ],
   ctSettings: [UserRole.DEPARTMENT_HEAD, UserRole.SYSTEM_ADMIN],
+
+  /** Enterprise / industry trainer logbook portal. */
+  enterprisePortal: [UserRole.ENTERPRISE_TRAINER, UserRole.SYSTEM_ADMIN],
+  /** Cross-department coordinator hub (DH sees only their own department). */
+  coordinatorDashboard: [
+    UserRole.INDUSTRIAL_PRACTITIONERS_SUPERVISOR,
+    UserRole.PROGRAM_DIRECTOR,
+    UserRole.DEPARTMENT_HEAD,
+    UserRole.SYSTEM_ADMIN,
+  ],
 } satisfies Record<string, UserRole[]>;
 
 export type ModuleKey = keyof typeof MODULE_ACCESS;
@@ -75,4 +85,29 @@ export function codesFor(module: ModuleKey): AppRole[] {
 export function canAccess(module: ModuleKey, roles: string[] | undefined | null): boolean {
   const allowed = new Set<string>(codesFor(module));
   return (roles ?? []).some((r) => allowed.has(r));
+}
+
+/**
+ * Dynamic feature unlocking for TVET trainers.
+ *
+ * A plain trainer only gets the Industrial Practical Training surface once the
+ * server confirms they hold an active placement assignment. Roles that own the
+ * module by mandate (admin, coordinator, director, industrial DH) are never
+ * gated by placement.
+ */
+export function isTrainerAssignedToPracticalPlacement(me: {
+  roles?: string[] | null;
+  isTrainerOnActivePlacement?: boolean | null;
+} | null | undefined): boolean {
+  return Boolean(me?.isTrainerOnActivePlacement);
+}
+
+/** Should this user see the Industrial Practical Training module at all? */
+export function canEnterPracticalTraining(me: any): boolean {
+  const roles: string[] = me?.roles ?? [];
+  if (canAccess("ctSupervisorQueue", roles) || canAccess("ctDirectorReview", roles)) return true;
+  if (me?.isIndustrialDh) return true;
+  if (roles.includes("MA")) return true;
+  if (roles.includes("T")) return isTrainerAssignedToPracticalPlacement(me);
+  return false;
 }
