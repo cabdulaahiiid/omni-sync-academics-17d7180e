@@ -26,6 +26,12 @@ import { useMe } from "@/hooks/use-me";
 import { useDhScheduleLive } from "@/hooks/use-dh-schedule-live";
 import { generatePlan, type Day as EngineDay } from "@/lib/scheduling/engine";
 import { getBuilderOptions, getTrainerLoad, validateBuilder, saveBuilderDraft } from "@/lib/semester-builder.functions";
+import { getModulePracticalTemplate } from "@/lib/practical-template.functions";
+import {
+  PracticalSessionEditor,
+  toDrafts,
+  type PracticalSessionDraft,
+} from "@/components/practical/practical-session-editor";
 import { requestSemesterApproval, dhRequestApprovalPerWeek } from "@/lib/semester-drafts.functions";
 
 export const Route = createFileRoute("/_authenticated/operational/semester-upload")({
