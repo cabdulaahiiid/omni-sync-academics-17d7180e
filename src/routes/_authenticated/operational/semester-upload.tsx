@@ -156,6 +156,7 @@ function SemesterBuilderPage() {
   const [levelId, setLevelId] = useState<string>("");
   const [venueId, setVenueId] = useState<string>("");
   const [delivery, setDelivery] = useState<"Theory" | "Practical" | "Both">("Theory");
+  const [practicalTree, setPracticalTree] = useState<PracticalSessionDraft[]>([]);
   const [theoryDays, setTheoryDays] = useState<Day[]>([]);
   const [practicalDays, setPracticalDays] = useState<Day[]>([]);
   const [theorySessionName, setTheorySessionName] = useState("");
